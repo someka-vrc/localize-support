@@ -12,6 +12,7 @@ export async function collectConfigsForDocument(documentUri: vscode.Uri) {
   }
   const sourceSet = new Set<string>();
   const poSet = new Set<string>();
+  const localizeSet = new Set<string>();
   let dir = path.dirname(documentUri.fsPath);
   const wsRoot = ws.uri.fsPath;
   while (true) {
@@ -33,6 +34,13 @@ export async function collectConfigsForDocument(documentUri: vscode.Uri) {
             poSet.add(resolved);
           }
         }
+        if (Array.isArray(parsed.localizeFuncs)) {
+          for (const f of parsed.localizeFuncs) {
+            if (typeof f === "string") {
+              localizeSet.add(f);
+            }
+          }
+        }
       } catch (e) {
         // no config here or parse error -- ignore
       }
@@ -49,6 +57,7 @@ export async function collectConfigsForDocument(documentUri: vscode.Uri) {
   return {
     sourceDirs: Array.from(sourceSet),
     poDirs: Array.from(poSet),
+    localizeFuncs: Array.from(localizeSet),
     workspaceFolder: ws,
   };
 }

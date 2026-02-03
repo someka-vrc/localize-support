@@ -15,35 +15,31 @@ export class LocalizationChecker implements vscode.Disposable {
     Array<{ range: vscode.Range; msgid: string }>
   >();
 
-  constructor(
-    private context: vscode.ExtensionContext,
-    private poManager: POManager,
-  ) {
-    this.context.subscriptions.push(this.diagnostics);
-    this.disposables.push(
-      vscode.workspace.onDidChangeConfiguration((e) => {
-        if (e.affectsConfiguration("poHover.functionName")) {
-          this.triggerScan();
-        }
-      }),
-    );
-    const configWatcher = vscode.workspace.createFileSystemWatcher(
-      "**/podotnetconfig.json",
-    );
-    this.context.subscriptions.push(configWatcher);
-    configWatcher.onDidCreate(() => this.triggerScan());
-    configWatcher.onDidChange(() => this.triggerScan());
-    configWatcher.onDidDelete(() => this.triggerScan());
-    this.disposables.push(
-      this.poManager.onDidChange(() => this.triggerScan()),
-    );
-    this.disposables.push(
-      vscode.workspace.onDidChangeTextDocument((e) =>
-        this.onDocumentChanged(e.document),
-      ),
-    );
-    this.triggerScan();
-  }
+    // workspace -> localize function names coming from podotnetconfig.json files
+    private workspaceLocalizeFuncs = new Map<string, string[]>();
+
+    constructor(
+      private context: vscode.ExtensionContext,
+      private poManager: POManager,
+    ) {
+      this.context.subscriptions.push(this.diagnostics);
+      const configWatcher = vscode.workspace.createFileSystemWatcher(
+        "**/podotnetconfig.json",
+      );
+      this.context.subscriptions.push(configWatcher);
+      configWatcher.onDidCreate(() => this.triggerScan());
+      configWatcher.onDidChange(() => this.triggerScan());
+      configWatcher.onDidDelete(() => this.triggerScan());
+      this.disposables.push(
+        this.poManager.onDidChange(() => this.triggerScan()),
+      );
+      this.disposables.push(
+        vscode.workspace.onDidChangeTextDocument((e) =>
+          this.onDocumentChanged(e.document),
+        ),
+      );
+      this.triggerScan();
+    }
 
   dispose() {
     this.diagnostics.dispose();
@@ -111,6 +107,7 @@ export class LocalizationChecker implements vscode.Disposable {
       {
         sourceDirs: string[];
         poDirs: string[];
+        localizeFuncs: string[];
         workspaceFolder: vscode.WorkspaceFolder;
       }[]
     >();
@@ -122,6 +119,7 @@ export class LocalizationChecker implements vscode.Disposable {
         const parsed = JSON.parse(content);
         const sourceDirs: string[] = [];
         const poDirs: string[] = [];
+        const localizeFuncs: string[] = [];
         if (Array.isArray(parsed.sourceDirs)) {
           for (const s of parsed.sourceDirs) {
             sourceDirs.push(path.resolve(dir, s));
@@ -130,6 +128,13 @@ export class LocalizationChecker implements vscode.Disposable {
         if (Array.isArray(parsed.poDirs)) {
           for (const p of parsed.poDirs) {
             poDirs.push(path.resolve(dir, p));
+          }
+        }
+        if (Array.isArray(parsed.localizeFuncs)) {
+          for (const f of parsed.localizeFuncs) {
+            if (typeof f === "string") {
+              localizeFuncs.push(f);
+            }
           }
         }
         const ws = vscode.workspace.getWorkspaceFolder(cfgUri);
@@ -141,9 +146,24 @@ export class LocalizationChecker implements vscode.Disposable {
         }
         cfgsByWorkspace
           .get(ws.uri.toString())!
-          .push({ sourceDirs, poDirs, workspaceFolder: ws });
+          .push({ sourceDirs, poDirs, localizeFuncs, workspaceFolder: ws });
       } catch (e) {
         // ignore
+      }
+    }
+
+    // collect localizeFuncs per workspace from config files
+    for (const [wsKey, cfgList] of cfgsByWorkspace) {
+      const set = new Set<string>();
+      for (const cfg of cfgList) {
+        for (const f of cfg.localizeFuncs || []) {
+          set.add(f);
+        }
+      }
+      if (set.size > 0) {
+        this.workspaceLocalizeFuncs.set(wsKey, Array.from(set));
+      } else {
+        this.workspaceLocalizeFuncs.delete(wsKey);
       }
     }
 
@@ -194,13 +214,21 @@ export class LocalizationChecker implements vscode.Disposable {
     const uriStr = document.uri.toString();
     this.scanningDocs.add(uriStr);
     const text = document.getText();
-    const target =
-      vscode.workspace
-        .getConfiguration("poHover")
-        .get<string>("functionName", "G") || "G";
+    const ws = vscode.workspace.getWorkspaceFolder(document.uri);
+    let funcs: string[] = [];
+    if (ws) {
+      funcs = this.workspaceLocalizeFuncs.get(ws.uri.toString()) || [];
+    }
+    if (!funcs || funcs.length === 0) {
+      const cfgFunc =
+        vscode.workspace
+          .getConfiguration("poHover")
+          .get<string>("functionName", "G") || "G";
+      funcs = [cfgFunc];
+    }
     const escapeRegExp = (s: string) =>
       s.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&");
-    const re = new RegExp(`\\b${escapeRegExp(target)}\\b`, "g");
+    const re = new RegExp(`\\b(?:${funcs.map(escapeRegExp).join("|")})\\b`, "g");
     let match: RegExpExecArray | null;
     const diags: vscode.Diagnostic[] = [];
     const entries: Array<{ range: vscode.Range; msgid: string }> = [];

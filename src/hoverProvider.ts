@@ -12,11 +12,6 @@ export function registerHoverProvider(
 ) {
   return vscode.languages.registerHoverProvider("csharp", {
     async provideHover(document, position, token) {
-      const config = vscode.workspace.getConfiguration("poHover");
-      const target = config.get<string>("functionName", "G");
-      if (!target) {
-        return undefined;
-      }
 
       const text = document.getText();
       const offset = document.offsetAt(position);
@@ -65,9 +60,13 @@ export function registerHoverProvider(
         return new vscode.Hover(md, new vscode.Range(startPos, endPos));
       }
 
+      const cfgForFuncs = await collectConfigsForDocument(document.uri);
+      const funcs = (cfgForFuncs.localizeFuncs && cfgForFuncs.localizeFuncs.length > 0)
+        ? cfgForFuncs.localizeFuncs
+        : [vscode.workspace.getConfiguration("poHover").get<string>("functionName", "G") || "G"];
       const escapeRegExp = (s: string) =>
         s.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&");
-      const re = new RegExp(`\\b${escapeRegExp(target)}\\b`, "g");
+      const re = new RegExp(`\\b(?:${funcs.map(escapeRegExp).join("|")})\\b`, "g");
       let match: RegExpExecArray | null;
       while ((match = re.exec(text)) !== null) {
         const matchIndex = match.index;
