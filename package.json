@@ -2,7 +2,7 @@
   "name": "po-dotnet",
   "displayName": "po-dotnet",
   "description": "show .po translation when hover on localize method in .NET project",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "license": "MIT",
   "repository": {
     "type": "git",
