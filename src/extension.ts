@@ -185,6 +185,39 @@ export function activate(context: vscode.ExtensionContext) {
 		return s.replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\t/g, '\t').replace(/\\\\/g, '\\');
 	}
 
+	function isInComment(text: string, offset: number): boolean {
+		let inComment = false;
+		let inString = false;
+		let i = 0;
+		while (i < offset) {
+			if (inString) {
+				if (text[i] === '"' && (i === 0 || text[i - 1] !== '\\')) {
+					inString = false;
+				}
+			} else if (inComment) {
+				if (text[i] === '*' && i + 1 < text.length && text[i + 1] === '/') {
+					inComment = false;
+					i += 2;
+					continue;
+				}
+			} else {
+				if (text[i] === '/' && i + 1 < text.length && text[i + 1] === '/') {
+					// Skip to end of line
+					while (i < offset && text[i] !== '\n') i++;
+					continue;
+				} else if (text[i] === '/' && i + 1 < text.length && text[i + 1] === '*') {
+					inComment = true;
+					i += 2;
+					continue;
+				} else if (text[i] === '"') {
+					inString = true;
+				}
+			}
+			i++;
+		}
+		return inComment;
+	}
+
 	function extractFirstStringArgument(inside: string) {
 		// find first quote; support verbatim @"..." and normal "..."
 		let i = 0;
@@ -233,6 +266,11 @@ export function activate(context: vscode.ExtensionContext) {
 
 			const text = document.getText();
 			const offset = document.offsetAt(position);
+
+			// Check if the position is inside a comment
+			if (isInComment(text, offset)) {
+				return undefined;
+			}
 
 			// escape function name for regex
 			const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
