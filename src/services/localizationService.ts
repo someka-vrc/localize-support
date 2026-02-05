@@ -26,4 +26,16 @@ export class LocalizationService {
     );
     return matched.map((m) => ({ poDirs: m.poDirs, workspaceFolder: m.workspaceFolder }));
   }
+
+  public getReferences(msgid: string, allowedSourceDirs?: string[]) {
+    return this.checker.getReferences(msgid, allowedSourceDirs);
+  }
+
+  public async triggerScan() {
+    return await this.checker.triggerScan();
+  }
+
+  public async scanDirs(dirs: string[]) {
+    return await this.checker.scanDirs(dirs);
+  }
 }

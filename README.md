@@ -5,7 +5,8 @@ PO .NET is a Visual Studio Code extension that helps with localization in C# sou
 ## Features
 
 - When you hover over a localization function, the extension displays the translation from the .po files.
-- The hover text includes links that jump to the corresponding entry in the .po file.
+- The hover text includes links and supports F12 (Go to Definition) to jump to the corresponding entry in the .po file.
+- You can use Find References (F12) on a .po file entry to jump to the corresponding usages in source code.
 - It detects untranslated keys and shows warnings (also displayed in the PROBLEMS tab).
 - Provides IntelliSense (completion) to suggest translation keys from .po files.
 - Supports per-folder settings via `podotnetconfig.json`.
@@ -59,7 +60,8 @@ C# ソースコード上のローカライズを支援する拡張機能です�
 ## 機能
 
 - ローカライズ関数をホバーすると .po ファイルの翻訳内容を表示する。
-- ホバーテキストのリンクから .po ファイルの該当エントリへジャンプする。
+- ホバーテキストのリンクまたはF12キー(Go to Definition)から .po ファイルの該当エントリへジャンプする。
+- .po ファイルのエントリからF12キー(Go to References)でソースコードの該当箇所へジャンプする。
 - 未翻訳キーを検出し警告表示する（PROBLEMS タブにも表示する）。
 - インテリセンス（補完機能）で .po ファイルの翻訳キーを補完する。
 - フォルダごとの設定が可能（podotnetconfig.json）

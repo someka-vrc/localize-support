@@ -64,6 +64,66 @@ export class LocalizationChecker implements vscode.Disposable {
     return this.scannedDocs.has(document.uri.toString());
   }
 
+  public getReferences(msgid: string, allowedSourceDirs?: string[]) {
+    const results: Array<{ uri: vscode.Uri; range: vscode.Range }> = [];
+    for (const [uriStr, entries] of this.docMsgids) {
+      const uri = vscode.Uri.parse(uriStr);
+      const fsPath = uri.fsPath;
+      if (allowedSourceDirs && allowedSourceDirs.length > 0) {
+        let ok = false;
+        for (const sd of allowedSourceDirs) {
+          if (fsPath === sd || fsPath.startsWith(sd + path.sep)) {
+            ok = true;
+            break;
+          }
+        }
+        if (!ok) {
+          continue;
+        }
+      }
+      for (const e of entries) {
+        if (e.msgid === msgid) {
+          results.push({ uri, range: e.range });
+        }
+      }
+    }
+    console.log(`po-dotnet: getReferences for '${msgid}' -> ${results.length} results`);
+    return results;
+  }
+
+  public async scanDirs(dirs: string[]) {
+    const seen = new Set<string>();
+    const walk = async (dir: string) => {
+      try {
+        const uri = vscode.Uri.file(dir);
+        const entries = await vscode.workspace.fs.readDirectory(uri);
+        for (const [name, type] of entries) {
+          const childPath = path.join(dir, name);
+          if (type === vscode.FileType.Directory) {
+            await walk(childPath);
+          } else if (type === vscode.FileType.File && childPath.endsWith(".cs")) {
+            const childUri = vscode.Uri.file(childPath);
+            if (!seen.has(childUri.toString())) {
+              seen.add(childUri.toString());
+              try {
+                const doc = await vscode.workspace.openTextDocument(childUri);
+                await this.scanDocument(doc);
+              } catch (e) {
+                console.error("po-dotnet: error scanning file", childPath, e);
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.error("po-dotnet: error reading directory", dir, e);
+      }
+    };
+    for (const d of dirs) {
+      await walk(d);
+    }
+    console.log(`po-dotnet: scanDirs completed for ${dirs.length} dirs`);
+  }
+
   public getMsgidAt(
     document: vscode.TextDocument,
     offset: number,
@@ -207,12 +267,13 @@ export class LocalizationChecker implements vscode.Disposable {
       }
     }
 
+    console.log(`po-dotnet: scanAll will scan ${toScan.length} documents:`, toScan.map((u) => u.fsPath));
     for (const uri of toScan) {
       try {
         const doc = await vscode.workspace.openTextDocument(uri);
         await this.scanDocument(doc);
       } catch (e) {
-        // ignore
+        console.error("po-dotnet: error scanning document", uri.toString(), e);
       }
     }
   }
@@ -338,6 +399,7 @@ export class LocalizationChecker implements vscode.Disposable {
       this.diagnostics.delete(document.uri);
     }
     this.docMsgids.set(uriStr, entries);
+    console.log(`po-dotnet: scanned ${document.uri.fsPath}, found ${entries.length} msgid entries:`, entries.map((e) => e.msgid));
     this.scanningDocs.delete(uriStr);
     this.scannedDocs.add(uriStr);
   }
