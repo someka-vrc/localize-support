@@ -4,8 +4,11 @@ import * as vscode from "vscode";
 import * as path from "path";
 import { POManager } from "./poManager";
 import { LocalizationChecker as ImportedLocalizationChecker } from "./localizationChecker";
-import { registerHoverProvider } from "./hoverProvider";
-import { registerCompletionProvider } from "./completionProvider";
+import { POService } from "./services/poService";
+import { LocalizationService } from "./services/localizationService";
+import { registerHoverProvider } from "./providers/hoverProvider";
+import { registerCompletionProvider } from "./providers/completionProvider";
+import { registerDefinitionProvider } from "./providers/definitionProvider";
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -30,9 +33,12 @@ export function activate(context: vscode.ExtensionContext) {
   const localizationChecker = new ImportedLocalizationChecker(context, poManager);
   context.subscriptions.push(localizationChecker);
 
-  const hoverProvider = registerHoverProvider(context, localizationChecker, poManager);
+  const poService = new POService(poManager);
+  const localizationService = new LocalizationService(localizationChecker);
 
-  const completionProvider = registerCompletionProvider(context, localizationChecker, poManager);
+  const hoverProvider = registerHoverProvider(context, localizationService, poService);
+  const completionProvider = registerCompletionProvider(context, localizationService, poService);
+  const definitionProvider = registerDefinitionProvider(context, localizationService, poService);
 
   const createConfigCmd = vscode.commands.registerCommand(
     "po-dotnet.createConfig",
@@ -98,7 +104,7 @@ export function activate(context: vscode.ExtensionContext) {
     },
   );
 
-  context.subscriptions.push(createConfigCmd, openPoCmd, hoverProvider, completionProvider);
+  context.subscriptions.push(createConfigCmd, openPoCmd, hoverProvider, completionProvider, definitionProvider);
 }
 
 // This method is called when your extension is deactivated

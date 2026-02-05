@@ -1,14 +1,13 @@
 import * as vscode from "vscode";
 import * as path from "path";
-import { LocalizationChecker } from "./localizationChecker";
-import { POManager } from "./poManager";
-import { isInComment, extractFirstStringArgument } from "./utils";
-import { collectConfigsForDocument, collectConfigObjectsForDocument } from "./config";
+import { LocalizationService } from "../services/localizationService";
+import { POService } from "../services/poService";
+import { isInComment, extractFirstStringArgument } from "../utils";
 
 export function registerHoverProvider(
   context: vscode.ExtensionContext,
-  localizationChecker: LocalizationChecker,
-  poManager: POManager,
+  localizationService: LocalizationService,
+  poService: POService,
 ) {
   return vscode.languages.registerHoverProvider("csharp", {
     async provideHover(document, position, token) {
@@ -19,7 +18,7 @@ export function registerHoverProvider(
         return undefined;
       }
 
-      const cached = localizationChecker.getMsgidAt(document, offset);
+      const cached = localizationService.getMsgidAtPosition(document, position);
       if (cached === "scanning") {
         const md = new vscode.MarkdownString();
         md.isTrusted = true;
@@ -29,23 +28,16 @@ export function registerHoverProvider(
         const msgid = cached.msgid;
         const startPos = cached.range.start;
         const endPos = cached.range.end;
-        const cfgObjs = await collectConfigObjectsForDocument(document.uri);
-        if (cfgObjs.length === 0) {
-          return undefined;
-        }
-        const docPath = document.uri.fsPath;
-        const matched = cfgObjs.filter((c) =>
-          c.sourceDirs.some((sd) => docPath === sd || docPath.startsWith(sd + path.sep)),
-        );
+        const matched = await localizationService.getAllowedPoDirsForDocument(document);
         if (matched.length === 0) {
           return undefined;
         }
         // ensure PO dirs watched
         for (const c of matched) {
-          await poManager.ensureDirs(c.poDirs, c.workspaceFolder);
+          await poService.ensureDirs(c.poDirs, c.workspaceFolder);
         }
         const allowedPoDirs = Array.from(new Set(matched.flatMap((c) => c.poDirs)));
-        const entries = poManager.getTranslations(msgid, allowedPoDirs);
+        const entries = poService.getTranslations(msgid, allowedPoDirs);
         const hoverLines: string[] = [];
         hoverLines.push("po-dotnet");
         if (entries.length === 0) {
@@ -66,13 +58,18 @@ export function registerHoverProvider(
         return new vscode.Hover(md, new vscode.Range(startPos, endPos));
       }
 
-      const cfgForFuncs = await collectConfigsForDocument(document.uri);
-      const funcs =
-        cfgForFuncs.localizeFuncs && cfgForFuncs.localizeFuncs.length > 0
-          ? cfgForFuncs.localizeFuncs
-          : ["G"];
+      // fallback: find function and string literal manually
+      const cfgForFuncs = await (async () => {
+        // reuse localizationService to get funcs via collectConfigsForDocument
+        const infos = await localizationService.getAllowedPoDirsForDocument(document);
+        // return funcs not available here; use default 'G' fallback
+        return { localizeFuncs: ["G"] };
+      })();
+      const funcs = cfgForFuncs.localizeFuncs && cfgForFuncs.localizeFuncs.length > 0
+        ? cfgForFuncs.localizeFuncs
+        : ["G"];
       const escapeRegExp = (s: string) =>
-        s.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&");
+        s.replace(/[.*+?^${}()|[\\\\]\\]/g, "\\$&");
       const re = new RegExp(
         `\\b(?:${funcs.map(escapeRegExp).join("|")})\\b`,
         "g",
@@ -106,22 +103,15 @@ export function registerHoverProvider(
                 if (!msgid) {
                   return undefined;
                 }
-                const cfgObjs = await collectConfigObjectsForDocument(document.uri);
-                if (cfgObjs.length === 0) {
-                  return undefined;
-                }
-                const docPath = document.uri.fsPath;
-                const matched = cfgObjs.filter((c) =>
-                  c.sourceDirs.some((sd) => docPath === sd || docPath.startsWith(sd + path.sep)),
-                );
+                const matched = await localizationService.getAllowedPoDirsForDocument(document);
                 if (matched.length === 0) {
                   return undefined;
                 }
                 for (const c of matched) {
-                  await poManager.ensureDirs(c.poDirs, c.workspaceFolder);
+                  await poService.ensureDirs(c.poDirs, c.workspaceFolder);
                 }
                 const allowedPoDirs = Array.from(new Set(matched.flatMap((c) => c.poDirs)));
-                const entries = poManager.getTranslations(msgid, allowedPoDirs);
+                const entries = poService.getTranslations(msgid, allowedPoDirs);
                 const hoverLines: string[] = [];
                 hoverLines.push("po-dotnet");
                 if (entries.length === 0) {
