@@ -10,7 +10,10 @@ export function parsePo(content: string): Map<string, {translation: string; line
     if (msgidParts.length > 0) {
       const id = msgidParts.join("");
       const str = msgstrParts.join("");
-      map.set(unescapePo(id), { translation: unescapePo(str), line: msgidLine });
+      // Ignore header entries where both msgid and msgstr are empty (metadata header like "Language: ...")
+      if (!(id.trim() === "" && str.trim() === "")) {
+        map.set(unescapePo(id), { translation: unescapePo(str), line: msgidLine });
+      }
     }
     msgidParts = [];
     msgstrParts = [];
@@ -64,7 +67,10 @@ export function parsePoEntries(content: string) {
     if (msgidParts.length > 0) {
       const id = msgidParts.join("");
       const str = msgstrParts.join("");
-      entries.push({ id: unescapePo(id), translation: unescapePo(str), line: msgidLine });
+      // Ignore header entries where both msgid and msgstr are empty (they serve as file metadata)
+      if (!(id.trim() === "" && str.trim() === "")) {
+        entries.push({ id: unescapePo(id), translation: unescapePo(str), line: msgidLine });
+      }
     }
     msgidParts = [];
     msgstrParts = [];

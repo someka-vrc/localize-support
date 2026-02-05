@@ -376,6 +376,11 @@ export class LocalizationChecker implements vscode.Disposable {
           try {
             const msgids = this.poManager.getAllMsgids(allowedPoDirs);
             for (const msgid of msgids) {
+              // Skip header-like entries with empty msgid — they represent file metadata and should not be diagnosed as unused
+              if (msgid.trim() === "") {
+                continue;
+              }
+
               // Use existing getReferences (which respects allowedSourceDirs) to detect usage.
               let refs = this.getReferences(msgid, allowedSourceDirs);
               if (refs && refs.length > 0) {
@@ -468,6 +473,10 @@ export class LocalizationChecker implements vscode.Disposable {
                 const entries = parsePoEntries(doc.getText());
                 const dupMap = new Map<string, number[]>();
                 for (const e of entries) {
+                  // ignore header / metadata entry with empty id
+                  if (e.id === "") {
+                    continue;
+                  }
                   const arr = dupMap.get(e.id) || [];
                   arr.push(e.line);
                   dupMap.set(e.id, arr);
