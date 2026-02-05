@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import * as path from "path";
 import { POManager } from "./poManager";
-import { extractFirstStringArgument } from "../utils";
+import { extractFirstStringArgument, parsePoEntries } from "../utils";
 import { collectConfigObjectsForDocument } from "../config";
 
 export class LocalizationChecker implements vscode.Disposable {
@@ -456,6 +456,66 @@ export class LocalizationChecker implements vscode.Disposable {
             }
           } catch (err) {
             console.error("po-dotnet: error while computing unused PO diagnostics", err);
+          }
+
+          // Detect duplicate msgid definitions within individual PO files and emit warnings
+          try {
+            const poUris = this.poManager.getPOFileUris(allowedPoDirs);
+            for (const uri of poUris) {
+              relevantPoUris.add(uri.toString());
+              try {
+                const doc = await vscode.workspace.openTextDocument(uri);
+                const entries = parsePoEntries(doc.getText());
+                const dupMap = new Map<string, number[]>();
+                for (const e of entries) {
+                  const arr = dupMap.get(e.id) || [];
+                  arr.push(e.line);
+                  dupMap.set(e.id, arr);
+                }
+                for (const [id, lines] of dupMap) {
+                  if (lines.length > 1) {
+                    const displayKey = id.replace(/\s+/g, " ").trim();
+                    const truncated = displayKey.length > 40 ? displayKey.slice(0, 40) + "…" : displayKey;
+                    for (let idx = 1; idx < lines.length; idx++) {
+                      const lineNum = lines[idx];
+                      let range: vscode.Range;
+                      try {
+                        const lineText = doc.lineAt(lineNum).text;
+                        const firstQuote = lineText.indexOf('"');
+                        let startCol = 0;
+                        let endCol = lineText.length;
+                        if (firstQuote >= 0) {
+                          const secondQuote = lineText.indexOf('"', firstQuote + 1);
+                          if (secondQuote > firstQuote) {
+                            startCol = firstQuote + 1;
+                            endCol = secondQuote;
+                          } else {
+                            startCol = firstQuote;
+                            endCol = firstQuote + 1;
+                          }
+                        }
+                        range = new vscode.Range(new vscode.Position(lineNum, startCol), new vscode.Position(lineNum, endCol));
+                      } catch (err) {
+                        range = new vscode.Range(new vscode.Position(lineNum, 0), new vscode.Position(lineNum, 0));
+                      }
+                      const firstLine = lines[0] + 1;
+                      const message = `Duplicate PO entry '${truncated}' (also at line ${firstLine})`;
+                      const diag = new vscode.Diagnostic(range, message, vscode.DiagnosticSeverity.Warning);
+                      diag.source = "po-dotnet";
+
+                      if (!poDiags.has(uri.toString())) {
+                        poDiags.set(uri.toString(), []);
+                      }
+                      poDiags.get(uri.toString())!.push(diag);
+                    }
+                  }
+                }
+              } catch (err) {
+                // ignore
+              }
+            }
+          } catch (err) {
+            // ignore
           }
         }
       }

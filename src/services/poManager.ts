@@ -237,4 +237,25 @@ export class POManager {
     }
     return set;
   }
+
+  public getPOFileUris(allowedDirs?: string[]) {
+    const uris: vscode.Uri[] = [];
+    for (const uriStr of this.cache.keys()) {
+      const uri = vscode.Uri.parse(uriStr);
+      if (allowedDirs && allowedDirs.length > 0) {
+        let ok = false;
+        for (const d of allowedDirs) {
+          if (this.pathIsUnder(uri.fsPath, d)) {
+            ok = true;
+            break;
+          }
+        }
+        if (!ok) {
+          continue;
+        }
+      }
+      uris.push(uri);
+    }
+    return uris;
+  }
 }

@@ -52,6 +52,60 @@ export function parsePo(content: string): Map<string, {translation: string; line
   return map;
 }
 
+export function parsePoEntries(content: string) {
+  const entries: Array<{id: string; translation: string; line: number}> = [];
+  const lines = content.split(/\r?\n/);
+  let state: "none" | "msgid" | "msgstr" = "none";
+  let msgidParts: string[] = [];
+  let msgstrParts: string[] = [];
+  let msgidLine = 0;
+
+  const flushEntry = () => {
+    if (msgidParts.length > 0) {
+      const id = msgidParts.join("");
+      const str = msgstrParts.join("");
+      entries.push({ id: unescapePo(id), translation: unescapePo(str), line: msgidLine });
+    }
+    msgidParts = [];
+    msgstrParts = [];
+    state = "none";
+    msgidLine = 0;
+  };
+
+  for (let idx = 0; idx < lines.length; idx++) {
+    const raw = lines[idx];
+    const line = raw.trim();
+    if (line.startsWith("msgid")) {
+      if (state !== "none") {
+        flushEntry();
+      }
+      msgidParts = [extractQuoted(line)];
+      msgidLine = idx;
+      state = "msgid";
+    } else if (line.startsWith("msgstr")) {
+      msgstrParts = [extractQuoted(line)];
+      state = "msgstr";
+    } else {
+      const m = line.match(/^"(.*)"$/);
+      if (m) {
+        if (state === "msgid") {
+          msgidParts.push(m[1]);
+        } else if (state === "msgstr") {
+          msgstrParts.push(m[1]);
+        }
+      } else if (line === "") {
+        if (state !== "none") {
+          flushEntry();
+        }
+      }
+    }
+  }
+  if (state !== "none") {
+    flushEntry();
+  }
+  return entries;
+}
+
 export function extractQuoted(line: string) {
   const first = line.indexOf('"');
   const last = line.lastIndexOf('"');
