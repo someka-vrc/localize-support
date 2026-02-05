@@ -5,7 +5,7 @@ import { parsePo } from "../utils";
 export class POManager {
   private cache = new Map<string, Map<string, {translation: string; line: number}>>(); // uri -> map
   private watchers = new Map<string, vscode.FileSystemWatcher>(); // dir -> watcher
-  private _onDidChange = new vscode.EventEmitter<void>();
+  private _onDidChange = new vscode.EventEmitter<{ uri: string }>();
   public readonly onDidChange = this._onDidChange.event;
   constructor(private context: vscode.ExtensionContext) {
     // Watch open/changed/closed text documents for in-memory edits of .po files
@@ -16,7 +16,7 @@ export class POManager {
           try {
             const map = parsePo(doc.getText());
             this.cache.set(doc.uri.toString(), map);
-            this._onDidChange.fire();
+            this._onDidChange.fire({ uri: doc.uri.toString() });
           } catch (e) {
             // ignore parse errors from in-progress edits
           }
@@ -28,7 +28,7 @@ export class POManager {
           try {
             const map = parsePo(doc.getText());
             this.cache.set(doc.uri.toString(), map);
-            this._onDidChange.fire();
+            this._onDidChange.fire({ uri: doc.uri.toString() });
           } catch (err) {
             // ignore parse errors while typing
           }
@@ -81,7 +81,7 @@ export class POManager {
         watcher.onDidChange((uri) => this.readAndParse(uri));
         watcher.onDidDelete((uri) => {
           this.cache.delete(uri.toString());
-          this._onDidChange.fire();
+          this._onDidChange.fire({ uri: uri.toString() });
         });
         this.watchers.set(dir, watcher);
         await this.scanDir(dir, workspaceFolder);
@@ -114,15 +114,29 @@ export class POManager {
 
   private async readAndParse(uri: vscode.Uri) {
     try {
+      // If the file is open in an editor, prefer its buffer to avoid
+      // overwriting unsaved in-memory changes.
+      const openDoc = vscode.workspace.textDocuments.find((d) => d.uri.toString() === uri.toString());
+      if (openDoc) {
+        try {
+          const map = parsePo(openDoc.getText());
+          this.cache.set(uri.toString(), map);
+          this._onDidChange.fire({ uri: uri.toString() });
+          return;
+        } catch (e) {
+          // ignore parse errors from in-progress edits and fallback to disk read
+        }
+      }
+
       const bytes = await vscode.workspace.fs.readFile(uri);
       const content = new TextDecoder("utf-8").decode(bytes);
       const map = parsePo(content);
       this.cache.set(uri.toString(), map);
-      this._onDidChange.fire();
+      this._onDidChange.fire({ uri: uri.toString() });
     } catch (e) {
       console.error("Error reading/parsing PO file", uri.toString(), e);
       this.cache.delete(uri.toString());
-      this._onDidChange.fire();
+      this._onDidChange.fire({ uri: uri.toString() });
     }
   }
 

@@ -32,7 +32,29 @@ export class LocalizationChecker implements vscode.Disposable {
       configWatcher.onDidChange(() => this.triggerScan());
       configWatcher.onDidDelete(() => this.triggerScan());
       this.disposables.push(
-        this.poManager.onDidChange(() => this.triggerScan()),
+        this.poManager.onDidChange(async (e) => {
+          try {
+            if (e && e.uri) {
+              const uri = vscode.Uri.parse(e.uri);
+              const cfgs = await collectConfigObjectsForDocument(uri);
+              if (cfgs && cfgs.length > 0) {
+                // gather all sourceDirs from configs and de-duplicate
+                const dirs = cfgs.reduce((acc: string[], c) => acc.concat(c.sourceDirs || []), [] as string[]);
+                const allSourceDirs = Array.from(new Set(dirs));
+                if (allSourceDirs.length > 0) {
+                  console.log(`po-dotnet: PO changed ${uri.fsPath}, scanning ${allSourceDirs.length} source dirs`);
+                  await this.scanDirs(allSourceDirs, cfgs);
+                  return;
+                }
+              }
+            }
+            // fallback to full scan
+            await this.triggerScan();
+          } catch (err) {
+            console.error("po-dotnet: error handling PO change", err);
+            await this.triggerScan();
+          }
+        }),
       );
       this.disposables.push(
         vscode.workspace.onDidChangeTextDocument((e) =>
