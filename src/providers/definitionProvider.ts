@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { LocalizationService } from "../services/localizationService";
 import { POService } from "../services/poService";
-import { extractFirstStringArgument } from "../utils";
+import { extractFirstStringArgumentRange } from "../utils";
 
 export function registerDefinitionProvider(
   context: vscode.ExtensionContext,
@@ -60,12 +60,12 @@ export function registerDefinitionProvider(
           return undefined;
         }
         const inside = text.substring(parenIndex + 1, j);
-        const extracted = extractFirstStringArgument(inside);
-        if (!extracted) {
+        const arg = extractFirstStringArgumentRange(inside, parenIndex + 1);
+        if (!arg) {
           return undefined;
         }
-        msgid = extracted;
-        originRange = new vscode.Range(document.positionAt(parenIndex), document.positionAt(j + 1));
+        msgid = arg.msgid;
+        originRange = new vscode.Range(document.positionAt(arg.start), document.positionAt(arg.end));
       }
 
       if (!msgid) {

@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import * as path from "path";
 import { LocalizationService } from "../services/localizationService";
 import { POService } from "../services/poService";
-import { isInComment, extractFirstStringArgument } from "../utils";
+import { isInComment, extractFirstStringArgumentRange } from "../utils";
 
 export function registerHoverProvider(
   context: vscode.ExtensionContext,
@@ -93,16 +93,15 @@ export function registerHoverProvider(
           } else if (ch === ")") {
             depth--;
             if (depth === 0) {
-              const startPos = document.positionAt(matchIndex);
-              const endPos = document.positionAt(j + 1);
-              const startOffset = matchIndex;
-              const endOffset = j + 1;
+              const inside = text.substring(i + 1, j);
+              const arg = extractFirstStringArgumentRange(inside, i + 1);
+              if (!arg) {
+                break;
+              }
+              const startOffset = arg.start;
+              const endOffset = arg.end;
               if (offset >= startOffset && offset <= endOffset) {
-                const inside = text.substring(i + 1, j);
-                const msgid = extractFirstStringArgument(inside);
-                if (!msgid) {
-                  return undefined;
-                }
+                const msgid = arg.msgid;
                 const matched = await localizationService.getAllowedPoDirsForDocument(document);
                 if (matched.length === 0) {
                   return undefined;
@@ -130,6 +129,8 @@ export function registerHoverProvider(
                 }
                 const md = new vscode.MarkdownString("", true);
                 md.isTrusted = true;
+                const startPos = document.positionAt(startOffset);
+                const endPos = document.positionAt(endOffset);
                 md.appendMarkdown(hoverLines.join("\n\n"));
                 return new vscode.Hover(md, new vscode.Range(startPos, endPos));
               }

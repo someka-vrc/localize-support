@@ -211,3 +211,64 @@ export function extractFirstStringArgument(inside: string) {
   }
   return null;
 }
+
+// Return the msgid and its absolute start/end offsets (end is the offset of the closing quote, exclusive)
+export function extractFirstStringArgumentRange(inside: string, baseOffset: number) {
+  let i = 0;
+  while (i < inside.length && /\s/.test(inside[i])) {
+    i++;
+  }
+  if (i >= inside.length) {
+    return null;
+  }
+  if (inside[i] === '@' && inside[i + 1] === '"') {
+    const start = i + 2;
+    let j = start;
+    let out = '';
+    while (j < inside.length) {
+      if (inside[j] === '"') {
+        if (inside[j + 1] === '"') {
+          out += '"';
+          j += 2;
+          continue;
+        }
+        return { msgid: out, start: baseOffset + start, end: baseOffset + j };
+      }
+      out += inside[j++];
+    }
+    return null;
+  } else if (inside[i] === '"') {
+    const start = i + 1;
+    let j = start;
+    let out = '';
+    while (j < inside.length) {
+      if (inside[j] === '"') {
+        // determine if quote is escaped by counting preceding backslashes
+        let k = j - 1;
+        let backslashes = 0;
+        while (k >= 0 && inside[k] === '\\') {
+          backslashes++;
+          k--;
+        }
+        if (backslashes % 2 === 0) {
+          return { msgid: unescapePo(out), start: baseOffset + start, end: baseOffset + j };
+        }
+      }
+      if (inside[j] === "\\" && j + 1 < inside.length) {
+        const esc = inside[j + 1];
+        if (esc === 'n') {
+          out += '\n';
+        } else if (esc === 't') {
+          out += '\t';
+        } else {
+          out += esc;
+        }
+        j += 2;
+        continue;
+      }
+      out += inside[j++];
+    }
+    return null;
+  }
+  return null;
+}

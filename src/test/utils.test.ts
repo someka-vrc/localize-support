@@ -1,5 +1,5 @@
 import * as assert from 'assert';
-import { parsePoEntries } from '../utils';
+import { parsePoEntries, extractFirstStringArgumentRange } from '../utils';
 
 suite('Utils - parsePoEntries', () => {
   test('detects duplicate msgid entries', () => {
@@ -40,5 +40,24 @@ msgstr "some value"
     const emptyEntry = entries.find(e => e.id === '');
     assert.ok(emptyEntry);
     assert.strictEqual(emptyEntry!.translation, 'some value');
+  });
+
+  test('extractFirstStringArgumentRange - basic', () => {
+    const inside = '  "hello" , 1,2';
+    const res = extractFirstStringArgumentRange(inside, 0);
+    assert.ok(res);
+    assert.strictEqual(res!.msgid, 'hello');
+    assert.strictEqual(res!.start, 2);
+    assert.strictEqual(res!.end, 7);
+  });
+
+  test('extractFirstStringArgumentRange - escaped', () => {
+    const inside = '"abc\\\"d"';
+    const res = extractFirstStringArgumentRange(inside, 0);
+    assert.ok(res);
+    assert.strictEqual(res!.msgid, 'abc"d');
+    assert.strictEqual(res!.start, 1);
+    // end should point to the index of closing quote
+    assert.strictEqual(res!.end, inside.indexOf('"', 1 + 1));
   });
 });

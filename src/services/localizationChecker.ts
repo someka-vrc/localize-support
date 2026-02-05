@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import * as path from "path";
 import { POManager } from "./poManager";
-import { extractFirstStringArgument, parsePoEntries } from "../utils";
+import { extractFirstStringArgument, extractFirstStringArgumentRange, parsePoEntries } from "../utils";
 import { collectConfigObjectsForDocument } from "../config";
 
 export class LocalizationChecker implements vscode.Disposable {
@@ -614,17 +614,18 @@ export class LocalizationChecker implements vscode.Disposable {
           depth--;
           if (depth === 0) {
             const inside = text.substring(i + 1, j);
-            const msgid = extractFirstStringArgument(inside);
-            if (!msgid) {
+            const arg = extractFirstStringArgumentRange(inside, i + 1);
+            if (!arg) {
               break;
             }
             entries.push({
               range: new vscode.Range(
-                document.positionAt(matchIndex),
-                document.positionAt(j + 1),
+                document.positionAt(arg.start),
+                document.positionAt(arg.end),
               ),
-              msgid,
+              msgid: arg.msgid,
             });
+            const msgid = arg.msgid;
             // restrict search to poDirs corresponding to this document; if none, skip (no fallback)
             const allowedPoDirs: string[] = [];
             for (const c of matchedCfgs) {
