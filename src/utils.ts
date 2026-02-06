@@ -278,55 +278,26 @@ export function extractFirstStringArgumentRange(inside: string, baseOffset: numb
   return null;
 }
 
+import { ParserManager } from "./parsers/parserManager";
+import { RegexSourceParser } from "./parsers/regexSourceParser";
+import { SourceParser } from "./parsers/sourceParser";
+
+const defaultParserManager = new ParserManager([new RegexSourceParser()]);
+
+export function setSourceParsers(parsers: SourceParser[]) {
+  defaultParserManager.setParsers(parsers);
+}
+
+export function getSourceParserManager() {
+  return defaultParserManager;
+}
+
 // Find all localization function calls in the text and return their msgid ranges and metadata.
 export function findAllLocalizationCalls(text: string, funcs: string[] = ['G']) {
-  const res: Array<{ msgid: string; start: number; end: number; callStart: number; callEnd: number; funcName: string }> = [];
-  if (!funcs || funcs.length === 0) {
-    funcs = ['G'];
-  }
-  const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&");
-  const re = new RegExp(`\\b(?:${funcs.map(escapeRegExp).join("|")})\\b`, "g");
-  let match: RegExpExecArray | null;
-  while ((match = re.exec(text)) !== null) {
-    const matchIndex = match.index;
-    let i = matchIndex + match[0].length;
-    while (i < text.length && /\s/.test(text[i])) {
-      i++;
-    }
-    if (i >= text.length || text[i] !== '(') {
-      continue;
-    }
-    let depth = 0;
-    let j = i;
-    for (; j < text.length; j++) {
-      const ch = text[j];
-      if (ch === '(') {
-        depth++;
-      } else if (ch === ')') {
-        depth--;
-        if (depth === 0) {
-          const inside = text.substring(i + 1, j);
-          const arg = extractFirstStringArgumentRange(inside, i + 1);
-          if (!arg) {
-            break;
-          }
-          res.push({ msgid: arg.msgid, start: arg.start, end: arg.end, callStart: matchIndex, callEnd: j + 1, funcName: match[0] });
-          break;
-        }
-      }
-    }
-  }
-  return res;
+  return defaultParserManager.findAllLocalizationCalls(text, funcs);
 }
 
 // Find a localization call (if any) that contains the given offset
 export function findLocalizationCallAtOffset(text: string, offset: number, funcs: string[] = ['G']) {
-  const calls = findAllLocalizationCalls(text, funcs);
-  for (const c of calls) {
-    // end is exclusive
-    if (offset >= c.start && offset < c.end) {
-      return c;
-    }
-  }
-  return null;
+  return defaultParserManager.findLocalizationCallAtOffset(text, offset, funcs);
 }

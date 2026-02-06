@@ -11,3 +11,11 @@
 
 CI では `npm run test:unit` を高速に回せ、必要に応じて npm run `test:integration` を別ジョブで実行できます（推奨）。
 今後は VS Code に依存するテストは必ず `test/integration` に入れてください。
+
+## Parsers / ソースコードパーサについて 🔧
+
+- ソースコード中のローカライズ関数の検出処理は抽象化されています。
+  - `src/parsers/sourceParser.ts` の `SourceParser` インターフェースを実装することで、正規表現ベース以外のパーサ（AST 等）を追加できます。
+  - デフォルトは `RegexSourceParser`（`src/parsers/regexSourceParser.ts`）です。
+  - パーサの登録／切替は `src/utils.ts` の `setSourceParsers()` を使って行います。フォールバックとして複数のパーサを順に試す `ParserManager` が用意されています。
+- 新しいパーサを追加する場合は、単体テストとエラーハンドリング（例: フォールバック時にスローされる場合の振る舞い）を必ず追加してください。
