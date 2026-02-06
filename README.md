@@ -36,11 +36,13 @@ Example (`settings.json`):
 {
   "poDotnet.config": [
     {
+      "languages": ["csharp"],
       "sourceDirs": ["./foo"],
       "poDirs": ["./fooL10N"],
       "localizeFuncs": ["G"]
     },
     {
+      "languages": ["csharp"],
       "sourceDirs": ["./bar"],
       "poDirs": ["./barL10N"],
       "localizeFuncs": ["G"]
@@ -50,10 +52,11 @@ Example (`settings.json`):
 }
 ```
 
+- `languages`: Specifies the programming languages.
 - `sourceDirs`: Specifies folders that contain `.cs` files. Subfolders are also included. Use paths relative to the configuration file; `.` is usually sufficient. Specify more precisely if you want the extension to operate only on certain folders.
 - `poDirs`: Specifies folders that contain `.po` files. Subfolders are also included. Use paths relative to the configuration file.
 - `localizeFuncs`: Specifies the names of localization functions.
-- `wasmCdnBaseURL`: Settings only. ptional setting to control where tree-sitter wasm files are fetched from. By default, it uses unpkg.
+- `wasmCdnBaseURL`: Settings only. Optional setting to control where tree-sitter wasm files are fetched from. By default, it uses unpkg.
 
 ---
 
@@ -79,6 +82,7 @@ C# ソースコード上のローカライズを支援する拡張機能です�
 {
   "config": [
     {
+      "languages": ["csharp"],
       "sourceDirs": ["."],
       "poDirs": ["./L10N"],
       "localizeFuncs": ["G"]
@@ -94,19 +98,24 @@ C# ソースコード上のローカライズを支援する拡張機能です�
 {
   "poDotnet.config": [
     {
+      "languages": ["csharp"],
       "sourceDirs": ["./foo"],
       "poDirs": ["./fooL10N"],
       "localizeFuncs": ["G"]
     },
     {
+      "languages": ["csharp"],
       "sourceDirs": ["./bar"],
       "poDirs": ["./barL10N"],
       "localizeFuncs": ["G"]
     }
-  ]
+  ], 
+  "poDotnet.wasmCdnBaseURL": "https://unpkg.com/tree-sitter-wasms@latest/out/"
 }
 ```
 
+- `languages`: プログラミング言語を指定します。
 - `sourceDirs`: .cs ファイルのフォルダを指定します。サブフォルダも対象となります。設定ファイルからの相対パスで指定してください。通常は `.` で十分です。一部のフォルダでのみ機能させたい場合は詳細に指定してください。
 - `poDirs`: .po ファイルのフォルダを指定します。サブフォルダも対象となります。設定ファイルからの相対パスで指定してください。
 - `localizeFuncs`: ローカライズ関数の名前を指定します。
+- `wasmCdnBaseURL`: Settings のみ。オプション設定で、tree-sitter wasm ファイルの取得元を制御します。デフォルトでは unpkg を使用します。
