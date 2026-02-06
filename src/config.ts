@@ -48,8 +48,6 @@ export async function collectConfigsForDocument(documentUri: vscode.Uri) {
           for (const cfg of parsed.config) {
             processCfg(cfg);
           }
-        } else {
-          processCfg(parsed);
         }
       } catch (e) {
         // no config here or parse error -- ignore
@@ -173,8 +171,6 @@ export async function collectConfigObjectsForDocument(documentUri: vscode.Uri) {
       for (const cfg of s) {
         addCfg(cfg);
       }
-    } else if (s && typeof s === "object") {
-      addCfg(s);
     }
   } catch (e) {
     // ignore config read errors

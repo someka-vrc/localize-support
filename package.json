@@ -52,31 +52,17 @@
       "properties": {
         "poDotnet.config": {
           "description": "Array of configuration objects similar to podotnetconfig.json (folder-scoped settings supported). Each item configures sourceDirs, poDirs and localizeFuncs.",
-          "oneOf": [
-            {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "sourceDirs": { "type": "array", "items": { "type": "string" } },
-                  "poDirs": { "type": "array", "items": { "type": "string" } },
-                  "localizeFuncs": { "type": "array", "items": { "type": "string" } }
-                },
-                "required": ["sourceDirs", "poDirs", "localizeFuncs"],
-                "additionalProperties": false
-              }
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "sourceDirs": { "type": "array", "items": { "type": "string" } },
+              "poDirs": { "type": "array", "items": { "type": "string" } },
+              "localizeFuncs": { "type": "array", "items": { "type": "string" } }
             },
-            {
-              "type": "object",
-              "properties": {
-                "sourceDirs": { "type": "array", "items": { "type": "string" } },
-                "poDirs": { "type": "array", "items": { "type": "string" } },
-                "localizeFuncs": { "type": "array", "items": { "type": "string" } }
-              },
-              "required": ["sourceDirs", "poDirs", "localizeFuncs"],
-              "additionalProperties": false
-            }
-          ]
+            "required": ["sourceDirs", "poDirs", "localizeFuncs"],
+            "additionalProperties": false
+          }
         }
       }
     }

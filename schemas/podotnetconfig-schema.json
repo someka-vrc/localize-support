@@ -43,34 +43,6 @@
       },
       "required": ["config"],
       "additionalProperties": false
-    },
-    {
-      "description": "Legacy single-config object (kept for backward compatibility)",
-      "properties": {
-        "sourceDirs": {
-          "type": "array",
-          "items": { "type": "string", "minLength": 1 },
-          "minItems": 1,
-          "uniqueItems": true,
-          "examples": ["."]
-        },
-        "poDirs": {
-          "type": "array",
-          "items": { "type": "string", "minLength": 1 },
-          "minItems": 1,
-          "uniqueItems": true,
-          "examples": ["./L10N"]
-        },
-        "localizeFuncs": {
-          "type": "array",
-          "items": { "type": "string", "minLength": 1 },
-          "minItems": 1,
-          "uniqueItems": true,
-          "examples": ["G"]
-        }
-      },
-      "required": ["sourceDirs", "poDirs", "localizeFuncs"],
-      "additionalProperties": false
     }
   ],
   "examples": [
@@ -82,11 +54,6 @@
           "localizeFuncs": ["G"]
         }
       ]
-    },
-    {
-      "sourceDirs": ["."],
-      "poDirs": ["./L10N"],
-      "localizeFuncs": ["G"]
     }
   ]
 }
