@@ -234,15 +234,15 @@ export function extractFirstStringArgumentRange(inside: string, baseOffset: numb
           j += 2;
           continue;
         }
-        // return start as index of opening quote, end as index of last char inside
-        return { msgid: out, start: baseOffset + start, end: baseOffset + (j - 1) };
+        // return start as index of first char inside, end as index of closing quote (exclusive)
+        return { msgid: out, start: baseOffset + (i + 2), end: baseOffset + j };
       }
       out += inside[j++];
     }
     return null;
   } else if (inside[i] === '"') {
     // normal string: opening quote is at i
-    const start = i; // opening quote index
+    // opening quote is at i, first char inside at i+1
     let j = i + 1;
     let out = '';
     while (j < inside.length) {
@@ -255,8 +255,8 @@ export function extractFirstStringArgumentRange(inside: string, baseOffset: numb
           k--;
         }
         if (backslashes % 2 === 0) {
-          // return start as index of opening quote, end as index of last char inside
-          return { msgid: unescapePo(out), start: baseOffset + start, end: baseOffset + (j - 1) };
+          // return start as index of first char inside, end as index of closing quote (exclusive)
+          return { msgid: unescapePo(out), start: baseOffset + (i + 1), end: baseOffset + j };
         }
       }
       if (inside[j] === "\\" && j + 1 < inside.length) {
@@ -323,7 +323,8 @@ export function findAllLocalizationCalls(text: string, funcs: string[] = ['G']) 
 export function findLocalizationCallAtOffset(text: string, offset: number, funcs: string[] = ['G']) {
   const calls = findAllLocalizationCalls(text, funcs);
   for (const c of calls) {
-    if (offset >= c.start && offset <= c.end) {
+    // end is exclusive
+    if (offset >= c.start && offset < c.end) {
       return c;
     }
   }

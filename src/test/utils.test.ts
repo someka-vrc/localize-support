@@ -1,3 +1,4 @@
+import './setup';
 import * as assert from 'assert';
 import { parsePoEntries, extractFirstStringArgumentRange } from '../utils';
 
@@ -47,8 +48,10 @@ msgstr "some value"
     const res = extractFirstStringArgumentRange(inside, 0);
     assert.ok(res);
     assert.strictEqual(res!.msgid, 'hello');
-    assert.strictEqual(res!.start, 2);
-    assert.strictEqual(res!.end, 7);
+    // opening quote at index 2, first char at 3
+    assert.strictEqual(res!.start, 3);
+    // closing quote at index 8, end should be 8
+    assert.strictEqual(res!.end, 8);
   });
 
   test('extractFirstStringArgumentRange - escaped', () => {
@@ -56,10 +59,10 @@ msgstr "some value"
     const res = extractFirstStringArgumentRange(inside, 0);
     assert.ok(res);
     assert.strictEqual(res!.msgid, 'abc"d');
-    // start should point to the opening quote (index 0 in this case)
-    assert.strictEqual(res!.start, inside.indexOf('"'));
-    // end should point to the last character inside (closing quote - 1)
-    assert.strictEqual(res!.end, inside.lastIndexOf('"') - 1);
+    // start should point to the first char inside (index 1 in this case)
+    assert.strictEqual(res!.start, inside.indexOf('"') + 1);
+    // end should point to the closing quote index (exclusive)
+    assert.strictEqual(res!.end, inside.lastIndexOf('"'));
   });
 
   test('findAllLocalizationCalls and findLocalizationCallAtOffset', () => {

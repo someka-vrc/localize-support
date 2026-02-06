@@ -1,7 +1,13 @@
-import * as vscode from "vscode";
+import type * as vscode from "vscode";
 import * as path from "path";
 import { POManager } from "./poManager";
 import { parsePoEntries } from "../utils";
+
+function getVscode() {
+  // lazy require to avoid loading 'vscode' in plain node test runs
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  return require('vscode') as typeof import('vscode');
+}
 
 // Pure helpers (easy to unit test)
 export function determineUnusedStatuses(
@@ -34,7 +40,7 @@ export function detectDuplicateMap(entries: Array<{ id: string; translation: str
   return res;
 }
 
-export function computeQuoteRangeFromDocLine(doc: vscode.TextDocument, lineNum: number) {
+export function computeQuoteRangeFromDocLine(doc: { lineAt(n:number): { text: string } }, lineNum: number) {
   try {
     const lineText = doc.lineAt(lineNum).text;
     const firstQuote = lineText.indexOf('"');
@@ -50,9 +56,10 @@ export function computeQuoteRangeFromDocLine(doc: vscode.TextDocument, lineNum: 
         endCol = firstQuote + 1;
       }
     }
-    return new vscode.Range(new vscode.Position(lineNum, startCol), new vscode.Position(lineNum, endCol));
+    // Return a plain object with shape similar to vscode.Range so unit tests don't need 'vscode' at runtime
+    return { start: { line: lineNum, character: startCol }, end: { line: lineNum, character: endCol } };
   } catch (err) {
-    return new vscode.Range(new vscode.Position(lineNum, 0), new vscode.Position(lineNum, 0));
+    return { start: { line: lineNum, character: 0 }, end: { line: lineNum, character: 0 } };
   }
 }
 
@@ -100,14 +107,19 @@ export class PODiagnostics {
               const uriStr = s.uri.toString();
               relevantPoUris.add(uriStr);
               try {
-                const doc = await vscode.workspace.openTextDocument(s.uri);
+                const vscodeRt = getVscode();
+                const doc = await vscodeRt.workspace.openTextDocument(s.uri);
                 const lineNum = s.line || 0;
                 const range = computeQuoteRangeFromDocLine(doc, lineNum);
 
                 const displayKey = msgid.replace(/\s+/g, " ");
                 const truncated = displayKey.length > 40 ? displayKey.slice(0, 40) + "…" : displayKey;
                 const message = `Unused PO entry '${truncated}'`;
-                const diag = new vscode.Diagnostic(range, message, vscode.DiagnosticSeverity.Information);
+                // convert range-like object to real vscode.Range when running inside vscode
+                const realRange = (range && (range.start && range.end && typeof range.start.character === 'number'))
+                  ? new vscodeRt.Range(new vscodeRt.Position(range.start.line, range.start.character), new vscodeRt.Position(range.end.line, range.end.character))
+                  : range as any;
+                const diag = new vscodeRt.Diagnostic(realRange as any, message, vscodeRt.DiagnosticSeverity.Information);
                 diag.source = "po-dotnet";
 
                 if (!poDiags.has(uriStr)) {
@@ -129,7 +141,8 @@ export class PODiagnostics {
           for (const uri of poUris) {
             relevantPoUris.add(uri.toString());
             try {
-              const doc = await vscode.workspace.openTextDocument(uri);
+              const vscodeRt = getVscode();
+              const doc = await vscodeRt.workspace.openTextDocument(uri);
               const entries = parsePoEntries(doc.getText());
               const dups = detectDuplicateMap(entries);
               for (const [id, lines] of dups) {
@@ -140,7 +153,11 @@ export class PODiagnostics {
                   const range = computeQuoteRangeFromDocLine(doc, lineNum);
                   const firstLine = lines[0] + 1;
                   const message = `Duplicate PO entry '${truncated}' (also at line ${firstLine})`;
-                  const diag = new vscode.Diagnostic(range, message, vscode.DiagnosticSeverity.Warning);
+                  const vscodeRt = getVscode();
+                  const realRange = (range && (range.start && range.end && typeof range.start.character === 'number'))
+                    ? new vscodeRt.Range(new vscodeRt.Position(range.start.line, range.start.character), new vscodeRt.Position(range.end.line, range.end.character))
+                    : range as any;
+                  const diag = new vscodeRt.Diagnostic(realRange as any, message, vscodeRt.DiagnosticSeverity.Warning);
                   diag.source = "po-dotnet";
 
                   if (!poDiags.has(uri.toString())) {
@@ -163,7 +180,8 @@ export class PODiagnostics {
     try {
       for (const uriStr of relevantPoUris) {
         try {
-          const uri = vscode.Uri.parse(uriStr);
+          const vscodeRt = getVscode();
+          const uri = vscodeRt.Uri.parse(uriStr);
           const diags = poDiags.get(uriStr) || [];
           if (diags.length > 0) {
             this.diagnostics.set(uri, diags);

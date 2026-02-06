@@ -73,7 +73,9 @@
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src",
-    "test": "vscode-test"
+    "test:unit": "mocha --ui tdd \"out/test/*.js\" --reporter spec",
+    "test:integration": "vscode-test",
+    "test": "npm run test:unit && npm run test:integration"
   },
   "devDependencies": {
     "@types/vscode": "^1.108.1",
@@ -83,6 +85,7 @@
     "eslint": "^9.39.2",
     "typescript": "^5.9.3",
     "@vscode/test-cli": "^0.0.12",
-    "@vscode/test-electron": "^2.5.2"
+    "@vscode/test-electron": "^2.5.2",
+    "mocha": "^10.2.0"
   }
 }

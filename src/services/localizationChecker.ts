@@ -185,7 +185,8 @@ export class LocalizationChecker implements vscode.Disposable {
     for (const e of entries) {
       const start = document.offsetAt(e.range.start);
       const end = document.offsetAt(e.range.end);
-      if (offset >= start && offset <= end) {
+      // end is exclusive
+      if (offset >= start && offset < end) {
         return { msgid: e.msgid, range: e.range };
       }
     }
