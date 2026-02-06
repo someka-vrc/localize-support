@@ -14,9 +14,9 @@ suite('PODiagnostics - integration', () => {
       // create and add a temporary workspace folder for the test
       const os = require('os');
       const path = require('path');
-      tmpRoot = vscode.Uri.file(path.join(os.tmpdir(), `po-dotnet-test-${Date.now()}`));
+      tmpRoot = vscode.Uri.file(path.join(os.tmpdir(), `po-support-test-${Date.now()}`));
       await vscode.workspace.fs.createDirectory(tmpRoot);
-      vscode.workspace.updateWorkspaceFolders(0, 0, { uri: tmpRoot, name: 'po-dotnet-test' });
+      vscode.workspace.updateWorkspaceFolders(0, 0, { uri: tmpRoot, name: 'po-support-test' });
       addedWorkspace = true;
       ws = vscode.workspace.getWorkspaceFolder(tmpRoot)!;
     }
@@ -82,7 +82,7 @@ msgstr "unused translation"
     await waitForMsgids(['hello', 'unused']);
 
     // Ensure the extension scanner has completed before computing diagnostics
-    try { const ok = await vscode.commands.executeCommand('po-dotnet.waitForScanIdle', 5000); if (!ok) { await new Promise(r => setTimeout(r, 200)); } } catch (_) { await new Promise(r => setTimeout(r, 200)); }
+    try { const ok = await vscode.commands.executeCommand('po-support.waitForScanIdle', 5000); if (!ok) { await new Promise(r => setTimeout(r, 200)); } } catch (_) { await new Promise(r => setTimeout(r, 200)); }
 
     // open source doc and build simple refResolver that checks for occurrences in source
     const srcDoc = await vscode.workspace.openTextDocument(srcFile);
@@ -105,7 +105,7 @@ msgstr "unused translation"
     const cfgsByWorkspace = new Map<string, any[]>();
     cfgsByWorkspace.set(wsFolder.uri.toString(), [{ sourceDirs: [srcDir.fsPath], poDirs: [poDir.fsPath], localizeFuncs: ['G'], workspaceFolder: wsFolder }]);
 
-    const diags = vscode.languages.createDiagnosticCollection('po-dotnet-test');
+    const diags = vscode.languages.createDiagnosticCollection('po-support-test');
     try {
       // Debug info to help detect why diagnostics might be missing
       console.log('DEBUG: PO msgids:', Array.from(poManager.getAllMsgids([poDir.fsPath])));
@@ -121,7 +121,7 @@ msgstr "unused translation"
         foundUnused = messages.some(m => m.includes("Unused PO entry") && m.includes('unused'));
         if (foundUnused) break;
         if (Date.now() - start > 15000) break;
-        try { await vscode.commands.executeCommand('po-dotnet.waitForScanIdle', 1000); } catch (_) {}
+        try { await vscode.commands.executeCommand('po-support.waitForScanIdle', 1000); } catch (_) {}
         await new Promise((r) => setTimeout(r, 100));
       }
 

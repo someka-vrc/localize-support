@@ -44,7 +44,7 @@ export function activate(context: vscode.ExtensionContext) {
   const renameProvider = registerRenameProvider(context, localizationService, poService);
 
   const createConfigCmd = vscode.commands.registerCommand(
-    "po-dotnet.createConfig",
+    "po-support.createConfig",
     async () => {
       const editor = vscode.window.activeTextEditor;
       if (!editor) {
@@ -92,7 +92,7 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   const openPoCmd = vscode.commands.registerCommand(
-    "po-dotnet.openPoEntry",
+    "po-support.openPoEntry",
     async (uriStr: string | vscode.Uri, line?: number) => {
       try {
         const uri = typeof uriStr === "string" ? vscode.Uri.parse(uriStr) : uriStr;
@@ -108,10 +108,10 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   const reloadCmd = vscode.commands.registerCommand(
-    "po-dotnet.reloadData",
+    "po-support.reloadData",
     async () => {
       try {
-        await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: "Reloading PO .NET data...", cancellable: false }, async () => {
+        await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: "Reloading PO Support data...", cancellable: false }, async () => {
           await localizationChecker.reload();
           vscode.window.showInformationMessage("Reloaded PO data (cache cleared)");
         });
@@ -121,7 +121,7 @@ export function activate(context: vscode.ExtensionContext) {
     },
   );
 
-  const waitIdleCmd = vscode.commands.registerCommand("po-dotnet.waitForScanIdle", async (timeoutMs?: number) => {
+  const waitIdleCmd = vscode.commands.registerCommand("po-support.waitForScanIdle", async (timeoutMs?: number) => {
     try {
       await localizationChecker.waitUntilIdle(timeoutMs || 5000);
       return true;
@@ -131,7 +131,7 @@ export function activate(context: vscode.ExtensionContext) {
   });
 
   // Test-only helper to invoke the rename provider logic directly (bypass RPC arg validation)
-  const invokeRenameTestCmd = vscode.commands.registerCommand('po-dotnet.test.invokeRenameProvider', async (uriLike: string | vscode.Uri, posLike: { line: number; character: number } | vscode.Position, newName: string) => {
+  const invokeRenameTestCmd = vscode.commands.registerCommand('po-support.test.invokeRenameProvider', async (uriLike: string | vscode.Uri, posLike: { line: number; character: number } | vscode.Position, newName: string) => {
     try {
       // renameProvider exposes invokeRenameForTest via the object returned from registerRenameProvider
       // it will apply the edits directly and return { success: true } or { success: false, error }

@@ -160,14 +160,14 @@ export function registerCompletionProvider(
             const parts: string[] = [];
             const md = new vscode.MarkdownString("", true);
             md.isTrusted = true;
-            md.appendMarkdown("po-dotnet\n\n");
+            md.appendMarkdown("po-support\n\n");
             for (const t of trans) {
               const fileName = path.basename(t.relativePath);
               let message = t.translation.replace(/`/g, "'").replace(/\r?\n/g, " ");
               if (message.length > 160) {
                 message = message.slice(0, 159) + "…";
               }
-              const fileLink = `[${fileName}](command:po-dotnet.openPoEntry?${encodeURIComponent(JSON.stringify([t.uri.toString(), t.line]))})`;
+              const fileLink = `[${fileName}](command:po-support.openPoEntry?${encodeURIComponent(JSON.stringify([t.uri.toString(), t.line]))})`;
               md.appendMarkdown(`- ${fileLink}: \`${message}\``);
               parts.push(`(${fileName}) ${message}`);
             }

@@ -89,7 +89,7 @@ export function registerRenameProvider(
             console.log('DEBUG: prepared source rename replacement', { uri: r.uri.toString(), start: refRange.start, end: refRange.end, newContent });
           } catch (e) {
             // ignore per-file errors
-            console.error("po-dotnet: error preparing source rename replacement", e);
+            console.error("po-support: error preparing source rename replacement", e);
           }
         }
 
@@ -105,7 +105,7 @@ export function registerRenameProvider(
         } catch (err) {
           // if poService fails for some reason, fall back to attempting rename
           // but log the error for diagnostics
-          console.error("po-dotnet: error checking existing msgids", err);
+          console.error("po-support: error checking existing msgids", err);
         }
         const poEntries = poService.getTranslations(oldKey, poDirs);
         for (const e of poEntries) {
@@ -151,14 +151,14 @@ export function registerRenameProvider(
             const newContent = escapeForPo(newName);
             edit.replace(e.uri, range, newContent);
           } catch (ex) {
-            console.error("po-dotnet: error preparing PO rename replacement", ex);
+            console.error("po-support: error preparing PO rename replacement", ex);
           }
         }
 
         console.log('DEBUG: final rename edit', edit);
         return edit;
       } catch (err) {
-        console.error('po-dotnet: error in provideRenameEdits', err);
+        console.error('po-support: error in provideRenameEdits', err);
         throw err;
       }
     }, 
@@ -276,7 +276,7 @@ export function registerRenameProvider(
           throw new Error(`A msgid '${newName}' already exists in PO files.`);
         }
       } catch (err) {
-        console.error("po-dotnet: error checking existing msgids", err);
+        console.error("po-support: error checking existing msgids", err);
       }
       const poEntries = poService.getTranslations(found, allowedPoDirs);
       for (const e of poEntries) {
@@ -319,7 +319,7 @@ export function registerRenameProvider(
           edit.replace(e.uri, range, newContent);
           console.log('DEBUG: prepared PO rename replacement', { uri: e.uri.toString(), start: range.start, end: range.end, newContent });
         } catch (ex) {
-          console.error("po-dotnet: error preparing PO rename replacement", ex);
+          console.error("po-support: error preparing PO rename replacement", ex);
         }
       }
 
@@ -348,7 +348,7 @@ export function registerRenameProvider(
           const newContent = escapeForCSharp(newName, verbatim);
           edit.replace(r.uri, refRange, newContent);
         } catch (ex) {
-          console.error("po-dotnet: error preparing source rename replacement", ex);
+          console.error("po-support: error preparing source rename replacement", ex);
         }
       }
 

@@ -117,7 +117,7 @@ export async function scanDocument(
         if (vscode && typeof (vscode as any).Diagnostic === 'function' && typeof (vscode as any).Range === 'function') {
           const diagRange = new (vscode as any).Range(startPos, endPos);
           const diag = new (vscode as any).Diagnostic(diagRange, message, (vscode as any).DiagnosticSeverity.Warning);
-          diag.source = "po-dotnet";
+          diag.source = "po-support";
           diags.push(diag);
         }
       } catch (_) {

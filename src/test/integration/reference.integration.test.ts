@@ -12,9 +12,9 @@ suite('Reference provider - integration', () => {
     let tmpRoot: vscode.Uri | undefined;
     if (!ws) {
       const os = require('os');
-      tmpRoot = vscode.Uri.file(require('path').join(os.tmpdir(), `po-dotnet-ref-${Date.now()}`));
+      tmpRoot = vscode.Uri.file(require('path').join(os.tmpdir(), `po-support-ref-${Date.now()}`));
       await vscode.workspace.fs.createDirectory(tmpRoot);
-      vscode.workspace.updateWorkspaceFolders(0, 0, { uri: tmpRoot, name: 'po-dotnet-ref' });
+      vscode.workspace.updateWorkspaceFolders(0, 0, { uri: tmpRoot, name: 'po-support-ref' });
       addedWorkspace = true;
       ws = vscode.workspace.getWorkspaceFolder(tmpRoot)!;
     }
@@ -46,8 +46,8 @@ suite('Reference provider - integration', () => {
     await vscode.workspace.fs.writeFile(poFile, Buffer.from(poContent, 'utf8'));
 
     // Trigger reload and wait for scanner
-    try { await vscode.commands.executeCommand('po-dotnet.reloadData'); } catch (_) {}
-    try { const ok = await vscode.commands.executeCommand('po-dotnet.waitForScanIdle', 10000); if (!ok) { await new Promise(r => setTimeout(r, 500)); } } catch (_) { await new Promise(r => setTimeout(r, 500)); }
+    try { await vscode.commands.executeCommand('po-support.reloadData'); } catch (_) {}
+    try { const ok = await vscode.commands.executeCommand('po-support.waitForScanIdle', 10000); if (!ok) { await new Promise(r => setTimeout(r, 500)); } } catch (_) { await new Promise(r => setTimeout(r, 500)); }
 
     const poDoc = await vscode.workspace.openTextDocument(poFile);
     const poTxt = poDoc.getText();
@@ -73,7 +73,7 @@ suite('Reference provider - integration', () => {
         // ignore and retry
       }
       if (Date.now() - start > 15000) break;
-      try { await vscode.commands.executeCommand('po-dotnet.waitForScanIdle', 1000); } catch (_) {}
+      try { await vscode.commands.executeCommand('po-support.waitForScanIdle', 1000); } catch (_) {}
       await new Promise(r => setTimeout(r, 100));
     }
 

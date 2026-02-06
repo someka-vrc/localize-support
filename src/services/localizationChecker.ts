@@ -7,7 +7,7 @@ import { computeUnusedPoDiagnostics as computeUnusedPoDiagnosticsImpl } from "./
 
 export class LocalizationChecker implements vscode.Disposable {
   private diagnostics =
-    vscode.languages.createDiagnosticCollection("po-dotnet");
+    vscode.languages.createDiagnosticCollection("po-support");
   private srcWatchers = new Map<string, vscode.FileSystemWatcher>();
   private disposables: vscode.Disposable[] = [];
   private scannedDocs = new Set<string>();
@@ -68,7 +68,7 @@ export class LocalizationChecker implements vscode.Disposable {
             // fallback to full scan
             await this.triggerScan();
           } catch (err) {
-            console.error("po-dotnet: error handling PO change", err);
+            console.error("po-support: error handling PO change", err);
             await this.triggerScan();
           }
         }),
@@ -156,13 +156,13 @@ export class LocalizationChecker implements vscode.Disposable {
                 const doc = await vscode.workspace.openTextDocument(childUri);
                 await this.scanDocument(doc, cfgs);
               } catch (e) {
-                console.error("po-dotnet: error scanning file", childPath, e);
+                console.error("po-support: error scanning file", childPath, e);
               }
             }
           }
         }
       } catch (e) {
-        console.error("po-dotnet: error reading directory", dir, e);
+        console.error("po-support: error reading directory", dir, e);
       }
     };
     for (const d of dirs) {
@@ -197,7 +197,7 @@ export class LocalizationChecker implements vscode.Disposable {
     try {
       await this.scanAll();
     } catch (e) {
-      console.error("po-dotnet: error during scanAll", e);
+      console.error("po-support: error during scanAll", e);
     }
   }
 
@@ -289,7 +289,7 @@ export class LocalizationChecker implements vscode.Disposable {
         const doc = await vscode.workspace.openTextDocument(uri);
         await this.scanDocument(doc);
       } catch (e) {
-        console.error("po-dotnet: error scanning document", uri.toString(), e);
+        console.error("po-support: error scanning document", uri.toString(), e);
       }
     }
 
@@ -317,7 +317,7 @@ export class LocalizationChecker implements vscode.Disposable {
       try {
         await this.computeUnusedPoDiagnostics(map);
       } catch (err) {
-        console.error("po-dotnet: error computing deferred PO diagnostics", err);
+        console.error("po-support: error computing deferred PO diagnostics", err);
       }
       this.pendingCfgs.delete(key);
       this.computeTimers.delete(key);

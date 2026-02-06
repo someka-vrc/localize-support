@@ -93,7 +93,7 @@ export class POManager {
         this.watchers.set(dir, watcher);
         await this.scanDir(dir, workspaceFolder);
       } catch (e) {
-        console.error("po-dotnet: failed to watch/scan dir", dir, e);
+        console.error("po-support: failed to watch/scan dir", dir, e);
       }
     }
   }
@@ -115,7 +115,7 @@ export class POManager {
         await this.readAndParse(uri);
       }
     } catch (e) {
-      console.error("po-dotnet: error scanning dir", dir, e);
+      console.error("po-support: error scanning dir", dir, e);
     }
   }
 

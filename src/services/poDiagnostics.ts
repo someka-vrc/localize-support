@@ -119,7 +119,7 @@ export class PODiagnostics {
                   ? new vscodeRt.Range(new vscodeRt.Position(range.start.line, range.start.character), new vscodeRt.Position(range.end.line, range.end.character))
                   : range as any;
                 const diag = new vscodeRt.Diagnostic(realRange as any, message, vscodeRt.DiagnosticSeverity.Information);
-                diag.source = "po-dotnet";
+                diag.source = "po-support";
 
                 if (!poDiags.has(uriStr)) {
                   poDiags.set(uriStr, []);
@@ -131,7 +131,7 @@ export class PODiagnostics {
             }
           }
         } catch (err) {
-          console.error("po-dotnet: error while computing unused PO diagnostics", err);
+          console.error("po-support: error while computing unused PO diagnostics", err);
         }
 
         // detect duplicates per file
@@ -157,7 +157,7 @@ export class PODiagnostics {
                     ? new vscodeRt.Range(new vscodeRt.Position(range.start.line, range.start.character), new vscodeRt.Position(range.end.line, range.end.character))
                     : range as any;
                   const diag = new vscodeRt.Diagnostic(realRange as any, message, vscodeRt.DiagnosticSeverity.Warning);
-                  diag.source = "po-dotnet";
+                  diag.source = "po-support";
 
                   if (!poDiags.has(uri.toString())) {
                     poDiags.set(uri.toString(), []);
@@ -192,7 +192,7 @@ export class PODiagnostics {
         }
       }
     } catch (err) {
-      console.error("po-dotnet: failed to apply PO diagnostics", err);
+      console.error("po-support: failed to apply PO diagnostics", err);
     }
   }
 }

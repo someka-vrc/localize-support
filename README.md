@@ -1,6 +1,6 @@
-# PO .NET
+# PO Support
 
-PO .NET is a Visual Studio Code extension that helps with localization in C# source code.
+PO Support is a Visual Studio Code extension that helps with localization in C# source code.
 
 ## Features
 

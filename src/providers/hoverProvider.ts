@@ -22,7 +22,7 @@ export function registerHoverProvider(
       if (cached === "scanning") {
         const md = new vscode.MarkdownString();
         md.isTrusted = true;
-        md.appendMarkdown("po-dotnet\n\nScanning...");
+        md.appendMarkdown("po-support\n\nScanning...");
         return new vscode.Hover(md);
       } else if (cached) {
         const msgid = cached.msgid;
@@ -39,7 +39,7 @@ export function registerHoverProvider(
         const allowedPoDirs = Array.from(new Set(matched.flatMap((c) => c.poDirs)));
         const entries = poService.getTranslations(msgid, allowedPoDirs);
         const hoverLines: string[] = [];
-        hoverLines.push("po-dotnet");
+        hoverLines.push("po-support");
         if (entries.length === 0) {
           hoverLines.push("- No entry");
         } else {
@@ -48,7 +48,7 @@ export function registerHoverProvider(
             const fileName = path.basename(e.relativePath);
             const message = e.translation.replace(/`/g, "'");
             const folderPath = path.dirname(e.relativePath) || ".";
-            const fileLink = `[${fileName}](command:po-dotnet.openPoEntry?${encodeURIComponent(JSON.stringify([e.uri.toString(), e.line]))})`;
+            const fileLink = `[${fileName}](command:po-support.openPoEntry?${encodeURIComponent(JSON.stringify([e.uri.toString(), e.line]))})`;
             hoverLines.push(`- ${fileLink}: \`${message}\` (${folderPath})`);
           }
         }
@@ -82,7 +82,7 @@ export function registerHoverProvider(
         const allowedPoDirs = Array.from(new Set(matched.flatMap((c) => c.poDirs)));
         const entries = poService.getTranslations(msgid, allowedPoDirs);
         const hoverLines: string[] = [];
-        hoverLines.push("po-dotnet");
+        hoverLines.push("po-support");
         if (entries.length === 0) {
           hoverLines.push("- No entry");
         } else {
@@ -91,7 +91,7 @@ export function registerHoverProvider(
             const fileName = path.basename(e.relativePath);
             const message = e.translation.replace(/`/g, "'");
             const folderPath = path.dirname(e.relativePath) || ".";
-            const fileLink = `[${fileName}](command:po-dotnet.openPoEntry?${encodeURIComponent(JSON.stringify([e.uri.toString(), e.line]))})`;
+            const fileLink = `[${fileName}](command:po-support.openPoEntry?${encodeURIComponent(JSON.stringify([e.uri.toString(), e.line]))})`;
             hoverLines.push(
               `- ${fileLink}: \`${message}\` (${folderPath})`,
             );
@@ -148,7 +148,7 @@ export function registerHoverProvider(
                 const allowedPoDirs = Array.from(new Set(matched.flatMap((c) => c.poDirs)));
                 const entries = poService.getTranslations(msgid, allowedPoDirs);
                 const hoverLines: string[] = [];
-                hoverLines.push("po-dotnet");
+                hoverLines.push("po-support");
                 if (entries.length === 0) {
                   hoverLines.push("- No entry");
                 } else {
@@ -157,7 +157,7 @@ export function registerHoverProvider(
                     const fileName = path.basename(e.relativePath);
                     const message = e.translation.replace(/`/g, "'");
                     const folderPath = path.dirname(e.relativePath) || ".";
-                    const fileLink = `[${fileName}](command:po-dotnet.openPoEntry?${encodeURIComponent(JSON.stringify([e.uri.toString(), e.line]))})`;
+                    const fileLink = `[${fileName}](command:po-support.openPoEntry?${encodeURIComponent(JSON.stringify([e.uri.toString(), e.line]))})`;
                     hoverLines.push(
                       `- ${fileLink}: \`${message}\` (${folderPath})`,
                     );

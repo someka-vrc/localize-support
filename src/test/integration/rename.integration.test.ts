@@ -12,9 +12,9 @@ suite('Rename provider - integration', () => {
     let tmpRoot: vscode.Uri | undefined;
     if (!ws) {
       const os = require('os');
-      tmpRoot = vscode.Uri.file(path.join(os.tmpdir(), `po-dotnet-rename-${Date.now()}`));
+      tmpRoot = vscode.Uri.file(path.join(os.tmpdir(), `po-support-rename-${Date.now()}`));
       await vscode.workspace.fs.createDirectory(tmpRoot);
-      vscode.workspace.updateWorkspaceFolders(0, 0, { uri: tmpRoot, name: 'po-dotnet-rename' });
+      vscode.workspace.updateWorkspaceFolders(0, 0, { uri: tmpRoot, name: 'po-support-rename' });
       addedWorkspace = true;
       ws = vscode.workspace.getWorkspaceFolder(tmpRoot)!;
     }
@@ -59,8 +59,8 @@ msgstr "こんにちは"
       // (debug log removed)
     } catch (e) { console.log('DEBUG: failed reading poFile from fs: ' + String(e)); }
     // Trigger a reload to ensure the checker scans files and wait for scanning to complete
-    try { await vscode.commands.executeCommand('po-dotnet.reloadData'); } catch (_) {}
-    try { const ok = await vscode.commands.executeCommand('po-dotnet.waitForScanIdle', 10000); if (!ok) { await new Promise(r => setTimeout(r, 500)); } } catch (_) { await new Promise(r => setTimeout(r, 500)); }
+    try { await vscode.commands.executeCommand('po-support.reloadData'); } catch (_) {}
+    try { const ok = await vscode.commands.executeCommand('po-support.waitForScanIdle', 10000); if (!ok) { await new Promise(r => setTimeout(r, 500)); } } catch (_) { await new Promise(r => setTimeout(r, 500)); }
 
     // Helper to retry rename if scanning is still in progress
     const executeRenameWithRetry = async (file: vscode.Uri, pos: vscode.Position, name: string, timeout = 60000) => {
@@ -83,7 +83,7 @@ msgstr "こんにちは"
           // Pass a plain URI string (avoid transmitting complex Uri/TextDocument objects that sometimes fail validation)
           const firstArg = typeof file.toString === 'function' ? file.toString() : file;
           // Use test helper which invokes provider logic directly and applies edits; it returns { success: boolean, error?: string }
-          const providerPromise = vscode.commands.executeCommand('po-dotnet.test.invokeRenameProvider', firstArg, pos, name) as Thenable<any>;
+          const providerPromise = vscode.commands.executeCommand('po-support.test.invokeRenameProvider', firstArg, pos, name) as Thenable<any>;
           const res: any = await Promise.race([
             providerPromise,
             new Promise((_, rej) => setTimeout(() => rej(new Error('provider-call-timeout')), perAttemptTimeout))
@@ -102,7 +102,7 @@ msgstr "こんにちは"
           (console as any).log('DEBUG: rename provider attempt failed: ' + JSON.stringify({ attempt, err: errMsg }));
           // Retry on any transient error (scanner not ready or provider not registered yet) until timeout
           if (Date.now() - start < timeout) {
-            try { await vscode.commands.executeCommand('po-dotnet.waitForScanIdle', 5000); } catch (_) { /* ignore */ }
+            try { await vscode.commands.executeCommand('po-support.waitForScanIdle', 5000); } catch (_) { /* ignore */ }
             // exponential backoff up to 1s
             const backoff = Math.min(1000, 100 * attempt);
             await new Promise(r => setTimeout(r, backoff));
@@ -188,7 +188,7 @@ msgstr "こんにちは"
     }
 
     // Wait for scanning to process the change and verify PO updated
-    try { await vscode.commands.executeCommand('po-dotnet.waitForScanIdle', 20000); } catch (_) { await new Promise(r => setTimeout(r, 500)); }
+    try { await vscode.commands.executeCommand('po-support.waitForScanIdle', 20000); } catch (_) { await new Promise(r => setTimeout(r, 500)); }
     const updatedPo = await vscode.workspace.openTextDocument(poFile);
     const poTxt1 = updatedPo.getText();
     console.log('DEBUG: PO content after waitForScanIdle:\n', poTxt1);
@@ -251,7 +251,7 @@ msgstr "こんにちは"
     }
 
     // Wait for scanning to process the change and verify source updated
-    try { await vscode.commands.executeCommand('po-dotnet.waitForScanIdle', 10000); } catch (_) { await new Promise(r => setTimeout(r, 500)); }
+    try { await vscode.commands.executeCommand('po-support.waitForScanIdle', 10000); } catch (_) { await new Promise(r => setTimeout(r, 500)); }
     const updatedSrc = await vscode.workspace.openTextDocument(srcFile);
     const srcTxt2 = updatedSrc.getText();
     assert.ok(srcTxt2.includes('G("salut")'), 'Source was not updated after PO rename');

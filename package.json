@@ -1,12 +1,12 @@
 {
-  "name": "po-dotnet",
-  "displayName": "po-dotnet",
+  "name": "po-support",
+  "displayName": "po-support",
   "description": "show .po translation when hover on localize method in .NET project",
   "version": "1.0.0",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/someka-vrc/po-dotnet.git"
+    "url": "https://github.com/someka-vrc/po-support.git"
   },
   "engines": {
     "vscode": "^1.108.1"
@@ -21,19 +21,19 @@
   "contributes": {
     "commands": [
       {
-        "command": "po-dotnet.createConfig",
+        "command": "po-support.createConfig",
         "title": "Create podotnetconfig.json",
-        "category": "PO .NET"
+        "category": "PO Support"
       },
       {
-        "command": "po-dotnet.openPoEntry",
+        "command": "po-support.openPoEntry",
         "title": "Open PO entry",
-        "category": "PO .NET"
+        "category": "PO Support"
       },
       {
-        "command": "po-dotnet.reloadData",
+        "command": "po-support.reloadData",
         "title": "Reload PO data (clear cache)",
-        "category": "PO .NET"
+        "category": "PO Support"
       }
     ],
     "jsonValidation": [
@@ -48,7 +48,7 @@
     ],
     "configuration": {
       "type": "object",
-      "title": "PO .NET Settings",
+      "title": "PO Support Settings",
       "properties": {
         "poDotnet.config": {
           "description": "Array of configuration objects similar to podotnetconfig.json (folder-scoped settings supported). Each item configures sourceDirs, poDirs and localizeFuncs.",
