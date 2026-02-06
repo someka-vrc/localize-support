@@ -107,7 +107,21 @@ export function activate(context: vscode.ExtensionContext) {
     },
   );
 
-  context.subscriptions.push(createConfigCmd, openPoCmd, hoverProvider, completionProvider, definitionProvider, referenceProvider, renameProvider);
+  const reloadCmd = vscode.commands.registerCommand(
+    "po-dotnet.reloadData",
+    async () => {
+      try {
+        await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: "Reloading PO .NET data...", cancellable: false }, async () => {
+          await localizationChecker.reload();
+          vscode.window.showInformationMessage("Reloaded PO data (cache cleared)");
+        });
+      } catch (e) {
+        vscode.window.showErrorMessage("Failed to reload PO data: " + String(e));
+      }
+    },
+  );
+
+  context.subscriptions.push(createConfigCmd, openPoCmd, reloadCmd, hoverProvider, completionProvider, definitionProvider, referenceProvider, renameProvider);
 }
 
 // This method is called when your extension is deactivated

@@ -200,6 +200,24 @@ export class LocalizationChecker implements vscode.Disposable {
     }
   }
 
+  // Clear internal caches and trigger a full rescan of sources and PO files
+  public async reload() {
+    // Clear scanning/scan caches
+    this.scannedDocs.clear();
+    this.scanningDocs.clear();
+    this.docMsgids.clear();
+    this.workspaceLocalizeFuncs.clear();
+    this.diagnostics.clear();
+    // Clear PO cache and trigger change notification
+    try {
+      this.poManager.clearCache();
+    } catch (_) {
+      // ignore
+    }
+    // Trigger a full scan
+    await this.triggerScan();
+  }
+
   private async scanAll() {
     const cfgUris = await vscode.workspace.findFiles(
       "**/podotnetconfig.json",

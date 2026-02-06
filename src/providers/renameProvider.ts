@@ -6,7 +6,8 @@ import { parsePoEntries, parsePo } from "../utils";
 import { collectConfigObjectsForDocument } from "../config";
 
 function escapeForPo(s: string) {
-  return s.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n").replace(/\t/g, "\\t");
+  // Preserve backslashes as-is (do not double-escape). Escape quotes and control chars.
+  return s.replace(/"/g, '\"').replace(/\n/g, "\\n").replace(/\t/g, "\\t");
 }
 
 function escapeForCSharp(s: string, verbatim: boolean) {
@@ -14,8 +15,8 @@ function escapeForCSharp(s: string, verbatim: boolean) {
     // double each quote inside verbatim string
     return s.replace(/"/g, '""');
   }
+  // Preserve backslashes as-is to avoid double-escaping user-provided escape sequences.
   return s
-    .replace(/\\/g, "\\\\")
     .replace(/"/g, '\\"')
     .replace(/\n/g, "\\n")
     .replace(/\r/g, "\\r")

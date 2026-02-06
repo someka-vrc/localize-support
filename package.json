@@ -29,6 +29,11 @@
         "command": "po-dotnet.openPoEntry",
         "title": "Open PO entry",
         "category": "PO .NET"
+      },
+      {
+        "command": "po-dotnet.reloadData",
+        "title": "Reload PO data (clear cache)",
+        "category": "PO .NET"
       }
     ],
     "jsonValidation": [

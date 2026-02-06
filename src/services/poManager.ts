@@ -56,6 +56,13 @@ export class POManager {
     this.watchers.clear();
   }
 
+  // Clear cached PO data and notify listeners so they can rescan.
+  public clearCache() {
+    this.cache.clear();
+    // Fire change event without a specific uri to indicate global change and trigger a full rescan.
+    this._onDidChange.fire({ uri: "" });
+  }
+
   public async ensureDirs(
     dirs: string[],
     workspaceFolder: vscode.WorkspaceFolder | null,
