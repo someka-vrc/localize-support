@@ -1,6 +1,6 @@
 import * as assert from 'assert';
-import { determineUnusedStatuses, detectDuplicateMap } from '../services/poDiagnostics';
-import { parsePoEntries } from '../utils';
+import { determineUnusedStatuses, detectDuplicateMap } from '../../services/poDiagnostics';
+import { parsePoEntries } from '../../utils';
 
 suite('PO Diagnostics - helpers', () => {
   test('determineUnusedStatuses filters untranslated and referenced', () => {

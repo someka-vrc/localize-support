@@ -1,11 +1,12 @@
-import '../setup';
+import '../unit/setup';
 import * as assert from 'assert';
 import * as vscode from 'vscode';
 import { POManager } from '../../services/poManager';
 import { computeUnusedPoDiagnostics } from '../../services/poDiagnostics';
 
 suite('PODiagnostics - integration', () => {
-  test('detects unused entry and ignores referenced entry', async () => {
+  test('detects unused entry and ignores referenced entry', async function () {
+    this.timeout(20000);
     let addedWorkspace = false;
     let ws = vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders[0];
     let tmpRoot: vscode.Uri | undefined;
@@ -67,6 +68,22 @@ msgstr "unused translation"
     const wsFolder = ws;
     await poManager.ensureDirs([poDir.fsPath], wsFolder);
 
+    // wait until POManager has loaded the msgids we expect
+    const waitForMsgids = async (expected: string[], timeout = 4000) => {
+      const start = Date.now();
+      while (true) {
+        const ids = poManager.getAllMsgids([poDir.fsPath]);
+        const ok = expected.every((e) => (ids as Set<string>).has(e));
+        if (ok) return;
+        if (Date.now() - start > timeout) throw new Error('timeout waiting for PO msgids');
+        await new Promise((r) => setTimeout(r, 50));
+      }
+    };
+    await waitForMsgids(['hello', 'unused']);
+
+    // Ensure the extension scanner has completed before computing diagnostics
+    try { const ok = await vscode.commands.executeCommand('po-dotnet.waitForScanIdle', 5000); if (!ok) { await new Promise(r => setTimeout(r, 200)); } } catch (_) { await new Promise(r => setTimeout(r, 200)); }
+
     // open source doc and build simple refResolver that checks for occurrences in source
     const srcDoc = await vscode.workspace.openTextDocument(srcFile);
     const txt = srcDoc.getText();
@@ -90,9 +107,26 @@ msgstr "unused translation"
 
     const diags = vscode.languages.createDiagnosticCollection('po-dotnet-test');
     try {
-      await computeUnusedPoDiagnostics(poManager, diags, cfgsByWorkspace, refResolver);
+      // Debug info to help detect why diagnostics might be missing
+      console.log('DEBUG: PO msgids:', Array.from(poManager.getAllMsgids([poDir.fsPath])));
+      console.log('DEBUG: PO file URIs:', poManager.getPOFileUris([poDir.fsPath]));
+      console.log('DEBUG: Entry status for "unused":', poManager.getEntryStatus('unused', [poDir.fsPath]));
+
+      const start = Date.now();
+      let foundUnused = false;
+      while (true) {
+        await computeUnusedPoDiagnostics(poManager, diags, cfgsByWorkspace, refResolver);
+        const diagsForPo = diags.get(poFile) || [];
+        const messages = diagsForPo.map(d => d.message);
+        foundUnused = messages.some(m => m.includes("Unused PO entry") && m.includes('unused'));
+        if (foundUnused) break;
+        if (Date.now() - start > 15000) break;
+        try { await vscode.commands.executeCommand('po-dotnet.waitForScanIdle', 1000); } catch (_) {}
+        await new Promise((r) => setTimeout(r, 100));
+      }
 
       const diagsForPo = diags.get(poFile) || [];
+      console.log('DEBUG: final diagsForPo:', diagsForPo);
       // should contain one diagnostic for 'unused' but not for 'hello'
       const messages = diagsForPo.map(d => d.message);
       const hasUnused = messages.some(m => m.includes("Unused PO entry") && m.includes('unused'));

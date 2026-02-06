@@ -121,7 +121,28 @@ export function activate(context: vscode.ExtensionContext) {
     },
   );
 
-  context.subscriptions.push(createConfigCmd, openPoCmd, reloadCmd, hoverProvider, completionProvider, definitionProvider, referenceProvider, renameProvider);
+  const waitIdleCmd = vscode.commands.registerCommand("po-dotnet.waitForScanIdle", async (timeoutMs?: number) => {
+    try {
+      await localizationChecker.waitUntilIdle(timeoutMs || 5000);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  });
+
+  // Test-only helper to invoke the rename provider logic directly (bypass RPC arg validation)
+  const invokeRenameTestCmd = vscode.commands.registerCommand('po-dotnet.test.invokeRenameProvider', async (uriLike: string | vscode.Uri, posLike: { line: number; character: number } | vscode.Position, newName: string) => {
+    try {
+      // renameProvider exposes invokeRenameForTest via the object returned from registerRenameProvider
+      // it will apply the edits directly and return { success: true } or { success: false, error }
+      const res: any = await (renameProvider as any).invokeRenameForTest(uriLike, posLike, newName);
+      return res;
+    } catch (err) {
+      return { success: false, error: String(err) };
+    }
+  });
+
+  context.subscriptions.push(createConfigCmd, openPoCmd, reloadCmd, hoverProvider, completionProvider, definitionProvider, referenceProvider, renameProvider, invokeRenameTestCmd);
 }
 
 // This method is called when your extension is deactivated

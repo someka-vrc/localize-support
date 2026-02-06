@@ -55,8 +55,7 @@
   "examples": [
     {
       "config": [
-        {
-          "sourceDirs": ["."],
+        {          "languages": ["csharp"],          "sourceDirs": ["."],
           "poDirs": ["./L10N"],
           "localizeFuncs": ["G"]
         }

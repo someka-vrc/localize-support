@@ -1,7 +1,7 @@
 import './setup';
 import * as assert from 'assert';
 import * as vscode from 'vscode';
-import { collectAllConfigsInWorkspace } from '../config';
+import { collectAllConfigsInWorkspace } from '../../config';
 import * as path from 'path';
 
 // This test has been moved to integration tests (requires full VS Code environment).

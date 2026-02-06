@@ -41,113 +41,127 @@ export function registerRenameProvider(
       return res.range;
     },
     async provideRenameEdits(document, position, newName, token) {
-      if (newName === undefined || newName.length === 0) {
-        throw new Error("New name must be non-empty.");
-      }
-      const res = localizationService.getMsgidAtPosition(document, position);
-      if (res === "scanning") {
-        throw new Error("Document scanning in progress. Try again later.");
-      }
-      if (!res) {
-        throw new Error("No localization key found at current position.");
-      }
-      const oldKey = res.msgid;
-      if (oldKey === newName) {
-        // nothing to do
-        return new vscode.WorkspaceEdit();
-      }
-
-      const edit = new vscode.WorkspaceEdit();
-
-      // Replace all source occurrences (within configured sourceDirs)
-      const cfgObjs = await collectConfigObjectsForDocument(document.uri);
-      const allowedSourceDirs = Array.from(new Set(cfgObjs.flatMap((c) => c.sourceDirs || [])));
-      const refs = localizationService.getReferences(oldKey, allowedSourceDirs);
-      for (const r of refs) {
-        try {
-          const doc = await vscode.workspace.openTextDocument(r.uri);
-          // Determine whether original string literal was verbatim (@"...")
-          const startOffset = doc.offsetAt(r.range.start);
-          const openingQuoteOffset = startOffset - 1;
-          let verbatim = false;
-          if (openingQuoteOffset - 1 >= 0) {
-            const charBefore = doc.getText(new vscode.Range(doc.positionAt(openingQuoteOffset - 1), doc.positionAt(openingQuoteOffset + 1)));
-            if (charBefore.startsWith('@"')) {
-              verbatim = true;
-            }
-          }
-          const newContent = escapeForCSharp(newName, verbatim);
-          edit.replace(r.uri, r.range, newContent);
-        } catch (e) {
-          // ignore per-file errors
-          console.error("po-dotnet: error preparing source rename replacement", e);
-        }
-      }
-
-      // Replace PO entries
-      // Determine allowed PO dirs for this document (configs that apply to the document)
-      const poDirs = Array.from(new Set(cfgObjs.flatMap((c) => c.poDirs || [])));
-      // Check for duplicate msgid across allowed PO dirs
       try {
-        const existingMsgids = poService.getAllMsgids(poDirs);
-        if (existingMsgids && existingMsgids.has(newName) && newName !== oldKey) {
-          throw new Error(`A msgid '${newName}' already exists in PO files.`);
+        if (newName === undefined || newName.length === 0) {
+          throw new Error("New name must be non-empty.");
         }
-      } catch (err) {
-        // if poService fails for some reason, fall back to attempting rename
-        // but log the error for diagnostics
-        console.error("po-dotnet: error checking existing msgids", err);
-      }
-      const poEntries = poService.getTranslations(oldKey, poDirs);
-      for (const e of poEntries) {
-        try {
-          const doc = await vscode.workspace.openTextDocument(e.uri);
-          const text = doc.getText();
-          const entries = parsePoEntries(text);
-          entries.sort((a, b) => a.line - b.line);
-          let foundIdx = -1;
-          for (let i = 0; i < entries.length; i++) {
-            const start = entries[i].line;
-            const end = i + 1 < entries.length ? entries[i + 1].line - 1 : Number.MAX_SAFE_INTEGER;
-            if (e.line >= start && e.line <= end) {
-              foundIdx = i;
-              break;
-            }
-          }
-          if (foundIdx === -1) {
-            continue;
-          }
-          const startLine = entries[foundIdx].line;
-          const endLine = foundIdx + 1 < entries.length ? entries[foundIdx + 1].line - 1 : doc.lineCount - 1;
-          const lines = text.split(/\r?\n/);
-          // find opening quote in startLine
-          const startLineText = lines[startLine];
-          const openIdx = startLineText.indexOf('"');
-          if (openIdx < 0) {continue;}
-          // find last quote in the msgid block (stop before msgstr line)
-          let lastQuoteIdx = -1;
-          let lastQuoteLine = startLine;
-          for (let j = startLine; j <= endLine; j++) {
-            if (lines[j].trim().startsWith('msgstr')) {
-              break;
-            }
-            const idx = lines[j].lastIndexOf('"');
-            if (idx >= 0) {
-              lastQuoteIdx = idx;
-              lastQuoteLine = j;
-            }
-          }
-          if (lastQuoteIdx < 0) {continue;}
-          const range = new vscode.Range(new vscode.Position(startLine, openIdx + 1), new vscode.Position(lastQuoteLine, lastQuoteIdx));
-          const newContent = escapeForPo(newName);
-          edit.replace(e.uri, range, newContent);
-        } catch (ex) {
-          console.error("po-dotnet: error preparing PO rename replacement", ex);
+        const res = localizationService.getMsgidAtPosition(document, position);
+        if (res === "scanning") {
+          throw new Error("Document scanning in progress. Try again later.");
         }
-      }
+        if (!res) {
+          throw new Error("No localization key found at current position.");
+        }
+        const oldKey = res.msgid;
+        if (oldKey === newName) {
+          // nothing to do
+          return new vscode.WorkspaceEdit();
+        }
 
-      return edit;
-    },
+        const edit = new vscode.WorkspaceEdit();
+
+        // Replace all source occurrences (within configured sourceDirs)
+        const cfgObjs = await collectConfigObjectsForDocument(document.uri);
+        const allowedSourceDirs = Array.from(new Set(cfgObjs.flatMap((c) => c.sourceDirs || [])));
+        const refs = localizationService.getReferences(oldKey, allowedSourceDirs);
+        for (const r of refs) {
+          try {
+            const doc = await vscode.workspace.openTextDocument(r.uri);
+            // normalize range to a real vscode.Range when necessary
+            let refRange: vscode.Range;
+            if ((r.range as any).start && typeof (r.range as any).start.line === 'number') {
+              refRange = new vscode.Range(new vscode.Position((r.range as any).start.line, (r.range as any).start.character), new vscode.Position((r.range as any).end.line, (r.range as any).end.character));
+            } else {
+              refRange = r.range as vscode.Range;
+            }
+            // Determine whether original string literal was verbatim (@"...")
+            const startOffset = doc.offsetAt(refRange.start);
+            const openingQuoteOffset = startOffset - 1;
+            let verbatim = false;
+            if (openingQuoteOffset - 1 >= 0) {
+              const charBefore = doc.getText(new vscode.Range(doc.positionAt(openingQuoteOffset - 1), doc.positionAt(openingQuoteOffset + 1)));
+              if (charBefore.startsWith('@"')) {
+                verbatim = true;
+              }
+            }
+            const newContent = escapeForCSharp(newName, verbatim);
+            edit.replace(r.uri, refRange, newContent);
+            console.log('DEBUG: prepared source rename replacement', { uri: r.uri.toString(), start: refRange.start, end: refRange.end, newContent });
+          } catch (e) {
+            // ignore per-file errors
+            console.error("po-dotnet: error preparing source rename replacement", e);
+          }
+        }
+
+        // Replace PO entries
+        // Determine allowed PO dirs for this document (configs that apply to the document)
+        const poDirs = Array.from(new Set(cfgObjs.flatMap((c) => c.poDirs || [])));
+        // Check for duplicate msgid across allowed PO dirs
+        try {
+          const existingMsgids = poService.getAllMsgids(poDirs);
+          if (existingMsgids && existingMsgids.has(newName) && newName !== oldKey) {
+            throw new Error(`A msgid '${newName}' already exists in PO files.`);
+          }
+        } catch (err) {
+          // if poService fails for some reason, fall back to attempting rename
+          // but log the error for diagnostics
+          console.error("po-dotnet: error checking existing msgids", err);
+        }
+        const poEntries = poService.getTranslations(oldKey, poDirs);
+        for (const e of poEntries) {
+          try {
+            const doc = await vscode.workspace.openTextDocument(e.uri);
+            const text = doc.getText();
+            const entries = parsePoEntries(text);
+            entries.sort((a, b) => a.line - b.line);
+            let foundIdx = -1;
+            for (let i = 0; i < entries.length; i++) {
+              const start = entries[i].line;
+              const end = i + 1 < entries.length ? entries[i + 1].line - 1 : Number.MAX_SAFE_INTEGER;
+              if (e.line >= start && e.line <= end) {
+                foundIdx = i;
+                break;
+              }
+            }
+            if (foundIdx === -1) {
+              continue;
+            }
+            const startLine = entries[foundIdx].line;
+            const endLine = foundIdx + 1 < entries.length ? entries[foundIdx + 1].line - 1 : doc.lineCount - 1;
+            const lines = text.split(/\r?\n/);
+            // find opening quote in startLine
+            const startLineText = lines[startLine];
+            const openIdx = startLineText.indexOf('"');
+            if (openIdx < 0) {continue;}
+            // find last quote in the msgid block (stop before msgstr line)
+            let lastQuoteIdx = -1;
+            let lastQuoteLine = startLine;
+            for (let j = startLine; j <= endLine; j++) {
+              if (lines[j].trim().startsWith('msgstr')) {
+                break;
+              }
+              const idx = lines[j].lastIndexOf('"');
+              if (idx >= 0) {
+                lastQuoteIdx = idx;
+                lastQuoteLine = j;
+              }
+            }
+            if (lastQuoteIdx < 0) {continue;}
+            const range = new vscode.Range(new vscode.Position(startLine, openIdx + 1), new vscode.Position(lastQuoteLine, lastQuoteIdx));
+            const newContent = escapeForPo(newName);
+            edit.replace(e.uri, range, newContent);
+          } catch (ex) {
+            console.error("po-dotnet: error preparing PO rename replacement", ex);
+          }
+        }
+
+        console.log('DEBUG: final rename edit', edit);
+        return edit;
+      } catch (err) {
+        console.error('po-dotnet: error in provideRenameEdits', err);
+        throw err;
+      }
+    }, 
   };
 
   // For PO files
@@ -303,6 +317,7 @@ export function registerRenameProvider(
           const range = new vscode.Range(new vscode.Position(startLine, openIdx + 1), new vscode.Position(lastQuoteLine, lastQuoteIdx));
           const newContent = escapeForPo(newName);
           edit.replace(e.uri, range, newContent);
+          console.log('DEBUG: prepared PO rename replacement', { uri: e.uri.toString(), start: range.start, end: range.end, newContent });
         } catch (ex) {
           console.error("po-dotnet: error preparing PO rename replacement", ex);
         }
@@ -314,7 +329,14 @@ export function registerRenameProvider(
       for (const r of refs) {
         try {
           const doc = await vscode.workspace.openTextDocument(r.uri);
-          const startOffset = doc.offsetAt(r.range.start);
+          // normalize range to a real vscode.Range when necessary
+          let refRange: vscode.Range;
+          if ((r.range as any).start && typeof (r.range as any).start.line === 'number') {
+            refRange = new vscode.Range(new vscode.Position((r.range as any).start.line, (r.range as any).start.character), new vscode.Position((r.range as any).end.line, (r.range as any).end.character));
+          } else {
+            refRange = r.range as vscode.Range;
+          }
+          const startOffset = doc.offsetAt(refRange.start);
           const openingQuoteOffset = startOffset - 1;
           let verbatim = false;
           if (openingQuoteOffset - 1 >= 0) {
@@ -324,7 +346,7 @@ export function registerRenameProvider(
             }
           }
           const newContent = escapeForCSharp(newName, verbatim);
-          edit.replace(r.uri, r.range, newContent);
+          edit.replace(r.uri, refRange, newContent);
         } catch (ex) {
           console.error("po-dotnet: error preparing source rename replacement", ex);
         }
@@ -336,6 +358,29 @@ export function registerRenameProvider(
 
   const d1 = vscode.languages.registerRenameProvider({ language: "csharp" }, srcProvider);
   const d2 = vscode.languages.registerRenameProvider({ pattern: "**/*.po" }, poProvider);
-  // Return a disposable that disposes both underlying registrations (caller should add to subscriptions)
-  return { dispose() { d1.dispose(); d2.dispose(); } } as vscode.Disposable;
+
+  // Test helper: allow tests to invoke the provider logic directly (bypass RPC argument validation issues)
+  async function invokeRenameForTest(uriLike: string | vscode.Uri, posLike: vscode.Position | { line: number; character: number }, newName: string) {
+    const uri = typeof uriLike === 'string' ? vscode.Uri.parse(uriLike) : uriLike;
+    const doc = await vscode.workspace.openTextDocument(uri);
+    const pos = posLike instanceof vscode.Position ? posLike : new vscode.Position(posLike.line, posLike.character);
+    try {
+      if (doc.uri.fsPath.endsWith('.po')) {
+        // PO file provider
+        const edit = await poProvider.provideRenameEdits(doc, pos, newName, undefined as any);
+        // Apply edits directly so test callers get a serializable result
+        const applied = edit ? await vscode.workspace.applyEdit(edit) : true;
+        return { success: applied };
+      } else {
+        const edit = await srcProvider.provideRenameEdits(doc, pos, newName, undefined as any);
+        const applied = edit ? await vscode.workspace.applyEdit(edit) : true;
+        return { success: applied };
+      }
+    } catch (err) {
+      return { success: false, error: String(err) };
+    }
+  }
+
+  // Return an object that disposes both underlying registrations and exposes the test helper
+  return { dispose() { d1.dispose(); d2.dispose(); }, invokeRenameForTest } as unknown as vscode.Disposable & { invokeRenameForTest(uriLike: string | vscode.Uri, posLike: vscode.Position | { line: number; character: number }, newName: string): Promise<{ success: boolean; error?: string }> };
 }

@@ -1,5 +1,5 @@
 import * as assert from 'assert';
-import { findAllLocalizationCalls } from '../utils';
+import { findAllLocalizationCalls } from '../../utils';
 
 suite('Providers - replaced with utils smoke tests', () => {
   test('findAllLocalizationCalls finds calls', () => {

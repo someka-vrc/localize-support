@@ -5,7 +5,6 @@ import { parsePoEntries } from "../utils";
 
 function getVscode() {
   // lazy require to avoid loading 'vscode' in plain node test runs
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   return require('vscode') as typeof import('vscode');
 }
 

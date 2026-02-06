@@ -1,6 +1,6 @@
 import * as assert from 'assert';
-import { computeQuoteRangeFromDocLine, detectDuplicateMap } from '../services/poDiagnostics';
-import { parsePoEntries } from '../utils';
+import { computeQuoteRangeFromDocLine, detectDuplicateMap } from '../../services/poDiagnostics';
+import { parsePoEntries } from '../../utils';
 
 suite('PODiagnostics helpers (additional)', () => {
   test('computeQuoteRangeFromDocLine fallback on errors', () => {

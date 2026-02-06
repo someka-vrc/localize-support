@@ -219,6 +219,22 @@ export class LocalizationChecker implements vscode.Disposable {
     await this.triggerScan();
   }
 
+  // Wait until no documents are being scanned and no pending compute timers remain
+  public async waitUntilIdle(timeoutMs: number = 5000): Promise<void> {
+    const start = Date.now();
+    while (true) {
+      const scanning = this.scanningDocs.size > 0;
+      const hasTimers = this.computeTimers.size > 0;
+      if (!scanning && !hasTimers) {
+        return;
+      }
+      if (Date.now() - start > timeoutMs) {
+        throw new Error('timeout waiting for idle');
+      }
+      await new Promise((r) => setTimeout(r, 50));
+    }
+  }
+
   private async scanAll() {
     const toScan: vscode.Uri[] = [];
     const cfgsByWorkspace = await collectAllConfigsInWorkspace();

@@ -280,9 +280,11 @@ export function extractFirstStringArgumentRange(inside: string, baseOffset: numb
 
 import { ParserManager } from "./parsers/parserManager";
 import { RegexSourceParser } from "./parsers/regexSourceParser";
+import { TreeSitterSourceParser } from "./parsers/treeSitterSourceParser";
 import { SourceParser } from "./parsers/sourceParser";
 
-const defaultParserManager = new ParserManager([new RegexSourceParser()]);
+// Default: try Tree-sitter first, fall back to regex parser if unavailable
+const defaultParserManager = new ParserManager([new TreeSitterSourceParser("csharp"), new RegexSourceParser()]);
 
 export function setSourceParsers(parsers: SourceParser[]) {
   defaultParserManager.setParsers(parsers);

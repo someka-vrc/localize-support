@@ -1,4 +1,4 @@
-import './setup';
+import './unit/setup';
 import * as assert from 'assert';
 import { parsePoEntries, extractFirstStringArgumentRange } from '../utils';
 

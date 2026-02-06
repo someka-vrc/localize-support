@@ -1,6 +1,6 @@
 import './setup';
 import * as assert from 'assert';
-import { findAllLocalizationCalls, findLocalizationCallAtOffset, extractFirstStringArgumentRange } from '../utils';
+import { findAllLocalizationCalls, findLocalizationCallAtOffset, extractFirstStringArgumentRange } from '../../utils';
 
 suite('Range regression tests for localization calls', () => {
   test('findAllLocalizationCalls returns inner content bounds for normal string', () => {

@@ -1,7 +1,7 @@
 import * as assert from 'assert';
-import { setSourceParsers, findAllLocalizationCalls, getSourceParserManager } from '../utils';
-import { RegexSourceParser } from '../parsers/regexSourceParser';
-import { SourceParser } from '../parsers/sourceParser';
+import { setSourceParsers, findAllLocalizationCalls, getSourceParserManager } from '../../utils';
+import { RegexSourceParser } from '../../parsers/regexSourceParser';
+import { SourceParser } from '../../parsers/sourceParser';
 
 suite('Parsers', () => {
   test('default parser finds calls (regex)', () => {
@@ -11,6 +11,14 @@ suite('Parsers', () => {
     const calls = findAllLocalizationCalls(text, ['G']);
     assert.strictEqual(calls.length, 2);
     assert.strictEqual(calls[0].msgid, 'hello');
+  });
+
+  test('default parser manager falls back to regex when tree-sitter unavailable', () => {
+    // Do not set parsers explicitly. The default manager tries Tree-sitter first and then regex.
+    const text = `G("ok")`;
+    const calls = findAllLocalizationCalls(text, ['G']);
+    assert.strictEqual(calls.length, 1);
+    assert.strictEqual(calls[0].msgid, 'ok');
   });
 
   test('custom parser can replace behavior', () => {

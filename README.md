@@ -20,6 +20,7 @@ Placing the following configuration file (`podotnetconfig.json`) will affect all
 {
   "config": [
     {
+      "languages": ["csharp"],
       "sourceDirs": ["."],
       "poDirs": ["./L10N"],
       "localizeFuncs": ["G"]
@@ -44,13 +45,15 @@ Example (`settings.json`):
       "poDirs": ["./barL10N"],
       "localizeFuncs": ["G"]
     }
-  ]
+  ], 
+  "poDotnet.wasmCdnBaseURL": "https://unpkg.com/tree-sitter-wasms@latest/out/"
 }
 ```
 
 - `sourceDirs`: Specifies folders that contain `.cs` files. Subfolders are also included. Use paths relative to the configuration file; `.` is usually sufficient. Specify more precisely if you want the extension to operate only on certain folders.
 - `poDirs`: Specifies folders that contain `.po` files. Subfolders are also included. Use paths relative to the configuration file.
 - `localizeFuncs`: Specifies the names of localization functions.
+- `wasmCdnBaseURL`: Settings only. ptional setting to control where tree-sitter wasm files are fetched from. By default, it uses unpkg.
 
 ---
 

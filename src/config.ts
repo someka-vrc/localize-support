@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import * as path from "path";
 
 export async function collectConfigsForDocument(documentUri: vscode.Uri) {
-  const ws = vscode.workspace.getWorkspaceFolder(documentUri);
+  const ws = (vscode.workspace && typeof (vscode.workspace as any).getWorkspaceFolder === 'function') ? vscode.workspace.getWorkspaceFolder(documentUri) : undefined;
   if (!ws) {
     return {
       sourceDirs: [] as string[],

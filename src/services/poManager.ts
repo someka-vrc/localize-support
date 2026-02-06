@@ -175,7 +175,7 @@ export class POManager {
           continue;
         }
       }
-      const wsFolder = vscode.workspace.getWorkspaceFolder(uri);
+      const wsFolder = (vscode.workspace && typeof (vscode.workspace as any).getWorkspaceFolder === 'function') ? vscode.workspace.getWorkspaceFolder(uri) : undefined;
       const relativePath = wsFolder
         ? path.relative(wsFolder.uri.fsPath, uri.fsPath)
         : uri.fsPath;
@@ -211,7 +211,7 @@ export class POManager {
       }
       const entry = map.get(msgid);
       if (entry && entry.translation !== undefined && entry.translation !== "") {
-        const wsFolder = vscode.workspace.getWorkspaceFolder(uri);
+        const wsFolder = (vscode.workspace && typeof (vscode.workspace as any).getWorkspaceFolder === 'function') ? vscode.workspace.getWorkspaceFolder(uri) : undefined;
         const relativePath = wsFolder
           ? path.relative(wsFolder.uri.fsPath, uri.fsPath)
           : uri.fsPath;
@@ -264,5 +264,16 @@ export class POManager {
       uris.push(uri);
     }
     return uris;
+  }
+
+  // Return parsed PO entries for a specific PO file (id -> translation + line)
+  public getEntriesForFile(uri: vscode.Uri) {
+    const map = this.cache.get(uri.toString());
+    if (!map) { return [] as Array<{ id: string; translation: string | undefined; line: number }>; }
+    const res: Array<{ id: string; translation: string | undefined; line: number }> = [];
+    for (const [k, v] of map.entries()) {
+      res.push({ id: k, translation: v.translation, line: v.line });
+    }
+    return res;
   }
 }

@@ -1,5 +1,5 @@
 import * as assert from 'assert';
-import { computeQuoteRangeFromDocLine } from '../services/poDiagnostics';
+import { computeQuoteRangeFromDocLine } from '../../services/poDiagnostics';
 
 suite('Helpers - quote range', () => {
   test('computeQuoteRangeFromDocLine finds quote bounds', () => {
