@@ -78,9 +78,9 @@ suite("CodeManager (unit)", () => {
     sinon.assert.calledOnce(parseStub);
     assert.strictEqual(parseStub.firstCall.args[1], wasmBase);
 
-    const keys = Array.from(mgr.codes.keys()).map((u) => u.path);
+    const keys = Array.from(mgr.codes.keys());
     assert.ok(keys.includes(sampleUri.path));
-    const parsed = mgr.codes.get(sampleUri as any);
+    const parsed = mgr.codes.get(sampleUri.path);
     assert.ok(parsed && parsed.length > 0);
     assert.strictEqual(parsed![0].key, "hello.world");
 
@@ -167,7 +167,7 @@ suite("CodeManager (unit)", () => {
       }, 10);
     });
 
-    const parsed = mgr.codes.get(uri as any);
+    const parsed = mgr.codes.get(uri.path);
     assert.ok(parsed && parsed.length > 0);
     assert.strictEqual(parsed![0].key, "B");
 
@@ -178,15 +178,15 @@ suite("CodeManager (unit)", () => {
     await new Promise<void>((res, rej) => {
       const to = setTimeout(() => rej(new Error("deleted rebuild not fired")), 500);
       const iv = setInterval(() => {
-        if (!mgr.codes.has(uri as any)) {
-          clearTimeout(to);
-          clearInterval(iv);
-          res();
-        }
-      }, 10);
+if (!mgr.codes.has(uri.path)) {
+            clearTimeout(to);
+            clearInterval(iv);
+            res();
+          }
+        }, 10);
     });
 
-    assert.ok(!mgr.codes.has(uri as any));
+    assert.ok(!mgr.codes.has(uri.path));
 
     // dispose and ensure further events are ignored
     await mgr.dispose();

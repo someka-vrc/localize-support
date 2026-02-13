@@ -19,3 +19,16 @@ msgstr "再試行"
 
 msgid "Cancel"
 msgstr "キャンセル"
+
+# 不正エントリ
+msgid "unused key"
+msgstr "未使用キー"
+
+msgid "Duplicate key"
+msgstr "重複キー"
+
+msgid "Duplicate key"
+msgstr "重複キー"
+
+msgid "Empty string"
+msgstr ""

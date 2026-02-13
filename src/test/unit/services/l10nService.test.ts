@@ -28,7 +28,7 @@ suite("L10nService (unit)", () => {
     const { diags, statuses } = svc.getDiagnostics();
     assert.strictEqual(statuses.length, 0);
     // diagnostic map should contain an entry for the settings URI
-    const d = diags.get(uri);
+    const d = diags.get(uri.path);
     assert.ok(d && d.length > 0, "diagnostic must be present for failed read");
     const msg = d![0].message;
     assert.ok(msg.includes("Failed to read settings file"));
@@ -106,13 +106,13 @@ suite("L10nService (unit)", () => {
     const mgr = new L10nTargetManager(workspace as any, target, 1);
 
     const codeUri = URI.file("d:/proj/src/foo.js");
-    mgr.codes.set(codeUri, [ { key: "missing.key", location: vscTypeHelper.newLocation(codeUri, vscTypeHelper.newRange(0,0,0,10)) } ] as any);
+    mgr.codes.set(codeUri.path, [ { key: "missing.key", location: vscTypeHelper.newLocation(codeUri, vscTypeHelper.newRange(0,0,0,10)) } ] as any);
 
     // inject into service.managers under arbitrary setting path
     (svc as any).managers.set('/path/to/setting', [ { manager: mgr, listenerDisposable: { dispose: () => {} } } ]);
 
     const { diags } = svc.getDiagnostics();
-    const codeDiags = diags.get(codeUri) || [];
+    const codeDiags = diags.get(codeUri.path) || [];
     assert.ok(codeDiags.some(d => /missing.key/.test(d.message)));
   });
 });

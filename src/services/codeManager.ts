@@ -24,8 +24,8 @@ export class CodeManager implements MyDisposable {
   private readonly rebuiltEmitter = new EventEmitter();
   private readonly rebuildIntervalQueue: IntervalQueue<RebuildQueueItem>;
 
-  // map: source file URI -> array of L10nCode (key + range)
-  public readonly codes: Map<URI, L10nCode[]> = new Map();
+  // map: source file path (string) -> array of L10nCode (key + range)
+  public readonly codes: Map<string, L10nCode[]> = new Map();
 
   // wasm downloader used by CodeParser instances
   private readonly wasmDownloader: WasmDownloader;
@@ -197,7 +197,7 @@ export class CodeManager implements MyDisposable {
           const codes = fragments.map(
             (f: L10nCode) => ({ key: f.key, location: f.location }) as L10nCode,
           );
-          this.codes.set(uri, codes);
+          this.codes.set(uri.path, codes);
           didChange = true;
         } catch (err) {
           // swallow parse errors — do not propagate to caller
@@ -205,8 +205,8 @@ export class CodeManager implements MyDisposable {
         }
         break;
       case "deleted":
-        if (this.codes.has(uri)) {
-          this.codes.delete(uri);
+        if (this.codes.has(uri.path)) {
+          this.codes.delete(uri.path);
           didChange = true;
         }
         break;

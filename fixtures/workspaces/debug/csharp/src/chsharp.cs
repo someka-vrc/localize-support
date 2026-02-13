@@ -30,6 +30,8 @@ namespace LocalizeDebug
             {
                 Console.WriteLine(G("Cancel"));              // 6
             }
+            
+            Console.WriteLine(G("Undefined Key"));  
 
             // keep program alive briefly so test harness can inspect output if needed
             System.Threading.Thread.Sleep(10);

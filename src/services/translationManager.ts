@@ -21,10 +21,10 @@ export class TranslationManager implements MyDisposable {
   private readonly disposables: { [key: string]: MyDisposable[] } = {};
   /**
    * ローカライズファイルのパース結果
-   * key: ファイルの Uri
+   * key: ファイルのパス（string）
    * value: パース結果
    */
-  public readonly l10ns: Map<URI, TranslationParseResult> = new Map();
+  public readonly l10ns: Map<string, TranslationParseResult> = new Map();
   private readonly rebuildQueue: RebuildQueueItem[] = [];
   private disposed: boolean = false;
   private l10nTimeoutId: NodeJS.Timeout = null as any;
@@ -168,7 +168,7 @@ export class TranslationManager implements MyDisposable {
           const parser = getL10nParser(this.target.l10nFormat);
           if (parser) {
             await parser.parse(uri, text).then((result) => {
-              this.l10ns.set(uri, result);
+              this.l10ns.set(uri.path, result);
               didChange = true;
             });
           }
@@ -179,15 +179,15 @@ export class TranslationManager implements MyDisposable {
           const parser = getL10nParser(this.target.l10nFormat);
           if (parser) {
             await parser.parse(uri, text).then((result) => {
-              this.l10ns.set(uri, result);
+              this.l10ns.set(uri.path, result);
               didChange = true;
             });
           }
         }
         break;
       case "deleted":
-        if (this.l10ns.has(uri)) {
-          this.l10ns.delete(uri);
+        if (this.l10ns.has(uri.path)) {
+          this.l10ns.delete(uri.path);
           didChange = true;
         }
         break;

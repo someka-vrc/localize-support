@@ -13,7 +13,7 @@ export class L10nTargetManager implements MyDisposable {
   private readonly codeManager: CodeManager;
   private readonly rebuiltEmitter = new EventEmitter();
   private reloadIntervalQueue: IntervalQueue<string>;
-  public get l10ns(): Map<URI, TranslationParseResult> {
+  public get l10ns(): Map<string, TranslationParseResult> {
     return this.l10nTranslationManager.l10ns;
   }
   public get codes() {
@@ -35,8 +35,8 @@ export class L10nTargetManager implements MyDisposable {
       }
     }
 
-    const pushDiagToBucket = (uri: URI, diag: MyDiagnostic) => {
-      const key = uri.path;
+    const pushDiagToBucket = (uriOrPath: URI | string, diag: MyDiagnostic) => {
+      const key = typeof uriOrPath === 'string' ? uriOrPath : uriOrPath.path;
       const arr = buckets.get(key) || [];
       arr.push(diag);
       buckets.set(key, arr);
@@ -45,14 +45,15 @@ export class L10nTargetManager implements MyDisposable {
     // build translation key index and language->uris map
     const keyExistsAnywhere = new Map<string, boolean>();
     const keyLangPresence = new Map<string, Set<string>>();
-    const langToUris = new Map<string, URI[]>();
+    const langToUris = new Map<string, string[]>();
 
     for (const [luri, res] of this.l10ns.entries()) {
+      const luriPath = luri;
       for (const lang of Object.keys(res.entries || {})) {
         if (!langToUris.has(lang)) {
           langToUris.set(lang, []);
         }
-        langToUris.get(lang)?.push(luri);
+        langToUris.get(lang)?.push(luriPath);
 
         const entries = (res.entries as any)[lang] || {};
         for (const k of Object.keys(entries)) {
@@ -83,12 +84,13 @@ export class L10nTargetManager implements MyDisposable {
 
     // 2) 未使用エントリ (翻訳側)
     for (const [luri, res] of this.l10ns.entries()) {
+      const luriPath = luri;
       for (const lang of Object.keys(res.entries || {})) {
         const entries = (res.entries as any)[lang] || {};
         for (const [k, entry] of Object.entries(entries)) {
           if (!usedKeys.has(k)) {
             pushDiagToBucket(
-              luri,
+              luriPath,
               vscTypeHelper.newDiagnostic(
                 (entry as any).location.range,
                 `Localization key '${k}' is not used in code.`,
@@ -124,24 +126,9 @@ export class L10nTargetManager implements MyDisposable {
 
     const result: { uri: URI; diagnostics: MyDiagnostic[] }[] = [];
     for (const [p, arr] of buckets.entries()) {
-      let uriObj: URI | undefined;
-      for (const u of this.l10ns.keys()) {
-        if (u.path === p) {
-          uriObj = u;
-          break;
-        }
-      }
-      if (!uriObj) {
-        for (const u of this.codes.keys()) {
-          if (u.path === p) {
-            uriObj = u;
-            break;
-          }
-        }
-      }
-      if (uriObj) {
-        result.push({ uri: uriObj, diagnostics: arr });
-      }
+      // keys are file paths (string); construct a URI for the result
+      const uriObj = URI.file(p);
+      result.push({ uri: uriObj, diagnostics: arr });
     }
 
     return result;

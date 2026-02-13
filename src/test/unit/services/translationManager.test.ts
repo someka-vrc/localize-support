@@ -83,9 +83,9 @@ suite("TranslationManager (unit)", () => {
     });
 
     // ensure l10ns has an entry for the sampleUri
-    const keys = Array.from(mgr.l10ns.keys()).map((u) => u.path);
+    const keys = Array.from(mgr.l10ns.keys());
     assert.ok(keys.includes(sampleUri.path), "l10ns should contain parsed uri");
-    const parsed = mgr.l10ns.get(sampleUri as any);
+    const parsed = mgr.l10ns.get(sampleUri.path);
     assert.ok(parsed && parsed.entries);
 
     disp.dispose();
@@ -176,7 +176,7 @@ suite("TranslationManager (unit)", () => {
     });
 
     // verify cache updated
-    const parsed = mgr.l10ns.get(uri as any);
+    const parsed = mgr.l10ns.get(uri.path);
     if (!parsed) {
       assert.fail("parsed should not be undefined");
     }
@@ -196,7 +196,7 @@ suite("TranslationManager (unit)", () => {
         500,
       );
       const iv = setInterval(() => {
-        if (!mgr.l10ns.has(uri as any)) {
+        if (!mgr.l10ns.has(uri.path)) {
           clearTimeout(to);
           clearInterval(iv);
           res();
@@ -204,7 +204,7 @@ suite("TranslationManager (unit)", () => {
       }, 10);
     });
 
-    assert.ok(!mgr.l10ns.has(uri as any));
+    assert.ok(!mgr.l10ns.has(uri.path));
 
     // dispose and ensure further events are ignored
     await mgr.dispose();

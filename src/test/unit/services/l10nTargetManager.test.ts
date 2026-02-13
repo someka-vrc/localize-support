@@ -26,7 +26,7 @@ suite("L10nTargetManager diagnostics (unit)", () => {
     const codeUri = URI.file("d:/proj/src/foo.js");
 
     // simulate code uses key 'missing.key'
-    mgr.codes.set(codeUri, [
+    mgr.codes.set(codeUri.path, [
       {
         key: "missing.key",
         location: vscTypeHelper.newLocation(codeUri, vscTypeHelper.newRange(1, 2, 1, 20)),
@@ -44,7 +44,7 @@ suite("L10nTargetManager diagnostics (unit)", () => {
     const luri = URI.file("d:/proj/locales/ja.po");
 
     // simulate translation file with key 'unused.key'
-    mgr.l10ns.set(luri, {
+    mgr.l10ns.set(luri.path, {
       success: true,
       diagnostics: [],
       entries: {
@@ -69,7 +69,7 @@ suite("L10nTargetManager diagnostics (unit)", () => {
     const ja = URI.file("d:/proj/locales/ja.po");
 
     // en has key 'hello', ja missing
-    mgr.l10ns.set(en, {
+    mgr.l10ns.set(en.path, {
       success: true,
       diagnostics: [],
       entries: {
@@ -83,7 +83,7 @@ suite("L10nTargetManager diagnostics (unit)", () => {
     } as any);
 
     // ja exists but without 'hello'
-    mgr.l10ns.set(ja, {
+    mgr.l10ns.set(ja.path, {
       success: true,
       diagnostics: [],
       entries: {
@@ -103,19 +103,19 @@ suite("L10nTargetManager diagnostics (unit)", () => {
     const ja = URI.file("d:/proj/locales/ja.po");
 
     // code uses 'greet'
-    mgr.codes.set(codeUri, [
+    mgr.codes.set(codeUri.path, [
       { key: "greet", location: vscTypeHelper.newLocation(codeUri, vscTypeHelper.newRange(0, 0, 0, 10)) },
     ] as any);
 
     // en has 'greet'
-    mgr.l10ns.set(en, {
+    mgr.l10ns.set(en.path, {
       success: true,
       diagnostics: [],
       entries: { en: { greet: { translation: "hi", location: vscTypeHelper.newLocation(en, vscTypeHelper.newRange(1, 0, 1, 5)) } } },
     } as any);
 
     // ja missing greet but has unused 'onlyInJa'
-    mgr.l10ns.set(ja, {
+    mgr.l10ns.set(ja.path, {
       success: true,
       diagnostics: [],
       entries: { ja: { onlyInJa: { translation: "x", location: vscTypeHelper.newLocation(ja, vscTypeHelper.newRange(2, 0, 2, 4)) } } },

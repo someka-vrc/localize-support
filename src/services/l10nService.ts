@@ -233,8 +233,8 @@ export class L10nService implements MyDisposable {
     } as MyDisposable;
   }
 
-  getDiagnostics(): { diags: Map<URI, MyDiagnostic[]>; statuses: string[] } {
-    const diagsMap: Map<URI, MyDiagnostic[]> = new Map();
+  getDiagnostics(): { diags: Map<string, MyDiagnostic[]>; statuses: string[] } {
+    const diagsMap: Map<string, MyDiagnostic[]> = new Map();
     const statuses: string[] = [];
 
     // First, include any diagnostics/statuses that were produced while parsing settings
@@ -244,10 +244,11 @@ export class L10nService implements MyDisposable {
       if (settingDiag.type === "diagnostic") {
         const mngDiag = settingDiag.diagnostics;
         const settingUri = mngDiag.uri;
-        if (!diagsMap.has(settingUri)) {
-          diagsMap.set(settingUri, []);
+        const key = settingUri.path;
+        if (!diagsMap.has(key)) {
+          diagsMap.set(key, []);
         }
-        diagsMap.get(settingUri)?.push(...mngDiag.diagnostics);
+        diagsMap.get(key)?.push(...mngDiag.diagnostics);
       } else if (settingDiag.type === "status") {
         statuses.push(...settingDiag.messages);
       }
@@ -257,12 +258,16 @@ export class L10nService implements MyDisposable {
     for (const [settingFile, tgtUnits] of this.managers.entries()) {
       for (const tu of tgtUnits) {
         // 1) include diagnostics from parsed translation files
-        for (const [l10nUri, res] of tu.manager?.l10ns.entries() || []) {
-          if (!diagsMap.has(l10nUri)) {
-            diagsMap.set(l10nUri, []);
-          }
-          for (const diag of res.diagnostics) {
-            diagsMap.get(l10nUri)?.push(diag);
+        {
+          const entries = tu.manager?.l10ns ? Array.from(tu.manager.l10ns.entries()) : [];
+          for (const [l10nUri, res] of entries) {
+            const key = l10nUri;
+            if (!diagsMap.has(key)) {
+              diagsMap.set(key, []);
+            }
+            for (const diag of res.diagnostics) {
+              diagsMap.get(key)?.push(diag);
+            }
           }
         }
 
@@ -271,11 +276,12 @@ export class L10nService implements MyDisposable {
           const matchItems = tu.manager?.getMatchDiagnostics() || [];
           for (const item of matchItems) {
             const uri = item.uri;
+            const key = uri.path;
             const arr = item.diagnostics || [];
-            if (!diagsMap.has(uri)) {
-              diagsMap.set(uri, []);
+            if (!diagsMap.has(key)) {
+              diagsMap.set(key, []);
             }
-            diagsMap.get(uri)?.push(...arr);
+            diagsMap.get(key)?.push(...arr);
           }
         } catch (err) {
           // swallow — matching diagnostics must not break overall diagnostics collection
