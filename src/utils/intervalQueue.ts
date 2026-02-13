@@ -1,4 +1,4 @@
-import { MyDisposable } from "../models/vscTypes";
+import { Disposable } from "../models/vscTypes";
 
 type SkippableItem<T> = {
   item: T;
@@ -9,7 +9,7 @@ type SkippableItem<T> = {
  *
  * 処理前にキューを整理することが可能（後に不要になるアイテムを削除したり、同種のアイテムをまとめたりなど）。
  */
-export class IntervalQueue<T> implements MyDisposable {
+export class IntervalQueue<T> implements Disposable {
   private items: T[] = [];
   private timeoutId: NodeJS.Timeout | null = null;
   private disposed: boolean = false;

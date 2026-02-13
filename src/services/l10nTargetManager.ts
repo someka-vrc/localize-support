@@ -1,14 +1,14 @@
 import EventEmitter from "events";
 import { L10nTarget } from "../models/l10nTypes";
-import { IWorkspaceService, MyDisposable, MyDiagnostic, MyDiagnosticSeverity, vscTypeHelper } from "../models/vscTypes";
+import { IWorkspaceService, Disposable, MyDiagnostic, MyDiagnosticSeverity, vscTypeHelper } from "../models/vscTypes";
 import { URI } from "vscode-uri";
 import { TranslationManager } from "./translationManager";
 import { CodeManager } from "./codeManager";
 import { TranslationParseResult } from "./translationParser";
 import { IntervalQueue, OrganizeStrategies } from "../utils/intervalQueue";
 
-export class L10nTargetManager implements MyDisposable {
-  private readonly disposables: MyDisposable[] = [];
+export class L10nTargetManager implements Disposable {
+  private readonly disposables: Disposable[] = [];
   private readonly l10nTranslationManager: TranslationManager;
   private readonly codeManager: CodeManager;
   private readonly rebuiltEmitter = new EventEmitter();
@@ -168,7 +168,7 @@ export class L10nTargetManager implements MyDisposable {
    * @param listener イベントリスナー
    * @returns MyDisposable オブジェクト
    */
-  onRebuilt(listener: () => any): MyDisposable {
+  onRebuilt(listener: () => any): Disposable {
     this.rebuiltEmitter.on("rebuilt", listener);
     return {
       dispose: () => {
@@ -179,7 +179,7 @@ export class L10nTargetManager implements MyDisposable {
           this.rebuiltEmitter.removeListener("rebuilt", listener as any);
         } catch {}
       },
-    } as MyDisposable;
+    };
   }
 
   public async init() {

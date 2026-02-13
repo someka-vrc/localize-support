@@ -1,4 +1,5 @@
 import {Utils, URI} from "vscode-uri";
+import { Disposable, DiagnosticCollection } from "vscode";
 // types.ts などの共通ファイルに定義
 export interface MyPosition {
   readonly line: number;
@@ -26,9 +27,9 @@ export interface MyDiagnostic {
   message: string;
   severity: MyDiagnosticSeverity;
 }
-export interface MyDisposable {
-  dispose(): any;
-}
+
+export {Disposable, DiagnosticCollection};
+
 export enum MyFileType {
   Unknown = 0,
   File = 1,
@@ -51,6 +52,9 @@ export interface MyConfigurationChangeEvent {
   /** 指定したセクションが変更されたかどうかを判定する */
   affectsConfiguration(section: string, scope?: URI): boolean;
 }
+
+
+
 export interface IWorkspaceService {
   // ファイル操作
   findFiles(pattern: string | MyRelativePattern): Promise<URI[]>;
@@ -74,18 +78,20 @@ export interface IWorkspaceService {
 
   // 監視 (Event Listeners)
   /** ドキュメントが開かれたり、メモリ上で編集された時のイベント */
-  onDidChangeTextDocument(callback: (uri: URI) => void): MyDisposable;
+  onDidChangeTextDocument(callback: (uri: URI) => void): Disposable;
   /** 設定が変更された時のイベント */
   onDidChangeConfiguration(
     callback: (e: MyConfigurationChangeEvent) => void,
-  ): MyDisposable;
+  ): Disposable;
 
   // --- ディスク監視 (FileSystemWatcher) ---
   /** ディスク上のファイル作成・変更・削除を監視する */
   createFileSystemWatcher(
     pattern: string | MyRelativePattern,
     callback: (type: "created" | "changed" | "deleted", uri: URI) => void,
-  ): MyDisposable;
+  ): Disposable;
+
+  createDiagnosticCollection(name: string): DiagnosticCollection;
 }
 
 export interface MyConfiguration {

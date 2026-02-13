@@ -6,7 +6,7 @@ import { copyWorkspaceIfExists, type DisposablePath } from "../unitTestHelper";
 import { CodeParser } from "../../../services/codeParser";
 import { WasmDownloader, WasmFileNames } from "../../../services/wasmDownloader";
 import { CodeLanguage } from "../../../models/l10nTypes";
-import { IWorkspaceService, MyFileStat, MyFileType } from "../../../models/vscTypes";
+import { DiagnosticCollection, IWorkspaceService, MyFileStat, MyFileType } from "../../../models/vscTypes";
 
 // Disk-backed minimal IWorkspaceService used only for wasm storage in tests
 class DiskWorkspaceService implements IWorkspaceService {
@@ -62,6 +62,9 @@ class DiskWorkspaceService implements IWorkspaceService {
   }
   createFileSystemWatcher() {
     return { dispose: () => {} };
+  }
+  createDiagnosticCollection(name: string): DiagnosticCollection {
+    throw new Error("Method not implemented.");
   }
 }
 

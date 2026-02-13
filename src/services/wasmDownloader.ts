@@ -1,5 +1,5 @@
 import { CodeLanguage } from "../models/l10nTypes";
-import { IWorkspaceService, MyDisposable } from "../models/vscTypes";
+import { IWorkspaceService, Disposable } from "../models/vscTypes";
 import { URI, Utils } from "vscode-uri";
 import { EventEmitter } from "events";
 
@@ -26,7 +26,7 @@ export type WasmProgress = { downloaded: number; total: number; status: WasmDown
 /** web-tree-sitter 言語別プレビルトバイナリのバージョン */
 const WASM_LANGUAGE_VERSION = "0.1.13";
 
-export class WasmDownloader implements MyDisposable {
+export class WasmDownloader implements Disposable {
   private disposed = false;
   private readonly clsController = new AbortController();
   private readonly promises: Map<CodeLanguage, Promise<URI>> = new Map();
@@ -250,7 +250,7 @@ export class WasmDownloader implements MyDisposable {
    * 進捗購読 API
    * listener(lang, {downloaded,total,status})
    */
-  public onDidProgress(listener: (lang: CodeLanguage, progress: WasmProgress) => any): MyDisposable {
+  public onDidProgress(listener: (lang: CodeLanguage, progress: WasmProgress) => any): Disposable {
     this.progressEmitter.on("progress", listener as any);
     return {
       dispose: () => {
@@ -259,7 +259,7 @@ export class WasmDownloader implements MyDisposable {
           this.progressEmitter.removeListener("progress", listener as any);
         } catch {}
       },
-    } as MyDisposable;
+    };
   }
 
   /** 指定言語の現在の集約進捗を返す（未開始なら undefined） */

@@ -3,7 +3,7 @@ import { URI } from "vscode-uri";
 import {
   IWorkspaceService,
   MyRelativePattern,
-  MyDisposable,
+  Disposable,
   MyFileType,
 } from "../models/vscTypes";
 import { L10nTarget, L10nCode, CodeLanguage } from "../models/l10nTypes";
@@ -19,8 +19,8 @@ type RebuildQueueItem = {
   text?: string;
 };
 
-export class CodeManager implements MyDisposable {
-  private readonly disposables: MyDisposable[] = [];
+export class CodeManager implements Disposable {
+  private readonly disposables: Disposable[] = [];
   private readonly rebuiltEmitter = new EventEmitter();
   private readonly rebuildIntervalQueue: IntervalQueue<RebuildQueueItem>;
 
@@ -56,7 +56,7 @@ export class CodeManager implements MyDisposable {
     this.disposables.push(this.wasmDownloader);
   }
 
-  public onRebuilt(listener: () => any): MyDisposable {
+  public onRebuilt(listener: () => any): Disposable {
     this.rebuiltEmitter.on("rebuilt", listener);
     return {
       dispose: () => {
@@ -65,7 +65,7 @@ export class CodeManager implements MyDisposable {
           this.rebuiltEmitter.removeListener("rebuilt", listener as any);
         } catch {}
       },
-    } as MyDisposable;
+    };
   }
 
   public async init() {

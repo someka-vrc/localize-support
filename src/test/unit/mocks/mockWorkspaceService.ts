@@ -1,11 +1,13 @@
+import { Uri, Diagnostic } from "vscode";
 import {
   IWorkspaceService,
   MyFileStat,
   MyConfiguration,
-  MyDisposable,
+  Disposable,
   MyRelativePattern,
   MyConfigurationChangeEvent,
   MyFileType,
+  DiagnosticCollection,
 } from "../../../models/vscTypes";
 import { URI } from "vscode-uri";
 
@@ -71,20 +73,66 @@ export class MockWorkspaceService implements IWorkspaceService {
 
   // --- 監視 (Event Listeners) ---
 
-  onDidChangeTextDocument(callback: (uri: URI) => void): MyDisposable {
+  onDidChangeTextDocument(callback: (uri: URI) => void): Disposable {
     return { dispose: () => {} };
   }
 
   onDidChangeConfiguration(
     callback: (e: MyConfigurationChangeEvent) => void,
-  ): MyDisposable {
+  ): Disposable {
     return { dispose: () => {} };
   }
 
   createFileSystemWatcher(
     pattern: string | MyRelativePattern,
     callback: (type: "created" | "changed" | "deleted", uri: URI) => void,
-  ): MyDisposable {
+  ): Disposable {
     return { dispose: () => {} };
+  }
+
+  createDiagnosticCollection(name: string): DiagnosticCollection {
+    return new MockDiagnosticCollection(name);
+  }
+}
+
+class MockDiagnosticCollection implements DiagnosticCollection {
+  name: string;
+  constructor(name: string) {
+    this.name = name;
+  }
+  set(uri: unknown, diagnostics?: unknown): void {
+    throw new Error("Method not implemented.");
+  }
+  delete(uri: Uri): void {
+    throw new Error("Method not implemented.");
+  }
+  clear(): void {
+    throw new Error("Method not implemented.");
+  }
+  forEach(
+    callback: (
+      uri: Uri,
+      diagnostics: readonly Diagnostic[],
+      collection: DiagnosticCollection,
+    ) => any,
+    thisArg?: any,
+  ): void {
+    throw new Error("Method not implemented.");
+  }
+  get(uri: Uri): readonly Diagnostic[] | undefined {
+    throw new Error("Method not implemented.");
+  }
+  has(uri: Uri): boolean {
+    throw new Error("Method not implemented.");
+  }
+  dispose(): void {
+    throw new Error("Method not implemented.");
+  }
+  [Symbol.iterator](): Iterator<
+    [uri: Uri, diagnostics: readonly Diagnostic[]],
+    any,
+    any
+  > {
+    throw new Error("Method not implemented.");
   }
 }

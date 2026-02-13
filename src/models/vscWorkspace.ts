@@ -3,7 +3,7 @@ import {
   IWorkspaceService,
   MyFileStat,
   MyConfiguration,
-  MyDisposable,
+  Disposable,
   MyRelativePattern,
   MyConfigurationChangeEvent,
   MyFileType,
@@ -94,7 +94,7 @@ export class VSCodeWorkspaceService implements IWorkspaceService {
     return vscode.workspace.fs.createDirectory(uri as vscode.Uri);
   }
 
-  onDidChangeTextDocument(callback: (uri: URI) => void): MyDisposable {
+  onDidChangeTextDocument(callback: (uri: URI) => void): Disposable {
     return vscode.workspace.onDidChangeTextDocument((e) => {
       callback(e.document.uri as unknown as URI);
     });
@@ -102,7 +102,7 @@ export class VSCodeWorkspaceService implements IWorkspaceService {
 
   onDidChangeConfiguration(
     callback: (e: MyConfigurationChangeEvent) => void,
-  ): MyDisposable {
+  ): Disposable {
     return vscode.workspace.onDidChangeConfiguration((e) => {
       callback({
         affectsConfiguration: (section, scope) =>
@@ -117,7 +117,7 @@ export class VSCodeWorkspaceService implements IWorkspaceService {
   createFileSystemWatcher(
     pattern: string | MyRelativePattern,
     callback: (type: "created" | "changed" | "deleted", uri: URI) => void,
-  ): MyDisposable {
+  ): Disposable {
     const vscPattern = this.toVscPattern(pattern);
     const watcher = vscode.workspace.createFileSystemWatcher(vscPattern);
 
@@ -133,5 +133,9 @@ export class VSCodeWorkspaceService implements IWorkspaceService {
         watcher.dispose();
       },
     };
+  }
+
+  createDiagnosticCollection(name: string): vscode.DiagnosticCollection {
+    return vscode.languages.createDiagnosticCollection(name);
   }
 }

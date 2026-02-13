@@ -1,5 +1,5 @@
 import {
-  MyDisposable,
+  Disposable,
   MyRelativePattern,
   IWorkspaceService,
 } from "../models/vscTypes";
@@ -17,8 +17,8 @@ type RebuildQueueItem = {
   text?: string;
 };
 
-export class TranslationManager implements MyDisposable {
-  private readonly disposables: { [key: string]: MyDisposable[] } = {};
+export class TranslationManager implements Disposable {
+  private readonly disposables: { [key: string]: Disposable[] } = {};
   /**
    * ローカライズファイルのパース結果
    * key: ファイルのパス（string）
@@ -51,7 +51,7 @@ export class TranslationManager implements MyDisposable {
    * @param listener イベントリスナー
    * @returns MyDisposable オブジェクト
    */
-  public onRebuilt(listener: () => any): MyDisposable {
+  public onRebuilt(listener: () => any): Disposable {
     this.rebuiltEmitter.on("rebuilt", listener);
     return {
       dispose: () => {
@@ -62,7 +62,7 @@ export class TranslationManager implements MyDisposable {
           this.rebuiltEmitter.removeListener("rebuilt", listener as any);
         } catch {}
       },
-    } as MyDisposable;
+    };
   }
 
   public async init() {

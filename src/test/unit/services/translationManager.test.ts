@@ -1,7 +1,7 @@
 import assert from "assert";
 import { TranslationManager } from "../../../services/translationManager";
 import {
-  MyDisposable,
+  Disposable,
   MyRelativePattern,
   MyFileType,
 } from "../../../models/vscTypes";
@@ -40,11 +40,11 @@ suite("TranslationManager (unit)", () => {
       .stub(workspace, "createFileSystemWatcher")
       .callsFake((pattern: string | MyRelativePattern, cb: any) => {
         (workspace as any)._fsWatcherCallback = cb;
-        return { dispose: () => {} } as MyDisposable;
+        return { dispose: () => {} };
       });
     sinon.stub(workspace, "onDidChangeTextDocument").callsFake((cb: any) => {
       (workspace as any)._editCallback = cb;
-      return { dispose: () => {} } as MyDisposable;
+      return { dispose: () => {} };
     });
     sinon
       .stub(workspace, "getConfiguration")
@@ -113,11 +113,11 @@ suite("TranslationManager (unit)", () => {
       .stub(workspace, "createFileSystemWatcher")
       .callsFake((pattern: string | MyRelativePattern, cb: any) => {
         (workspace as any)._fsWatcherCallback = cb;
-        return { dispose: () => {} } as MyDisposable;
+        return { dispose: () => {} };
       });
     sinon.stub(workspace, "onDidChangeTextDocument").callsFake((cb: any) => {
       (workspace as any)._editCallback = cb;
-      return { dispose: () => {} } as MyDisposable;
+      return { dispose: () => {} };
     });
     sinon
       .stub(workspace, "getConfiguration")

@@ -1,5 +1,5 @@
 import {
-  MyDisposable,
+  Disposable,
   MyDiagnostic,
   MyRange,
   MyPosition,
@@ -22,7 +22,7 @@ import { normalizeDirPath } from "../utils/util";
 
 type TargetUnit = {
   manager?: L10nTargetManager;
-  listenerDisposable?: MyDisposable;
+  listenerDisposable?: Disposable;
 };
 /**
  * ローカライズサービス
@@ -30,8 +30,8 @@ type TargetUnit = {
  * 翻訳ファイルとソースコードを監視して翻訳エントリとコード内のローカライズ関数呼び出しを解析し、
  * 診断情報を提供する。
  */
-export class L10nService implements MyDisposable {
-  private readonly settingsWatchers: MyDisposable[] = [];
+export class L10nService implements Disposable {
+  private readonly settingsWatchers: Disposable[] = [];
   private readonly managers: Map<string, TargetUnit[]> = new Map();
   private readonly settingDiags: Map<string, DiagOrStatus> = new Map();
   private readonly reloadIntervalQueue: IntervalQueue<L10nService>;
@@ -219,7 +219,7 @@ export class L10nService implements MyDisposable {
    * @param listener イベントリスナー
    * @returns Disposable オブジェクト
    */
-  onReloaded(listener: (s: L10nService) => any): MyDisposable {
+  onReloaded(listener: (s: L10nService) => any): Disposable {
     this.reloadedEmitter.on("reloaded", listener);
     return {
       dispose: () => {
@@ -230,7 +230,7 @@ export class L10nService implements MyDisposable {
           this.reloadedEmitter.removeListener("reloaded", listener as any);
         } catch {}
       },
-    } as MyDisposable;
+    };
   }
 
   getDiagnostics(): { diags: Map<string, MyDiagnostic[]>; statuses: string[] } {
