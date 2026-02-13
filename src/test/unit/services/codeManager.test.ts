@@ -53,9 +53,6 @@ suite("CodeManager (unit)", () => {
       l10nExtension: ".po",
       l10nFuncNames: ["t"],
       settingsLocation: URI.file("d:/proj"),
-      l10nEntries: {},
-      codes: [],
-      diagnostics: [],
     };
 
     const mgr = new CodeManager(workspace, target, 10);
@@ -129,9 +126,6 @@ suite("CodeManager (unit)", () => {
       l10nExtension: ".po",
       l10nFuncNames: ["t"],
       settingsLocation: URI.file("d:/proj"),
-      l10nEntries: {},
-      codes: [],
-      diagnostics: [],
     };
 
     const mgr = new CodeManager(workspace, target, 10);

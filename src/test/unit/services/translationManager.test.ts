@@ -58,9 +58,6 @@ suite("TranslationManager (unit)", () => {
       l10nExtension: ".po",
       l10nFuncNames: ["t"],
       settingsLocation: URI.file("d:/proj"),
-      l10nEntries: {},
-      codes: [],
-      diagnostics: [],
     };
 
     const mgr = new TranslationManager(workspace, target, 10);
@@ -134,9 +131,6 @@ suite("TranslationManager (unit)", () => {
       l10nExtension: ".po",
       l10nFuncNames: ["t"],
       settingsLocation: URI.file("d:/proj"),
-      l10nEntries: {},
-      codes: [],
-      diagnostics: [],
     };
 
     const mgr = new TranslationManager(workspace, target, 10);

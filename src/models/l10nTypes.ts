@@ -51,9 +51,4 @@ export type L10nTarget = {
   l10nFuncNames: string[];
   /** 設定ファイルの場所 */
   settingsLocation: URI | number;
-  /** ローカライズエントリ */
-  l10nEntries: L10nEntries;
-  /** ローカライズ関数呼び出し */
-  codes: L10nCode[];
-  diagnostics: MyDiagnostic[];
 };

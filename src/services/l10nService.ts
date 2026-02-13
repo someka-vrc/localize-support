@@ -27,7 +27,8 @@ type TargetUnit = {
 /**
  * ローカライズサービス
  *
- * ローカライズ設定ファイルを監視し、ローカライズターゲットを管理する。
+ * 翻訳ファイルとソースコードを監視して翻訳エントリとコード内のローカライズ関数呼び出しを解析し、
+ * 診断情報を提供する。
  */
 export class L10nService implements MyDisposable {
   private readonly settingsWatchers: MyDisposable[] = [];
@@ -145,21 +146,29 @@ export class L10nService implements MyDisposable {
     await this.disposeManagersBySetting(this.getSettingPath(settingFile));
     // 設定jsonの読み込み
     if (isConfig) {
-      const folder =
-        this.workspace.getWorkspaceFolders()![settingFile as number];
+      const wsfs = this.workspace.getWorkspaceFolders() || [];
+      const idx = settingFile as number;
+      if (!(Number.isInteger(idx) && idx >= 0 && idx < wsfs.length)) {
+        // invalid workspace index — record a status message and abort
+        const msg = `Workspace folder index ${idx} is out of range.`;
+        this.settingDiags.set(this.getSettingPath(settingFile), this.toDiags(settingFile, [msg]));
+        return;
+      }
+      const folder = wsfs[idx];
       const config = this.workspace.getConfiguration(
         "localize-support",
         folder.uri,
       );
       rawTargets = config.get<any[]>("targets") || [];
     } else {
-      const buf = await this.workspace.readFile(settingFile as URI);
-      const content = Buffer.from(buf).toString();
       let json: any;
       try {
+        const buf = await this.workspace.readFile(settingFile as URI);
+        const content = Buffer.from(buf).toString();
         json = JSON.parse(content);
       } catch (error) {
-        const diags = this.toDiags(settingFile, [`Invalid JSON: ${error}`]);
+        const msg = error && (error as any).message ? (error as any).message : String(error);
+        const diags = this.toDiags(settingFile, [`Failed to read settings file: ${msg}`]);
         this.settingDiags.set(this.getSettingPath(settingFile), diags);
         return;
       }
@@ -223,23 +232,27 @@ export class L10nService implements MyDisposable {
   getDiagnostics(): { diags: Map<URI, MyDiagnostic[]>; statuses: string[] } {
     const diagsMap: Map<URI, MyDiagnostic[]> = new Map();
     const statuses: string[] = [];
-    for (const [settingFile, tgtUnits] of this.managers.entries()) {
-      if (this.settingDiags.has(settingFile)) {
-        const settingDiag = this.settingDiags.get(settingFile)!;
-        if (settingDiag.type === "diagnostic") {
-          const mngDiag = settingDiag.diagnostics;
-          const settingUri = mngDiag.uri;
-          if (!diagsMap.has(settingUri)) {
-            diagsMap.set(settingUri, []);
-          }
-          diagsMap.get(settingUri)?.push(...mngDiag.diagnostics);
-        } else if (settingDiag.type === "status") {
-          statuses.push(...settingDiag.messages);
-        } else {
-          // do nothing
+
+    // First, include any diagnostics/statuses that were produced while parsing settings
+    const processedSettings = new Set<string>();
+    for (const [settingPath, settingDiag] of this.settingDiags.entries()) {
+      processedSettings.add(settingPath);
+      if (settingDiag.type === "diagnostic") {
+        const mngDiag = settingDiag.diagnostics;
+        const settingUri = mngDiag.uri;
+        if (!diagsMap.has(settingUri)) {
+          diagsMap.set(settingUri, []);
         }
+        diagsMap.get(settingUri)?.push(...mngDiag.diagnostics);
+      } else if (settingDiag.type === "status") {
+        statuses.push(...settingDiag.messages);
       }
+    }
+
+    // Then, include diagnostics collected from managers (l10n files)
+    for (const [settingFile, tgtUnits] of this.managers.entries()) {
       for (const tu of tgtUnits) {
+        // 1) include diagnostics from parsed translation files
         for (const [l10nUri, res] of tu.manager?.l10ns.entries() || []) {
           if (!diagsMap.has(l10nUri)) {
             diagsMap.set(l10nUri, []);
@@ -248,8 +261,26 @@ export class L10nService implements MyDisposable {
             diagsMap.get(l10nUri)?.push(diag);
           }
         }
+
+        // 2) include diagnostics produced by matching code <-> translations
+        try {
+          const matchItems = tu.manager?.getMatchDiagnostics() || [];
+          for (const item of matchItems) {
+            const uri = item.uri;
+            const arr = item.diagnostics || [];
+            if (!diagsMap.has(uri)) {
+              diagsMap.set(uri, []);
+            }
+            diagsMap.get(uri)?.push(...arr);
+          }
+        } catch (err) {
+          // swallow — matching diagnostics must not break overall diagnostics collection
+        }
       }
+      // ensure settings without managers but with diagnostics were already added above
+      processedSettings.add(settingFile);
     }
+
     return { diags: diagsMap, statuses };
   }
 
@@ -355,12 +386,14 @@ export class L10nService implements MyDisposable {
       }
 
       const codeDirs: URI[] = [];
-      for (const dir of targetObj.codeDirs) {
-        const normalized = await normalizeDirPath(
-          this.workspace,
-          settingFile,
-          dir,
-        );
+      // normalize codeDirs in parallel
+      const normalizedCodeDirs = await Promise.all(
+        (targetObj.codeDirs || []).map((d: any) =>
+          normalizeDirPath(this.workspace, settingFile, d),
+        ),
+      );
+      normalizedCodeDirs.forEach((normalized, idx) => {
+        const dir = targetObj.codeDirs[idx];
         if (normalized) {
           if (!codeDirs.find((d) => d.path === normalized.path)) {
             codeDirs.push(normalized);
@@ -370,15 +403,17 @@ export class L10nService implements MyDisposable {
             `${rootPropName}[${i}]: Code directory '${dir}' does not exist.`,
           );
         }
-      }
+      });
 
       const l10nDirs: URI[] = [];
-      for (const dir of targetObj.l10nDirs) {
-        const normalized = await normalizeDirPath(
-          this.workspace,
-          settingFile,
-          dir,
-        );
+      // normalize l10nDirs in parallel
+      const normalizedL10nDirs = await Promise.all(
+        (targetObj.l10nDirs || []).map((d: any) =>
+          normalizeDirPath(this.workspace, settingFile, d),
+        ),
+      );
+      normalizedL10nDirs.forEach((normalized, idx) => {
+        const dir = targetObj.l10nDirs[idx];
         if (normalized) {
           if (!l10nDirs.find((d) => d.path === normalized.path)) {
             l10nDirs.push(normalized);
@@ -388,7 +423,7 @@ export class L10nService implements MyDisposable {
             `${rootPropName}[${i}]: Localization directory '${dir}' does not exist.`,
           );
         }
-      }
+      });
 
       const l10nFuncNames: string[] = [];
       for (const funcName of targetObj.l10nFuncNames) {
@@ -440,9 +475,6 @@ export class L10nService implements MyDisposable {
         l10nExtension: l10nExtension,
         l10nFuncNames: l10nFuncNames,
         settingsLocation: settingFile,
-        l10nEntries: {},
-        codes: [],
-        diagnostics: [],
       } as L10nTarget);
     }
     return { targets, messages };
@@ -518,9 +550,6 @@ export class L10nService implements MyDisposable {
       l10nExtension: ".po",
       l10nFuncNames: [],
       settingsLocation: settingFile,
-      l10nEntries: {},
-      codes: [],
-      diagnostics: [],
     };
   }
 }

@@ -5,7 +5,6 @@ import { L10nTarget, L10nCode, CodeLanguage } from "../models/l10nTypes";
 import { IntervalQueue, OrganizeStrategies } from "../utils/intervalQueue";
 import { CodeParser } from "./codeParser";
 import { WasmDownloader } from "./wasmDownloader";
-import { vscTypeHelper } from "../models/vscTypes";
 import * as path from "path";
 
 type RebuildQueueItem = {

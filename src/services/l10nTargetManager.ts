@@ -1,6 +1,6 @@
 import EventEmitter from "events";
 import { L10nTarget } from "../models/l10nTypes";
-import { IWorkspaceService, MyDisposable } from "../models/vscTypes";
+import { IWorkspaceService, MyDisposable, MyDiagnostic, MyDiagnosticSeverity, vscTypeHelper } from "../models/vscTypes";
 import { URI } from "vscode-uri";
 import { TranslationManager } from "./translationManager";
 import { CodeManager } from "./codeManager";
@@ -18,6 +18,133 @@ export class L10nTargetManager implements MyDisposable {
   }
   public get codes() {
     return this.codeManager.codes;
+  }
+
+  /**
+   * コードと翻訳を突き合わせて診断を返す（配列版）
+   * 戻り値: { uri, diagnostics }[] — 呼び出し側でマージしやすい形
+   */
+  public getMatchDiagnostics(): { uri: URI; diagnostics: MyDiagnostic[] }[] {
+    const buckets = new Map<string, MyDiagnostic[]>();
+
+    // collect used keys from code
+    const usedKeys = new Set<string>();
+    for (const [codeUri, codeList] of this.codes.entries()) {
+      for (const c of codeList) {
+        usedKeys.add(c.key);
+      }
+    }
+
+    const pushDiagToBucket = (uri: URI, diag: MyDiagnostic) => {
+      const key = uri.path;
+      const arr = buckets.get(key) || [];
+      arr.push(diag);
+      buckets.set(key, arr);
+    };
+
+    // build translation key index and language->uris map
+    const keyExistsAnywhere = new Map<string, boolean>();
+    const keyLangPresence = new Map<string, Set<string>>();
+    const langToUris = new Map<string, URI[]>();
+
+    for (const [luri, res] of this.l10ns.entries()) {
+      for (const lang of Object.keys(res.entries || {})) {
+        if (!langToUris.has(lang)) {
+          langToUris.set(lang, []);
+        }
+        langToUris.get(lang)?.push(luri);
+
+        const entries = (res.entries as any)[lang] || {};
+        for (const k of Object.keys(entries)) {
+          keyExistsAnywhere.set(k, true);
+          if (!keyLangPresence.has(k)) {
+            keyLangPresence.set(k, new Set());
+          }
+          keyLangPresence.get(k)?.add(lang);
+        }
+      }
+    }
+
+    // 1) 未定義キーの使用 (コード側)
+    for (const [codeUri, codeList] of this.codes.entries()) {
+      for (const c of codeList) {
+        if (!keyExistsAnywhere.has(c.key)) {
+          pushDiagToBucket(
+            codeUri,
+            vscTypeHelper.newDiagnostic(
+              c.location.range,
+              `Undefined localization key '${c.key}' used in code.`,
+              MyDiagnosticSeverity.Warning,
+            ),
+          );
+        }
+      }
+    }
+
+    // 2) 未使用エントリ (翻訳側)
+    for (const [luri, res] of this.l10ns.entries()) {
+      for (const lang of Object.keys(res.entries || {})) {
+        const entries = (res.entries as any)[lang] || {};
+        for (const [k, entry] of Object.entries(entries)) {
+          if (!usedKeys.has(k)) {
+            pushDiagToBucket(
+              luri,
+              vscTypeHelper.newDiagnostic(
+                (entry as any).location.range,
+                `Localization key '${k}' is not used in code.`,
+                MyDiagnosticSeverity.Information,
+              ),
+            );
+          }
+        }
+      }
+    }
+
+    // 3) 未翻訳言語あり
+    const allLangs = Array.from(langToUris.keys());
+    if (allLangs.length > 0) {
+      for (const [k, langs] of keyLangPresence.entries()) {
+        for (const lang of allLangs) {
+          if (!langs.has(lang)) {
+            const uris = langToUris.get(lang) || [];
+            for (const uri of uris) {
+              pushDiagToBucket(
+                uri,
+                vscTypeHelper.newDiagnostic(
+                  vscTypeHelper.newRange(0, 0, 0, 0),
+                  `Missing translation for key '${k}' in language '${lang}'.`,
+                  MyDiagnosticSeverity.Warning,
+                ),
+              );
+            }
+          }
+        }
+      }
+    }
+
+    const result: { uri: URI; diagnostics: MyDiagnostic[] }[] = [];
+    for (const [p, arr] of buckets.entries()) {
+      let uriObj: URI | undefined;
+      for (const u of this.l10ns.keys()) {
+        if (u.path === p) {
+          uriObj = u;
+          break;
+        }
+      }
+      if (!uriObj) {
+        for (const u of this.codes.keys()) {
+          if (u.path === p) {
+            uriObj = u;
+            break;
+          }
+        }
+      }
+      if (uriObj) {
+        result.push({ uri: uriObj, diagnostics: arr });
+      }
+    }
+
+    return result;
   }
 
   constructor(
