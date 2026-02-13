@@ -13,10 +13,11 @@ export async function activate(context: vscode.ExtensionContext) {
   console.log('Congratulations, your extension "localize-support" is now active!');
 
   // --- existing example command -------------------------------------------------
-  const disposable = vscode.commands.registerCommand("localize-support.helloWorld", () => {
-    vscode.window.showInformationMessage("Hello World from localize-support!");
-  });
-  context.subscriptions.push(disposable);
+  context.subscriptions.push(
+    vscode.commands.registerCommand("localize-support.helloWorld", () => {
+      vscode.window.showInformationMessage("Hello World from localize-support!");
+    }),
+  );
 
   // --- L10nService -----------------------------------
   const workspaceService = new VSCodeWorkspaceService();
