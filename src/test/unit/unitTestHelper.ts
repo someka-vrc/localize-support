@@ -25,7 +25,7 @@ export async function copyWorkspaceIfExists(
     exists = true;
   } catch {}
   if (exists) {
-    destDir = path.join(process.cwd(), ".tmp", dateStr, timeStr, 'unit', subPath);
+    destDir = path.join(process.cwd(), ".tmp/fixtures", dateStr, timeStr, 'unit', subPath);
     await fs.cp(srcDir, destDir, { recursive: true });
   }
   return destDir

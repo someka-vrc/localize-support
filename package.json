@@ -3,6 +3,7 @@
   "displayName": "localize-support",
   "description": "VS Code extension supports localizing",
   "version": "0.0.1",
+  "license": "MIT",
   "engines": {
     "vscode": "^1.109.0"
   },
@@ -127,6 +128,7 @@
     "clean": "yarn run clean:tmp && yarn run clean:out && yarn run clean:vsctest"
   },
   "devDependencies": {
+    "@types/emscripten": "^1.41.5",
     "@types/mocha": "^10.0.10",
     "@types/node": "22.x",
     "@types/sinon": "^21.0.0",
@@ -144,6 +146,6 @@
     "vscode-uri": "^3.1.0"
   },
   "dependencies": {
-    "web-tree-sitter": "^0.26.5"
+    "web-tree-sitter": "^0.20.8"
   }
 }

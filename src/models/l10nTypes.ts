@@ -16,19 +16,6 @@ export const CodeLanguages = [
 /** 対応コード言語 */
 export type CodeLanguage = (typeof CodeLanguages)[number];
 
-/**
- * wasm 言語別バイナリファイル名
- * 
- * @see https://app.unpkg.com/tree-sitter-wasms@0.1.13/files/out
- */
-export const WasmFileNames: Record<CodeLanguage, string> = {
-  "csharp": "tree-sitter-c_sharp.wasm",
-  "javascript": "tree-sitter-javascript.wasm",
-  "typescript": "tree-sitter-typescript.wasm",
-  "python": "tree-sitter-python.wasm",
-  "java": "tree-sitter-java.wasm",
-};
-
 /** ローカライズエントリ */
 export type L10nEntry = {
   translation: string;

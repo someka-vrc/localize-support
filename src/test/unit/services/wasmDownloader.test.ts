@@ -2,8 +2,11 @@ import * as assert from "assert";
 import * as http from "http";
 import { Utils, URI } from "vscode-uri";
 import { copyWorkspaceIfExists, type DisposablePath } from "../unitTestHelper";
-import { WasmDownloader } from "../../../services/wasmDownloader";
-import { CodeLanguage, WasmFileNames } from "../../../models/l10nTypes";
+import {
+  WasmDownloader,
+  WasmFileNames,
+} from "../../../services/wasmDownloader";
+import { CodeLanguage } from "../../../models/l10nTypes";
 import { MyFileStat, MyFileType } from "../../../models/vscTypes";
 import sinon from "sinon";
 import { MockWorkspaceService } from "../mocks/mockWorkspaceService";
@@ -109,10 +112,18 @@ suite("WasmDownloader (unit)", () => {
     const storageUri = Utils.joinPath(workspaceUri, ".wasm-test-storage");
 
     const downloader = new WasmDownloader(workspace, storageUri);
-    const base = URI.parse(`http://127.0.0.1:${port}/out`);
+    const base = `http://127.0.0.1:${port}/out`;
+
+    const captured: Array<{
+      lang: CodeLanguage;
+      progress: { downloaded: number; total: number; status: string };
+    }> = [];
+    const sub = downloader.onDidProgress((l, p) =>
+      captured.push({ lang: l, progress: p }),
+    );
 
     let lastProgress: { downloaded: number; total: number } | null = null;
-    const localUri = await downloader.ensureWasmFile(base, lang, {
+    const localUri = await downloader.retrieveWasmFileInner(base, lang, {
       onProgress: (downloaded: number, total: number) => {
         lastProgress = { downloaded, total };
       },
@@ -130,16 +141,63 @@ suite("WasmDownloader (unit)", () => {
     assert.strictEqual((lastProgress as any).total, wasmContent.length);
     assert.strictEqual((lastProgress as any).downloaded, wasmContent.length);
 
+    // EventEmitter 経由の進捗通知と集約状態を確認
+    assert.ok(captured.length > 0, "onDidProgress should emit events");
+    const finalEvent = captured.filter((c) => c.lang === lang).slice(-1)[0];
+    assert.ok(finalEvent, "final progress event must exist");
+    assert.strictEqual(finalEvent.progress.status, "done");
+    const agg = downloader.getProgress(lang);
+    assert.ok(agg, "aggregated progress must be available");
+    assert.strictEqual(agg!.status, "done");
+    assert.strictEqual(agg!.downloaded, wasmContent.length);
+    assert.strictEqual(agg!.total, wasmContent.length);
+
     // stop server and call ensureWasmFile again — should succeed from cache/local file
     await new Promise<void>((resolve) => server.close(() => resolve()));
 
-    const localUri2 = await downloader.ensureWasmFile(base, lang);
+    const localUri2 = await downloader.retrieveWasmFileInner(base, lang);
     assert.strictEqual(
       localUri.fsPath,
       localUri2.fsPath,
       "should return same local URI when file exists",
     );
 
+    sub.dispose();
     await workspaceFixture!.dispose();
   }).timeout(30_000);
+
+  test("constructs correct remote URL when base contains {version}", async () => {
+    const workspace = new MockWorkspaceService();
+
+    // force download path by making stat throw
+    sinon.stub(workspace, "createDirectory").resolves();
+    sinon.stub(workspace, "stat").rejects(new Error("not found"));
+    sinon.stub(workspace, "writeFile").resolves();
+
+    const storageUri = Utils.joinPath(URI.file(process.cwd()), ".tmp/wasm-url-test");
+    const downloader = new WasmDownloader(workspace, storageUri);
+
+    const base = "https://unpkg.com/tree-sitter-wasms@{version}/out";
+
+    let capturedUrl = "";
+    // intercept the private downloadFile to capture the remote URL constructed
+    const dlStub = sinon.stub(WasmDownloader.prototype as any, "downloadFile").callsFake(async (...args: any[]) => {
+      const url = args[0] as string;
+      const dest = args[1] as URI;
+      capturedUrl = url;
+      // simulate a successful write so retrieveWasmFileInner completes
+      await workspace.writeFile(dest, new Uint8Array([1]));
+    });
+
+    const local = await downloader.retrieveWasmFileInner(base, "javascript");
+
+    // URI may percent-encode reserved characters (e.g. '@' -> '%40') —
+    // compare against the decoded form so both encoded/unencoded forms pass.
+    assert.strictEqual(decodeURI(capturedUrl), "https://unpkg.com/tree-sitter-wasms@0.1.13/out/tree-sitter-javascript.wasm");
+
+    // ensure returned local uri points to expected filename
+    assert.ok(local.fsPath.endsWith("tree-sitter-javascript.wasm"));
+
+    dlStub.restore();
+  });
 });

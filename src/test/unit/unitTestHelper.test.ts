@@ -12,7 +12,7 @@ suite("unitTestHelper", () => {
       .relative(process.cwd(), workspace.path)
       .replace(/\//g, "\\");
     const pattern =
-      /^\.tmp\\\d{4}-\d{2}-\d{2}\\\d{2}-\d{2}-\d{2}\\unit\\unitTestHelper$/;
+      /^\.tmp\\fixtures\\\d{4}-\d{2}-\d{2}\\\d{2}-\d{2}-\d{2}\\unit\\unitTestHelper$/;
     assert.match(
       copied,
       pattern,

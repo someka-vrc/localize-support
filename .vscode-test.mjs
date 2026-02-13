@@ -20,7 +20,7 @@ async function copyWorkspaceIfExists(subPath) {
   if (exists) {
     destDir = path.join(
       process.cwd(),
-      ".tmp",
+      ".tmp/fixtures",
       dateStr,
       timeStr,
       "vscode",
