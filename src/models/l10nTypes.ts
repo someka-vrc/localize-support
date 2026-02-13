@@ -30,10 +30,10 @@ export type L10nEntries = {
   [lang: string]: L10nLangEntries;
 }
 
-/** ローカライズ関数呼び出し */
+/** ローカライズ関数呼び出し（ファイル位置を含む） */
 export type L10nCode = {
   key: string;
-  range: MyRange;
+  location: MyLocation;
 };
 
 export type L10nTarget = {

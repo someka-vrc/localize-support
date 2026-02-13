@@ -3,16 +3,21 @@ import { L10nTarget } from "../models/l10nTypes";
 import { IWorkspaceService, MyDisposable } from "../models/vscTypes";
 import { URI } from "vscode-uri";
 import { TranslationManager } from "./translationManager";
+import { CodeManager } from "./codeManager";
 import { TranslationParseResult } from "./translationParser";
 import { IntervalQueue, OrganizeStrategies } from "../utils/intervalQueue";
 
 export class L10nTargetManager implements MyDisposable {
   private readonly disposables: MyDisposable[] = [];
   private readonly l10nTranslationManager: TranslationManager;
+  private readonly codeManager: CodeManager;
   private readonly rebuiltEmitter = new EventEmitter();
   private reloadIntervalQueue: IntervalQueue<void>;
   public get l10ns(): Map<URI, TranslationParseResult> {
     return this.l10nTranslationManager.l10ns;
+  }
+  public get codes() {
+    return this.codeManager.codes;
   }
 
   constructor(
@@ -24,7 +29,10 @@ export class L10nTargetManager implements MyDisposable {
       this.workspace,
       this.target,
     );
+    this.codeManager = new CodeManager(this.workspace, this.target);
     this.disposables.push(this.l10nTranslationManager);
+    this.disposables.push(this.codeManager);
+
     this.reloadIntervalQueue = new IntervalQueue<void>(
       reloadIntervalMs,
       async () => {
@@ -55,7 +63,9 @@ export class L10nTargetManager implements MyDisposable {
   }
 
   public async init() {
+    // initialize both translation and code managers
     await this.l10nTranslationManager.init();
+    await this.codeManager.init();
     this.reloadIntervalQueue.start();
   }
 

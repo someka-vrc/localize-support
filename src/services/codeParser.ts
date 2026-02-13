@@ -1,13 +1,8 @@
 import { URI } from "vscode-uri";
 import Parser from "web-tree-sitter";
-import { CodeLanguage } from "../models/l10nTypes";
+import { CodeLanguage, L10nCode } from "../models/l10nTypes";
 import { WasmDownloader } from "./wasmDownloader";
-import { MyRange, vscTypeHelper } from "../models/vscTypes";
-
-export type CodeFragment = {
-  key: string;
-  range: MyRange;
-};
+import { vscTypeHelper } from "../models/vscTypes";
 
 /**
  * Lightweight code parser using tree-sitter.
@@ -40,7 +35,8 @@ export class CodeParser {
     l10nFuncNames: string[],
     wasmCdnBaseUrl: string,
     content: string,
-  ): Promise<CodeFragment[]> {
+    uri: URI,
+  ): Promise<L10nCode[]> {
     // input validation
     if (l10nFuncNames.length === 0) {
       throw new Error("l10nFuncNames must be a non-empty array");
@@ -205,9 +201,10 @@ export class CodeParser {
             node.endPosition.row,
             node.endPosition.column,
           );
-          return { key, range };
+          const location = vscTypeHelper.newLocation(uri, range);
+          return { key, location } as L10nCode;
         })
-        .filter((item): item is CodeFragment => item !== null);
+        .filter((item): item is L10nCode => item !== null);
 
       return captures;
     } catch (err) {

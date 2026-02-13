@@ -121,7 +121,7 @@ suite("CodeParser (unit, integration with wasm)", () => {
       const s = "not_a_call";
     `;
 
-    const fragments = await parser.parse(["t"], wasmCdnBase, src);
+    const fragments = await parser.parse(["t"], wasmCdnBase, src, URI.file(path.join(process.cwd(), 'src', 'services', 'codeParser.test.js')));
 
     // expect keys for each call site
     const keys = fragments.map((f) => f.key).sort();
@@ -137,10 +137,12 @@ suite("CodeParser (unit, integration with wasm)", () => {
     assert.ok(keys.includes("member.call"), `found keys: ${JSON.stringify(keys)}`);
     assert.ok(keys.includes("static-template"), `found keys: ${JSON.stringify(keys)}`);
 
-    // ranges should have valid line numbers (0-based)
+    // locations should have valid line numbers (0-based) and the URI we passed
+    const expectedUri = URI.file(path.join(process.cwd(), 'src', 'services', 'codeParser.test.js'));
     for (const f of fragments) {
-      assert.ok(typeof f.range.start.line === "number");
-      assert.ok(typeof f.range.end.line === "number");
+      assert.ok(typeof f.location.range.start.line === "number");
+      assert.ok(typeof f.location.range.end.line === "number");
+      assert.strictEqual(f.location.uri.fsPath, expectedUri.fsPath);
     }
 
     // wasm file should be cached on disk under .tmp/wasms/wasm/{version}/
@@ -182,7 +184,7 @@ suite("CodeParser (unit, integration with wasm)", () => {
       throw new Error(`failed to download wasm before parsing: ${String(lastErr)}`);
     }
 
-    const fragments = await parser.parse(["t"], wasmCdnBase, src);
+    const fragments = await parser.parse(["t"], wasmCdnBase, src, URI.file(path.join(process.cwd(), 'src', 'services', 'codeParser.test.js')));
     const keys = fragments.map((f) => f.key).sort();
 
     assert.ok(
@@ -269,7 +271,7 @@ suite("CodeParser (unit, integration with wasm)", () => {
       t("a" + "b");
     `;
 
-    const fragments = await parser.parse(["t"], wasmCdnBase, src);
+    const fragments = await parser.parse(["t"], wasmCdnBase, src, URI.file(path.join(process.cwd(), 'src', 'services', 'codeParser.test.js')));
     const keys = fragments.map((f) => f.key);
 
     // only the static first call should be captured
@@ -295,7 +297,7 @@ suite("CodeParser (unit, integration with wasm)", () => {
       t("a" + "b");
     `;
 
-    const fragments = await parser.parse(["t"], wasmCdnBase, src);
+    const fragments = await parser.parse(["t"], wasmCdnBase, src, URI.file(path.join(process.cwd(), 'src', 'services', 'codeParser.test.js')));
     const keys = fragments.map((f) => f.key);
 
     assert.ok(keys.includes("ok"));
@@ -320,7 +322,7 @@ suite("CodeParser (unit, integration with wasm)", () => {
       t("a" "b")
     `;
 
-    const fragments = await parser.parse(["t"], wasmCdnBase, src);
+    const fragments = await parser.parse(["t"], wasmCdnBase, src, URI.file(path.join(process.cwd(), 'src', 'services', 'codeParser.test.js')));
     const keys = fragments.map((f) => f.key);
 
     assert.ok(keys.includes("ok"));
@@ -349,7 +351,7 @@ suite("CodeParser (unit, integration with wasm)", () => {
       obj['t']("computed");
     `;
 
-    const fragments = await parser.parse(["t"], wasmCdnBase, src);
+    const fragments = await parser.parse(["t"], wasmCdnBase, src, URI.file(path.join(process.cwd(), 'src', 'services', 'codeParser.test.js')));
     const keys = fragments.map((f) => f.key);
 
     assert.ok(keys.includes("verbatim"));
@@ -372,7 +374,7 @@ suite("CodeParser (unit, integration with wasm)", () => {
       t("a" + "b");
     `;
 
-    const fragments = await parser.parse(["t"], wasmCdnBase, src);
+    const fragments = await parser.parse(["t"], wasmCdnBase, src, URI.file(path.join(process.cwd(), 'src', 'services', 'codeParser.test.js')));
     const keys = fragments.map((f) => f.key);
 
     assert.ok(keys.includes("ok"));

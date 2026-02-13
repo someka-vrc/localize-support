@@ -113,19 +113,19 @@
     ]
   },
   "scripts": {
-    "vscode:prepublish": "yarn run compile",
+    "vscode:prepublish": "yarn compile",
     "compile": "yarn lint && tsc -p ./",
     "watch": "tsc -watch -p ./",
     "lint": "eslint src",
-    "pretest:integration": "yarn run compile && yarn run lint",
+    "pretest:integration": "yarn compile && yarn lint",
     "test:unit": "cross-env NODE_OPTIONS=--enable-source-maps c8 --reporter=lcov --report-dir=coverage mocha \"./out/test/unit/**/*.test.js\"",
-    "pretest:unit": "yarn run compile && yarn run lint",
+    "pretest:unit": "yarn compile && yarn lint",
     "test:integration": "vscode-test",
-    "test": "yarn run test:unit && yarn run test:integration",
+    "test": "yarn test:unit && yarn test:integration",
     "clean:tmp": "node -e \"const fs = require('fs'); fs.rmSync('.tmp', { recursive: true, force: true })\"",
     "clean:out": "node -e \"const fs = require('fs'); fs.rmSync('out', { recursive: true, force: true })\"",
     "clean:vsctest": "node -e \"const fs = require('fs'); fs.rmSync('.vscode-test', { recursive: true, force: true })\"",
-    "clean": "yarn run clean:tmp && yarn run clean:out && yarn run clean:vsctest"
+    "clean": "yarn clean:tmp && yarn clean:out && yarn clean:vsctest"
   },
   "devDependencies": {
     "@types/emscripten": "^1.41.5",
