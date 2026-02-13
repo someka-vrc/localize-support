@@ -12,6 +12,7 @@ export class PoParser implements TranslationParser {
   constructor() {}
 
   public async parse(uri: URI, content: string): Promise<TranslationParseResult> {
+    console.log('[localize-support][PoParser] parse', uri.path);
     const text = content.split("\n");
     const entries: L10nLangEntries = {};
     const diagnostics: MyDiagnostic[] = [];

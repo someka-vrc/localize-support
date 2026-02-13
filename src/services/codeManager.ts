@@ -1,6 +1,11 @@
 import { EventEmitter } from "events";
 import { URI } from "vscode-uri";
-import { IWorkspaceService, MyRelativePattern, MyDisposable, MyFileType } from "../models/vscTypes";
+import {
+  IWorkspaceService,
+  MyRelativePattern,
+  MyDisposable,
+  MyFileType,
+} from "../models/vscTypes";
 import { L10nTarget, L10nCode, CodeLanguage } from "../models/l10nTypes";
 import { IntervalQueue, OrganizeStrategies } from "../utils/intervalQueue";
 import { CodeParser } from "./codeParser";
@@ -25,25 +30,54 @@ export class CodeManager implements MyDisposable {
   // wasm downloader used by CodeParser instances
   private readonly wasmDownloader: WasmDownloader;
 
-  constructor(private workspace: IWorkspaceService, private target: L10nTarget, rebuildIntervalMs: number = 500) {
+  constructor(
+    private workspace: IWorkspaceService,
+    private target: L10nTarget,
+    rebuildIntervalMs: number = 500,
+  ) {
+    console.log(
+      "[localize-support][CodeManager] constructor for",
+      target.settingsLocation,
+    );
     this.rebuildIntervalQueue = new IntervalQueue<RebuildQueueItem>(
       rebuildIntervalMs,
-      async (item: RebuildQueueItem) => await item.thisArg.rebuildCache(item.uri, item.reason, item.text),
-      OrganizeStrategies.skipDuplicatesByKey<RebuildQueueItem>((item) => item.uri.path + "-" + item.reason),
+      async (item: RebuildQueueItem) =>
+        await item.thisArg.rebuildCache(item.uri, item.reason, item.text),
+      OrganizeStrategies.skipDuplicatesByKey<RebuildQueueItem>(
+        (item) => item.uri.path + "-" + item.reason,
+      ),
     );
 
     // default wasm storage under project .tmp/wasms — tests may stub parsing instead of downloading
-    this.wasmDownloader = new WasmDownloader(this.workspace, URI.file(path.join(process.cwd(), ".tmp/wasms")));
+    this.wasmDownloader = new WasmDownloader(
+      this.workspace,
+      URI.file(path.join(process.cwd(), ".tmp/wasms")),
+    );
     this.disposables.push(this.wasmDownloader);
   }
 
   public onRebuilt(listener: () => any): MyDisposable {
     this.rebuiltEmitter.on("rebuilt", listener);
-    return { dispose: () => { try { (this.rebuiltEmitter as any).off?.("rebuilt", listener); this.rebuiltEmitter.removeListener("rebuilt", listener as any); } catch {} } } as MyDisposable;
+    return {
+      dispose: () => {
+        try {
+          (this.rebuiltEmitter as any).off?.("rebuilt", listener);
+          this.rebuiltEmitter.removeListener("rebuilt", listener as any);
+        } catch {}
+      },
+    } as MyDisposable;
   }
 
   public async init() {
-    if (this.target.codeLanguages.length === 0 || this.target.codeDirs.length === 0 || this.target.l10nFuncNames.length === 0) {
+    console.log(
+      "[localize-support][CodeManager] init for",
+      this.target.settingsLocation,
+    );
+    if (
+      this.target.codeLanguages.length === 0 ||
+      this.target.codeDirs.length === 0 ||
+      this.target.l10nFuncNames.length === 0
+    ) {
       return; // nothing to do
     }
 
@@ -52,7 +86,10 @@ export class CodeManager implements MyDisposable {
       const pattern = this.buildGlobForLanguages(this.target.codeLanguages);
       const rel: MyRelativePattern = { baseUri, pattern } as MyRelativePattern;
 
-      const fsWatcher = this.workspace.createFileSystemWatcher(rel, (type, uri) => this.handleFileEvent(uri, type));
+      const fsWatcher = this.workspace.createFileSystemWatcher(
+        rel,
+        (type, uri) => this.handleFileEvent(uri, type),
+      );
       this.disposables.push(fsWatcher);
 
       const editWatcher = this.workspace.onDidChangeTextDocument((uri) => {
@@ -65,8 +102,14 @@ export class CodeManager implements MyDisposable {
       // initial load
       const uris = await this.workspace.findFiles(rel);
       for (const uri of uris) {
-        const content = (await this.workspace.getTextDocumentContent(uri)) || "";
-        this.rebuildIntervalQueue.push({ thisArg: this, uri, reason: "created", text: content });
+        const content =
+          (await this.workspace.getTextDocumentContent(uri)) || "";
+        this.rebuildIntervalQueue.push({
+          thisArg: this,
+          uri,
+          reason: "created",
+          text: content,
+        });
       }
     }
 
@@ -92,17 +135,39 @@ export class CodeManager implements MyDisposable {
   }
 
   private handleFileEvent(uri: URI, reason: "created" | "changed" | "deleted") {
-    const fullText = reason === "deleted" ? undefined : (this.workspace.getTextDocumentContent(uri) as any);
+    const fullText =
+      reason === "deleted"
+        ? undefined
+        : (this.workspace.getTextDocumentContent(uri) as any);
     // push will evaluate lazily in rebuild queue
-    this.rebuildIntervalQueue.push({ thisArg: this, uri, reason, text: undefined as any });
+    this.rebuildIntervalQueue.push({
+      thisArg: this,
+      uri,
+      reason,
+      text: undefined as any,
+    });
   }
 
   private async handleEditEvent(uri: URI) {
     const text = (await this.workspace.getTextDocumentContent(uri)) || "";
-    this.rebuildIntervalQueue.push({ thisArg: this, uri, reason: "changed", text });
+    this.rebuildIntervalQueue.push({
+      thisArg: this,
+      uri,
+      reason: "changed",
+      text,
+    });
   }
 
-  private async rebuildCache(uri: URI, reason: "created" | "changed" | "deleted", text?: string | undefined) {
+  private async rebuildCache(
+    uri: URI,
+    reason: "created" | "changed" | "deleted",
+    text?: string | undefined,
+  ) {
+    console.log(
+      "[localize-support][CodeManager] rebuildCache",
+      uri.path,
+      reason,
+    );
     let didChange = false;
     switch (reason) {
       case "created":
@@ -113,14 +178,25 @@ export class CodeManager implements MyDisposable {
           break;
         }
         try {
-          const content = text ?? (await this.workspace.getTextDocumentContent(uri));
+          const content =
+            text ?? (await this.workspace.getTextDocumentContent(uri));
           const parser = new CodeParser(this.wasmDownloader, lang);
           // always read wasm CDN base URL from configuration (do not cache)
           const cfg = this.workspace.getConfiguration("localize-support");
-          const wasmCdnBaseUrl = (cfg && cfg.get<string>("wasmCdnBaseUrl")) || "";
-          const fragments = await parser.parse(this.target.l10nFuncNames, wasmCdnBaseUrl, content, uri as any).catch((_) => []);
+          const wasmCdnBaseUrl =
+            (cfg && cfg.get<string>("wasmCdnBaseUrl")) || "";
+          const fragments = await parser
+            .parse(
+              this.target.l10nFuncNames,
+              wasmCdnBaseUrl,
+              content,
+              uri as any,
+            )
+            .catch((_) => []);
           // parser now returns L10nCode (key + location)
-          const codes = fragments.map((f: L10nCode) => ({ key: f.key, location: f.location } as L10nCode));
+          const codes = fragments.map(
+            (f: L10nCode) => ({ key: f.key, location: f.location }) as L10nCode,
+          );
           this.codes.set(uri, codes);
           didChange = true;
         } catch (err) {
@@ -164,8 +240,12 @@ export class CodeManager implements MyDisposable {
   public async dispose() {
     this.rebuildIntervalQueue.dispose();
     for (const d of this.disposables) {
-      try { await d.dispose(); } catch {}
+      try {
+        await d.dispose();
+      } catch {}
     }
-    try { this.rebuiltEmitter.removeAllListeners(); } catch {}
+    try {
+      this.rebuiltEmitter.removeAllListeners();
+    } catch {}
   }
 }

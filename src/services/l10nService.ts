@@ -58,6 +58,7 @@ export class L10nService implements MyDisposable {
    * 再度呼び出すと既存のウォッチャーとターゲットをクリアして再設定する。
    */
   async init(): Promise<void> {
+    console.log('[localize-support][L10nService] init()');
     // clear existing watchers
     await Promise.all(this.settingsWatchers.map((d) => d.dispose()));
     this.settingsWatchers.length = 0;
@@ -122,6 +123,7 @@ export class L10nService implements MyDisposable {
   }
 
   async dispose(): Promise<void> {
+    console.log('[localize-support][L10nService] dispose()');
     this.reloadIntervalQueue.dispose();
     this.reloadedEmitter.removeAllListeners();
     await Promise.all(this.settingsWatchers.map((d) => d.dispose()));
@@ -139,6 +141,7 @@ export class L10nService implements MyDisposable {
    * @returns エラーメッセージの配列
    */
   async reload(settingFile: URI | number): Promise<void> {
+    console.log('[localize-support][L10nService] reload()', typeof settingFile === 'number' ? `configIndex=${settingFile}` : (settingFile as URI).path);
     let rawTargets: any[] = [];
     let isConfig = typeof settingFile === "number";
 
@@ -208,6 +211,7 @@ export class L10nService implements MyDisposable {
       this.getSettingPath(settingFile),
       managers.filter((m) => m !== null),
     );
+    console.log('[localize-support][L10nService] reload() completed for', this.getSettingPath(settingFile));
   }
 
   /**

@@ -66,6 +66,7 @@ export class TranslationManager implements MyDisposable {
   }
 
   public async init() {
+    console.log('[localize-support][TranslationManager] init for', this.target.settingsLocation);
     if (this.disposed) {
       return;
     }
@@ -99,7 +100,7 @@ export class TranslationManager implements MyDisposable {
 
     const editWatcher = this.workspace.onDidChangeTextDocument((uri) => {
       // 監視対象フォルダ配下のファイルかチェック
-      if (uri.path.startsWith(baseUri.path)) {
+      if (uri.path.startsWith(baseUri.path) && uri.path.endsWith(this.target.l10nExtension)) {
         this.handleL10nChangeEvent(uri);
       }
     });
@@ -159,6 +160,7 @@ export class TranslationManager implements MyDisposable {
     reason: "created" | "changed" | "deleted",
     text: string | undefined,
   ) {
+    console.log('[localize-support][TranslationManager] rebuildCache', uri.path, reason);
     let didChange = false;
     switch (reason) {
       case "created":
