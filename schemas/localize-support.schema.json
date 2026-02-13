@@ -1,0 +1,75 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://example.com/schemas/localize-support.schema.json",
+  "title": "localize-support configuration schema",
+  "description": "Schema for localize-support settings — contains `targets` array (same structure as `localize-support.targets`).",
+  "type": "object",
+  "properties": {
+    "targets": {
+      "type": "array",
+      "description": "Array of localization targets (maps to `localize-support.targets`).",
+      "items": {
+        "type": "object",
+        "required": [
+          "codeLanguages",
+          "codeDirs",
+          "l10nFormat",
+          "l10nDirs",
+          "l10nExtension",
+          "l10nFuncNames"
+        ],
+        "properties": {
+          "codeLanguages": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["csharp", "javascript", "typescript", "python", "java"]
+            },
+            "description": "Supported code languages for this target."
+          },
+          "codeDirs": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Workspace directories (relative or absolute) that contain source code to scan."
+          },
+          "l10nFormat": {
+            "type": "string",
+            "enum": ["po"],
+            "description": "Localization file format."
+          },
+          "l10nDirs": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Directories containing localization files."
+          },
+          "l10nExtension": {
+            "type": "string",
+            "description": "File extension (without dot) for localization files, e.g. 'po'."
+          },
+          "l10nFuncNames": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Function names used for localization calls in source code."
+          }
+        },
+        "additionalProperties": false
+      },
+      "default": []
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "targets": [
+        {
+          "codeLanguages": ["typescript", "javascript"],
+          "codeDirs": ["src/"],
+          "l10nFormat": "po",
+          "l10nDirs": ["locales/"],
+          "l10nExtension": "po",
+          "l10nFuncNames": ["t", "translate"]
+        }
+      ]
+    }
+  ]
+}

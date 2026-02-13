@@ -17,24 +17,133 @@
         "command": "localize-support.helloWorld",
         "title": "Hello World"
       }
+    ],
+    "configuration": {
+      "title": "localize-support",
+      "properties": {
+        "localize-support.targets": {
+          "type": "array",
+          "scope": "resource",
+          "description": "Array of localization targets. Each item configures code languages/dirs and localization settings (matches L10nTarget: codeLanguages → l10nFuncNames).",
+          "items": {
+            "type": "object",
+            "required": [
+              "codeLanguages",
+              "codeDirs",
+              "l10nFormat",
+              "l10nDirs",
+              "l10nExtension",
+              "l10nFuncNames"
+            ],
+            "properties": {
+              "codeLanguages": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "csharp",
+                    "javascript",
+                    "typescript",
+                    "python",
+                    "java"
+                  ]
+                },
+                "description": "Supported code languages for this target."
+              },
+              "codeDirs": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Workspace directories (relative or absolute) that contain source code to scan."
+              },
+              "l10nFormat": {
+                "type": "string",
+                "enum": [
+                  "po"
+                ],
+                "description": "Localization file format."
+              },
+              "l10nDirs": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Directories containing localization files."
+              },
+              "l10nExtension": {
+                "type": "string",
+                "description": "File extension for localization files, e.g. '.po'."
+              },
+              "l10nFuncNames": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Function names used for localization calls in source code."
+              }
+            }
+          },
+          "default": []
+        },
+        "localize-support.wasmCdnBaseUrl": {
+          "type": "string",
+          "scope": "machine",
+          "description": "Base URL for tree-sitter wasm CDN. Use {version} as placeholder for package version.",
+          "default": "https://unpkg.com/tree-sitter-wasms@{version}/out/"
+        }
+      }
+    },
+    "jsonValidation": [
+      {
+        "fileMatch": [
+          "localize-support.json",
+          "localize-support~.json"
+        ],
+        "url": "./schemas/localize-support.schema.json"
+      }
+    ]
+  },
+  "mocha": {
+    "ui": "tdd",
+    "timeout": 5000,
+    "require": [
+      "source-map-support/register"
     ]
   },
   "scripts": {
     "vscode:prepublish": "yarn run compile",
-    "compile": "tsc -p ./",
+    "compile": "yarn lint && tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "pretest": "yarn run compile && yarn run lint",
     "lint": "eslint src",
-    "test": "vscode-test"
+    "pretest:integration": "yarn run compile && yarn run lint",
+    "test:unit": "cross-env NODE_OPTIONS=--enable-source-maps c8 --reporter=lcov --report-dir=coverage mocha \"./out/test/unit/**/*.test.js\"",
+    "pretest:unit": "yarn run compile && yarn run lint",
+    "test:integration": "vscode-test",
+    "test": "yarn run test:unit && yarn run test:integration",
+    "clean:tmp": "node -e \"const fs = require('fs'); fs.rmSync('.tmp', { recursive: true, force: true })\"",
+    "clean:out": "node -e \"const fs = require('fs'); fs.rmSync('out', { recursive: true, force: true })\"",
+    "clean:vsctest": "node -e \"const fs = require('fs'); fs.rmSync('.vscode-test', { recursive: true, force: true })\"",
+    "clean": "yarn run clean:tmp && yarn run clean:out && yarn run clean:vsctest"
   },
   "devDependencies": {
-    "@types/vscode": "^1.109.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "22.x",
-    "typescript-eslint": "^8.54.0",
-    "eslint": "^9.39.2",
-    "typescript": "^5.9.3",
+    "@types/sinon": "^21.0.0",
+    "@types/vscode": "^1.109.0",
     "@vscode/test-cli": "^0.0.12",
-    "@vscode/test-electron": "^2.5.2"
+    "@vscode/test-electron": "^2.5.2",
+    "c8": "^10.1.3",
+    "cross-env": "^10.1.0",
+    "eslint": "^9.39.2",
+    "sinon": "^21.0.1",
+    "source-map-support": "^0.5.21",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.54.0",
+    "vscode-uri": "^3.1.0"
+  },
+  "dependencies": {
+    "web-tree-sitter": "^0.26.5"
   }
 }
