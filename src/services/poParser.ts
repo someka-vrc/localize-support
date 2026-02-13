@@ -1,8 +1,4 @@
-import {
-  MyDiagnostic,
-  MyDiagnosticSeverity,
-  vscTypeHelper,
-} from "../models/vscTypes";
+import { MyDiagnostic, MyDiagnosticSeverity, vscTypeHelper } from "../models/vscTypes";
 import { URI } from "vscode-uri";
 import { TranslationParser, TranslationParseResult } from "./translationParser";
 import { L10nLangEntries } from "../models/l10nTypes";
@@ -12,7 +8,7 @@ export class PoParser implements TranslationParser {
   constructor() {}
 
   public async parse(uri: URI, content: string): Promise<TranslationParseResult> {
-    console.log('[localize-support][PoParser] parse', uri.path);
+    console.log("[localize-support][PoParser] parse", uri.path);
     const text = content.split("\n");
     const entries: L10nLangEntries = {};
     const diagnostics: MyDiagnostic[] = [];
@@ -178,8 +174,7 @@ export class PoParser implements TranslationParser {
           currentMsgIdStartLine = i;
           currentMsgIdStartCol = Math.max(0, firstQuote);
           currentMsgIdEndLine = i;
-          currentMsgIdEndCol =
-            lastQuote >= 0 ? lastQuote + 1 : currentMsgIdStartCol;
+          currentMsgIdEndCol = lastQuote >= 0 ? lastQuote + 1 : currentMsgIdStartCol;
           const s = parsePoQuotedString(m[1]);
           currentMsgIdParts.push(s);
           continue;
@@ -211,8 +206,7 @@ export class PoParser implements TranslationParser {
           currentMsgStrStartLine = i;
           currentMsgStrStartCol = Math.max(0, firstQuote);
           currentMsgStrEndLine = i;
-          currentMsgStrEndCol =
-            lastQuote >= 0 ? lastQuote + 1 : currentMsgStrStartCol;
+          currentMsgStrEndCol = lastQuote >= 0 ? lastQuote + 1 : currentMsgStrStartCol;
           const s = parsePoQuotedString(m[1]);
           currentMsgStrParts.push(s);
           continue;
@@ -242,18 +236,15 @@ export class PoParser implements TranslationParser {
             currentMsgIdParts.push(s);
             // update end pos
             currentMsgIdEndLine = i;
-            currentMsgIdEndCol =
-              lastQuote >= 0 ? lastQuote + 1 : currentMsgIdEndCol;
+            currentMsgIdEndCol = lastQuote >= 0 ? lastQuote + 1 : currentMsgIdEndCol;
           } else if (state === "inMsgStr") {
             currentMsgStrParts.push(s);
             currentMsgStrEndLine = i;
-            currentMsgStrEndCol =
-              lastQuote >= 0 ? lastQuote + 1 : currentMsgStrEndCol;
+            currentMsgStrEndCol = lastQuote >= 0 ? lastQuote + 1 : currentMsgStrEndCol;
           } else {
             // 文法エラー: 継続行があるが msgid/msgstr の中でない
             const col = firstQuote >= 0 ? firstQuote : 0;
-            const endCol =
-              lastQuote >= 0 ? lastQuote + 1 : col + (m[1] ? m[1].length : 1);
+            const endCol = lastQuote >= 0 ? lastQuote + 1 : col + (m[1] ? m[1].length : 1);
             diagnostics.push(
               vscTypeHelper.newDiagnostic(
                 vscTypeHelper.newRange(i, col, i, endCol),

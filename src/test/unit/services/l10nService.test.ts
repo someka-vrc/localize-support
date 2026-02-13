@@ -38,12 +38,10 @@ suite("L10nService (unit)", () => {
     const settingUri = URI.file("/workspace/localize-support.json");
 
     // stub validateDirectoryPath to accept only the specific existing dirs
-    sinon
-      .stub(workspace, "validateDirectoryPath")
-      .callsFake(async (uri: URI) => {
-        const p = uri.path;
-        return p.endsWith("/src/exists") || p.endsWith("/locale");
-      });
+    sinon.stub(workspace, "validateDirectoryPath").callsFake(async (uri: URI) => {
+      const p = uri.path;
+      return p.endsWith("/src/exists") || p.endsWith("/locale");
+    });
 
     const rawTargets = [
       {
@@ -60,22 +58,24 @@ suite("L10nService (unit)", () => {
     assert.strictEqual(res.targets.length, 1);
     const t = res.targets[0];
     // debug output for normalized dirs
-    console.debug('normalized codeDirs:', t.codeDirs.map(d => d.path));
+    console.debug(
+      "normalized codeDirs:",
+      t.codeDirs.map((d) => d.path),
+    );
     // only the existing code dir should be normalized
     assert.strictEqual(t.codeDirs.length, 1);
     assert.ok(t.codeDirs[0].path.endsWith("/src/exists"));
     // debug output for normalized l10n dirs
-    console.debug('normalized l10nDirs:', t.l10nDirs.map(d => d.path));
+    console.debug(
+      "normalized l10nDirs:",
+      t.l10nDirs.map((d) => d.path),
+    );
     // only the existing l10n dir should be normalized
     assert.strictEqual(t.l10nDirs.length, 1);
     assert.ok(t.l10nDirs[0].path.endsWith("/locale"));
     // messages should mention the missing entries
-    assert.ok(
-      res.messages.some((m) => m.includes("Code directory './src/missing' does not exist.")),
-    );
-    assert.ok(
-      res.messages.some((m) => m.includes("Localization directory './locale/missing' does not exist.")),
-    );
+    assert.ok(res.messages.some((m) => m.includes("Code directory './src/missing' does not exist.")));
+    assert.ok(res.messages.some((m) => m.includes("Localization directory './locale/missing' does not exist.")));
   });
 
   test("reload() with invalid workspace index records status (unit)", async () => {
@@ -86,9 +86,7 @@ suite("L10nService (unit)", () => {
 
     const { diags, statuses } = svc.getDiagnostics();
     assert.strictEqual(diags.size, 0);
-    assert.ok(
-      statuses.some((s) => s.includes("Workspace folder index 99 is out of range.")),
-    );
+    assert.ok(statuses.some((s) => s.includes("Workspace folder index 99 is out of range.")));
   });
 
   test("getDiagnostics() merges manager match diagnostics", () => {
@@ -106,13 +104,15 @@ suite("L10nService (unit)", () => {
     const mgr = new L10nTargetManager(workspace as any, target, 1);
 
     const codeUri = URI.file("d:/proj/src/foo.js");
-    mgr.codes.set(codeUri.path, [ { key: "missing.key", location: vscTypeHelper.newLocation(codeUri, vscTypeHelper.newRange(0,0,0,10)) } ] as any);
+    mgr.codes.set(codeUri.path, [
+      { key: "missing.key", location: vscTypeHelper.newLocation(codeUri, vscTypeHelper.newRange(0, 0, 0, 10)) },
+    ] as any);
 
     // inject into service.managers under arbitrary setting path
-    (svc as any).managers.set('/path/to/setting', [ { manager: mgr, listenerDisposable: { dispose: () => {} } } ]);
+    (svc as any).managers.set("/path/to/setting", [{ manager: mgr, listenerDisposable: { dispose: () => {} } }]);
 
     const { diags } = svc.getDiagnostics();
     const codeDiags = diags.get(codeUri.path) || [];
-    assert.ok(codeDiags.some(d => /missing.key/.test(d.message)));
+    assert.ok(codeDiags.some((d) => /missing.key/.test(d.message)));
   });
 });

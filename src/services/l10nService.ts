@@ -8,13 +8,7 @@ import {
 } from "../models/vscTypes";
 import { URI } from "vscode-uri";
 import type { DiagOrStatus } from "../models/interfaces";
-import {
-  CodeLanguage,
-  CodeLanguages,
-  L10nFormat,
-  L10nFormats,
-  L10nTarget,
-} from "../models/l10nTypes";
+import { CodeLanguage, CodeLanguages, L10nFormat, L10nFormats, L10nTarget } from "../models/l10nTypes";
 import { L10nTargetManager } from "./l10nTargetManager";
 import { IntervalQueue, OrganizeStrategies } from "../utils/intervalQueue";
 import { EventEmitter } from "events";
@@ -58,7 +52,7 @@ export class L10nService implements Disposable {
    * 再度呼び出すと既存のウォッチャーとターゲットをクリアして再設定する。
    */
   async init(): Promise<void> {
-    console.log('[localize-support][L10nService] init()');
+    console.log("[localize-support][L10nService] init()");
     // clear existing watchers
     await Promise.all(this.settingsWatchers.map((d) => d.dispose()));
     this.settingsWatchers.length = 0;
@@ -71,16 +65,13 @@ export class L10nService implements Disposable {
     }
 
     // ファイルの変更
-    const fsWatcher = this.workspace.createFileSystemWatcher(
-      settingsGlob,
-      async (type, uri) => {
-        if (type === "changed" || type === "created") {
-          await this.reload(uri);
-        } else if (type === "deleted") {
-          await this.unload(uri);
-        }
-      },
-    );
+    const fsWatcher = this.workspace.createFileSystemWatcher(settingsGlob, async (type, uri) => {
+      if (type === "changed" || type === "created") {
+        await this.reload(uri);
+      } else if (type === "deleted") {
+        await this.unload(uri);
+      }
+    });
     this.settingsWatchers.push(fsWatcher);
 
     // 保存時のみ捕捉するのでコメントアウト
@@ -123,7 +114,7 @@ export class L10nService implements Disposable {
   }
 
   async dispose(): Promise<void> {
-    console.log('[localize-support][L10nService] dispose()');
+    console.log("[localize-support][L10nService] dispose()");
     this.reloadIntervalQueue.dispose();
     this.reloadedEmitter.removeAllListeners();
     await Promise.all(this.settingsWatchers.map((d) => d.dispose()));
@@ -141,7 +132,10 @@ export class L10nService implements Disposable {
    * @returns エラーメッセージの配列
    */
   async reload(settingFile: URI | number): Promise<void> {
-    console.log('[localize-support][L10nService] reload()', typeof settingFile === 'number' ? `configIndex=${settingFile}` : (settingFile as URI).path);
+    console.log(
+      "[localize-support][L10nService] reload()",
+      typeof settingFile === "number" ? `configIndex=${settingFile}` : (settingFile as URI).path,
+    );
     let rawTargets: any[] = [];
     let isConfig = typeof settingFile === "number";
 
@@ -158,10 +152,7 @@ export class L10nService implements Disposable {
         return;
       }
       const folder = wsfs[idx];
-      const config = this.workspace.getConfiguration(
-        "localize-support",
-        folder.uri,
-      );
+      const config = this.workspace.getConfiguration("localize-support", folder.uri);
       rawTargets = config.get<any[]>("targets") || [];
     } else {
       let json: any;
@@ -179,10 +170,7 @@ export class L10nService implements Disposable {
     }
 
     // 設定オブジェクト化
-    const { targets, messages } = await this.normalizeSettingsObject(
-      rawTargets,
-      settingFile,
-    );
+    const { targets, messages } = await this.normalizeSettingsObject(rawTargets, settingFile);
     // 新しいマネージャーを作成、登録
     const managers = await Promise.all(
       targets.map(async (t) => {
@@ -203,15 +191,12 @@ export class L10nService implements Disposable {
       }),
     );
     // メッセージを更新
-    this.settingDiags.set(
-      this.getSettingPath(settingFile),
-      this.toDiags(settingFile, messages),
-    );
+    this.settingDiags.set(this.getSettingPath(settingFile), this.toDiags(settingFile, messages));
     this.managers.set(
       this.getSettingPath(settingFile),
       managers.filter((m) => m !== null),
     );
-    console.log('[localize-support][L10nService] reload() completed for', this.getSettingPath(settingFile));
+    console.log("[localize-support][L10nService] reload() completed for", this.getSettingPath(settingFile));
   }
 
   /**
@@ -305,13 +290,7 @@ export class L10nService implements Disposable {
     if (isConfig) {
       return {
         type: "status",
-        messages:
-          messages.length > 0
-            ? [
-                `Invalid settings in ${settingName}:`,
-                ...messages.map((m) => `- ${m}`),
-              ]
-            : [],
+        messages: messages.length > 0 ? [`Invalid settings in ${settingName}:`, ...messages.map((m) => `- ${m}`)] : [],
       };
     } else {
       return {
@@ -350,9 +329,7 @@ export class L10nService implements Disposable {
       // ターゲットがない、またはいずれかの配列が空でチェック不要な場合は空オブジェクトを返す
       return {
         targets: [],
-        messages: isConfig
-          ? []
-          : [`No targets defined. Please define at least one target.`],
+        messages: isConfig ? [] : [`No targets defined. Please define at least one target.`],
       };
     }
 
@@ -361,9 +338,7 @@ export class L10nService implements Disposable {
     for (let i = 0; i < rawTargets.length; i++) {
       const targetObj = rawTargets[i];
       if (typeof targetObj !== "object" || targetObj === null) {
-        messages.push(
-          `${rootPropName}[${i}]: Invalid target definition. Expected an object.`,
-        );
+        messages.push(`${rootPropName}[${i}]: Invalid target definition. Expected an object.`);
         targets.push(this.createEmptyTarget(settingFile));
         continue;
       }
@@ -398,9 +373,7 @@ export class L10nService implements Disposable {
       const codeDirs: URI[] = [];
       // normalize codeDirs in parallel
       const normalizedCodeDirs = await Promise.all(
-        (targetObj.codeDirs || []).map((d: any) =>
-          normalizeDirPath(this.workspace, settingFile, d),
-        ),
+        (targetObj.codeDirs || []).map((d: any) => normalizeDirPath(this.workspace, settingFile, d)),
       );
       normalizedCodeDirs.forEach((normalized, idx) => {
         const dir = targetObj.codeDirs[idx];
@@ -409,18 +382,14 @@ export class L10nService implements Disposable {
             codeDirs.push(normalized);
           }
         } else {
-          messages.push(
-            `${rootPropName}[${i}]: Code directory '${dir}' does not exist.`,
-          );
+          messages.push(`${rootPropName}[${i}]: Code directory '${dir}' does not exist.`);
         }
       });
 
       const l10nDirs: URI[] = [];
       // normalize l10nDirs in parallel
       const normalizedL10nDirs = await Promise.all(
-        (targetObj.l10nDirs || []).map((d: any) =>
-          normalizeDirPath(this.workspace, settingFile, d),
-        ),
+        (targetObj.l10nDirs || []).map((d: any) => normalizeDirPath(this.workspace, settingFile, d)),
       );
       normalizedL10nDirs.forEach((normalized, idx) => {
         const dir = targetObj.l10nDirs[idx];
@@ -429,9 +398,7 @@ export class L10nService implements Disposable {
             l10nDirs.push(normalized);
           }
         } else {
-          messages.push(
-            `${rootPropName}[${i}]: Localization directory '${dir}' does not exist.`,
-          );
+          messages.push(`${rootPropName}[${i}]: Localization directory '${dir}' does not exist.`);
         }
       });
 
@@ -448,10 +415,7 @@ export class L10nService implements Disposable {
       }
 
       let l10nFormat: L10nFormat;
-      if (
-        Object.prototype.hasOwnProperty.call(targetObj, "l10nFormat") &&
-        L10nFormats.includes(targetObj.l10nFormat)
-      ) {
+      if (Object.prototype.hasOwnProperty.call(targetObj, "l10nFormat") && L10nFormats.includes(targetObj.l10nFormat)) {
         l10nFormat = targetObj.l10nFormat;
       } else {
         l10nFormat = "po";
@@ -472,9 +436,7 @@ export class L10nService implements Disposable {
         l10nExtension = extension.includes(".") ? extension : `.${extension}`;
       } else {
         l10nExtension = ".po";
-        messages.push(
-          `${rootPropName}[${i}]: Invalid or missing l10nExtension. Defaulting to '.po'.`,
-        );
+        messages.push(`${rootPropName}[${i}]: Invalid or missing l10nExtension. Defaulting to '.po'.`);
       }
 
       targets.push({

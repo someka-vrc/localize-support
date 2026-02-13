@@ -31,12 +31,7 @@ export class CodeParser {
     return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   }
 
-  async parse(
-    l10nFuncNames: string[],
-    wasmCdnBaseUrl: string,
-    content: string,
-    uri: URI,
-  ): Promise<L10nCode[]> {
+  async parse(l10nFuncNames: string[], wasmCdnBaseUrl: string, content: string, uri: URI): Promise<L10nCode[]> {
     // input validation
     if (l10nFuncNames.length === 0) {
       throw new Error("l10nFuncNames must be a non-empty array");
@@ -45,24 +40,17 @@ export class CodeParser {
     await CodeParser.ensureParserInitialized();
 
     // load/cached language
-    let loadedLanguage: Parser.Language | undefined =
-      CodeParser.languageCache.get(this.language);
+    let loadedLanguage: Parser.Language | undefined = CodeParser.languageCache.get(this.language);
     try {
       if (!loadedLanguage) {
-        const uri = await this.wasmDownloader.retrieveWasmFile(
-          wasmCdnBaseUrl,
-          this.language,
-        );
+        const uri = await this.wasmDownloader.retrieveWasmFile(wasmCdnBaseUrl, this.language);
         // pass a filesystem path (not a file:// URI string) — Language.load expects a file path
         loadedLanguage = await Parser.Language.load(uri.fsPath);
         CodeParser.languageCache.set(this.language, loadedLanguage);
       }
     } catch (err) {
       // fail-safe: log and return empty list rather than throwing internal parser errors
-      console.warn(
-        `CodeParser: failed to load language for ${this.language}:`,
-        err,
-      );
+      console.warn(`CodeParser: failed to load language for ${this.language}:`, err);
       return [];
     }
 
@@ -185,9 +173,7 @@ export class CodeParser {
           let normalized = text.replace(/^[@$]+/, "");
           // strip surrounding quotes/backticks when possible
           const key =
-            normalized.startsWith("`") ||
-            normalized.startsWith("'") ||
-            normalized.startsWith('"')
+            normalized.startsWith("`") || normalized.startsWith("'") || normalized.startsWith('"')
               ? normalized.slice(1, -1)
               : normalized;
 
@@ -214,9 +200,7 @@ export class CodeParser {
   }
 
   getTreeSitterQuery(language: CodeLanguage, l10nFuncNames: string[]): string {
-    const funcPattern = l10nFuncNames
-      .map((n) => CodeParser.escapeForRegex(n))
-      .join("|");
+    const funcPattern = l10nFuncNames.map((n) => CodeParser.escapeForRegex(n)).join("|");
 
     // NOTE: queries try to be permissive and match both bare identifier calls and member calls
     switch (language) {

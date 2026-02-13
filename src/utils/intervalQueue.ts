@@ -3,7 +3,7 @@ import { Disposable } from "../models/vscTypes";
 type SkippableItem<T> = {
   item: T;
   skip: boolean;
-}
+};
 /**
  * 一定間隔でキュー内のアイテムをバッチ処理するクラス。
  *
@@ -15,9 +15,7 @@ export class IntervalQueue<T> implements Disposable {
   private disposed: boolean = false;
   private intervalMs: number;
   private processItem: (item: T) => Promise<void>;
-  private organize: ((
-    items: SkippableItem<T>[],
-  ) => SkippableItem<T>[])[];
+  private organize: ((items: SkippableItem<T>[]) => SkippableItem<T>[])[];
   /**
    * コンストラクタ
    *
@@ -28,9 +26,7 @@ export class IntervalQueue<T> implements Disposable {
   constructor(
     intervalMs: number,
     processItem: (item: T) => Promise<void>,
-    ...organize: ((
-      items: SkippableItem<T>[],
-    ) => SkippableItem<T>[])[]
+    ...organize: ((items: SkippableItem<T>[]) => SkippableItem<T>[])[]
   ) {
     // プロパティへの代入
     this.intervalMs = intervalMs;
@@ -100,16 +96,12 @@ export class IntervalQueue<T> implements Disposable {
 
 export class OrganizeStrategies {
   /** 最後のアイテムのみを処理する戦略 */
-  static lastOnly<T>(
-    items: SkippableItem<T>[],
-  ): SkippableItem<T>[] {
+  static lastOnly<T>(items: SkippableItem<T>[]): SkippableItem<T>[] {
     return items.length > 0 ? [items[items.length - 1]] : [];
   }
 
   /** キーに基づいて重複するアイテムの古い方をスキップする戦略 */
-  static skipDuplicatesByKey<T>(
-    keyFunc: (item: T) => string,
-  ): (items: SkippableItem<T>[]) => SkippableItem<T>[] {
+  static skipDuplicatesByKey<T>(keyFunc: (item: T) => string): (items: SkippableItem<T>[]) => SkippableItem<T>[] {
     return (items) => {
       const seenKeys = new Set<string>();
       // mark older duplicates (keep the last occurrence)

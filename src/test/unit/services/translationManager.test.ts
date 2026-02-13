@@ -1,10 +1,6 @@
 import assert from "assert";
 import { TranslationManager } from "../../../services/translationManager";
-import {
-  Disposable,
-  MyRelativePattern,
-  MyFileType,
-} from "../../../models/vscTypes";
+import { Disposable, MyRelativePattern, MyFileType } from "../../../models/vscTypes";
 import { URI } from "vscode-uri";
 import { L10nTarget } from "../../../models/l10nTypes";
 import sinon from "sinon";
@@ -25,30 +21,24 @@ suite("TranslationManager (unit)", () => {
     const sampleUri = URI.file("d:/proj/locales/en.po");
 
     sinon.stub(workspace, "findFiles").resolves([sampleUri]);
-    sinon
-      .stub(workspace, "getTextDocumentContent")
-      .callsFake(async (uri: URI) => {
-        return uri.path === sampleUri.path ? poContent : "";
-      });
+    sinon.stub(workspace, "getTextDocumentContent").callsFake(async (uri: URI) => {
+      return uri.path === sampleUri.path ? poContent : "";
+    });
     sinon.stub(workspace, "stat").resolves({
       type: MyFileType.Directory,
       ctime: Date.now(),
       mtime: Date.now(),
       size: 0,
     });
-    sinon
-      .stub(workspace, "createFileSystemWatcher")
-      .callsFake((pattern: string | MyRelativePattern, cb: any) => {
-        (workspace as any)._fsWatcherCallback = cb;
-        return { dispose: () => {} };
-      });
+    sinon.stub(workspace, "createFileSystemWatcher").callsFake((pattern: string | MyRelativePattern, cb: any) => {
+      (workspace as any)._fsWatcherCallback = cb;
+      return { dispose: () => {} };
+    });
     sinon.stub(workspace, "onDidChangeTextDocument").callsFake((cb: any) => {
       (workspace as any)._editCallback = cb;
       return { dispose: () => {} };
     });
-    sinon
-      .stub(workspace, "getConfiguration")
-      .callsFake(() => ({ get: <T>() => undefined }));
+    sinon.stub(workspace, "getConfiguration").callsFake(() => ({ get: <T>() => undefined }));
 
     const target: L10nTarget = {
       codeLanguages: ["javascript" as any],
@@ -69,10 +59,7 @@ suite("TranslationManager (unit)", () => {
 
     // wait until the rebuild event is emitted (IntervalQueue processes immediately)
     await new Promise<void>((resolve, reject) => {
-      const to = setTimeout(
-        () => reject(new Error("rebuilt event not fired")),
-        500,
-      );
+      const to = setTimeout(() => reject(new Error("rebuilt event not fired")), 500);
       const iv = setInterval(() => {
         if (rebuilt) {
           clearTimeout(to);
@@ -98,30 +85,24 @@ suite("TranslationManager (unit)", () => {
     const changed = 'msgid "A"\nmsgstr "壱"\n';
 
     sinon.stub(workspace, "findFiles").resolves([uri]);
-    sinon
-      .stub(workspace, "getTextDocumentContent")
-      .callsFake(async (u: URI) => {
-        return u.path === uri.path ? initial : "";
-      });
+    sinon.stub(workspace, "getTextDocumentContent").callsFake(async (u: URI) => {
+      return u.path === uri.path ? initial : "";
+    });
     sinon.stub(workspace, "stat").resolves({
       type: MyFileType.Directory,
       ctime: Date.now(),
       mtime: Date.now(),
       size: 0,
     });
-    sinon
-      .stub(workspace, "createFileSystemWatcher")
-      .callsFake((pattern: string | MyRelativePattern, cb: any) => {
-        (workspace as any)._fsWatcherCallback = cb;
-        return { dispose: () => {} };
-      });
+    sinon.stub(workspace, "createFileSystemWatcher").callsFake((pattern: string | MyRelativePattern, cb: any) => {
+      (workspace as any)._fsWatcherCallback = cb;
+      return { dispose: () => {} };
+    });
     sinon.stub(workspace, "onDidChangeTextDocument").callsFake((cb: any) => {
       (workspace as any)._editCallback = cb;
       return { dispose: () => {} };
     });
-    sinon
-      .stub(workspace, "getConfiguration")
-      .callsFake(() => ({ get: <T>() => undefined }));
+    sinon.stub(workspace, "getConfiguration").callsFake(() => ({ get: <T>() => undefined }));
 
     const target: L10nTarget = {
       codeLanguages: ["javascript" as any],
@@ -142,10 +123,7 @@ suite("TranslationManager (unit)", () => {
 
     // wait for initial load
     await new Promise<void>((res, rej) => {
-      const to = setTimeout(
-        () => rej(new Error("initial rebuild not fired")),
-        500,
-      );
+      const to = setTimeout(() => rej(new Error("initial rebuild not fired")), 500);
       const iv = setInterval(() => {
         if (rebuildCount >= 1) {
           clearTimeout(to);
@@ -156,16 +134,12 @@ suite("TranslationManager (unit)", () => {
     });
 
     // simulate edit event (onDidChangeTextDocument)
-    workspace.getTextDocumentContent = async (u: URI) =>
-      u.path === uri.path ? changed : "";
+    workspace.getTextDocumentContent = async (u: URI) => (u.path === uri.path ? changed : "");
     (workspace as any)._editCallback(uri);
 
     // wait for changed event to be processed
     await new Promise<void>((res, rej) => {
-      const to = setTimeout(
-        () => rej(new Error("changed rebuild not fired")),
-        500,
-      );
+      const to = setTimeout(() => rej(new Error("changed rebuild not fired")), 500);
       const iv = setInterval(() => {
         if (rebuildCount >= 2) {
           clearTimeout(to);
@@ -180,10 +154,7 @@ suite("TranslationManager (unit)", () => {
     if (!parsed) {
       assert.fail("parsed should not be undefined");
     }
-    assert.ok(
-      parsed.entries["en"],
-      "parsed entries should include 'en' language",
-    );
+    assert.ok(parsed.entries["en"], "parsed entries should include 'en' language");
     assert.strictEqual(parsed.entries["en"]["A"].translation, "壱");
 
     // simulate delete via fsWatcher callback
@@ -191,10 +162,7 @@ suite("TranslationManager (unit)", () => {
 
     // wait for delete to be processed
     await new Promise<void>((res, rej) => {
-      const to = setTimeout(
-        () => rej(new Error("deleted rebuild not fired")),
-        500,
-      );
+      const to = setTimeout(() => rej(new Error("deleted rebuild not fired")), 500);
       const iv = setInterval(() => {
         if (!mgr.l10ns.has(uri.path)) {
           clearTimeout(to);

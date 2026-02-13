@@ -10,19 +10,12 @@ import { DiagnosticProvider } from "./providers/diagnosticProvider";
 export async function activate(context: vscode.ExtensionContext) {
   // Use the console to output diagnostic information (console.log) and errors (console.error)
   // This line of code will only be executed once when your extension is activated
-  console.log(
-    'Congratulations, your extension "localize-support" is now active!',
-  );
+  console.log('Congratulations, your extension "localize-support" is now active!');
 
   // --- existing example command -------------------------------------------------
-  const disposable = vscode.commands.registerCommand(
-    "localize-support.helloWorld",
-    () => {
-      vscode.window.showInformationMessage(
-        "Hello World from localize-support!",
-      );
-    },
-  );
+  const disposable = vscode.commands.registerCommand("localize-support.helloWorld", () => {
+    vscode.window.showInformationMessage("Hello World from localize-support!");
+  });
   context.subscriptions.push(disposable);
 
   // --- L10nService -----------------------------------
@@ -31,12 +24,8 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(l10nService);
   await l10nService.init().catch((e) => console.error(e));
 
-  const diagnosticsProvider = new DiagnosticProvider(
-    "localize-support",
-    l10nService,
-  );
+  const diagnosticsProvider = new DiagnosticProvider("localize-support", l10nService);
   context.subscriptions.push(diagnosticsProvider);
-
 }
 
 // This method is called when your extension is deactivated

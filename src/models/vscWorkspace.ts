@@ -16,17 +16,11 @@ import { URI } from "vscode-uri";
 export class VSCodeWorkspaceService implements IWorkspaceService {
   // --- ヘルパーメソッド ---
 
-
-  private toVscPattern(
-    pattern: string | MyRelativePattern,
-  ): string | vscode.RelativePattern {
+  private toVscPattern(pattern: string | MyRelativePattern): string | vscode.RelativePattern {
     if (typeof pattern === "string") {
       return pattern;
     }
-    return new vscode.RelativePattern(
-      pattern.baseUri as vscode.Uri,
-      pattern.pattern,
-    );
+    return new vscode.RelativePattern(pattern.baseUri as vscode.Uri, pattern.pattern);
   }
 
   // --- IWorkspaceService の実装 ---
@@ -81,10 +75,7 @@ export class VSCodeWorkspaceService implements IWorkspaceService {
   }
 
   getConfiguration(section: string, scope?: URI): MyConfiguration {
-    const config = vscode.workspace.getConfiguration(
-      section,
-      scope ? scope as vscode.Uri : undefined,
-    );
+    const config = vscode.workspace.getConfiguration(section, scope ? (scope as vscode.Uri) : undefined);
     return {
       get: <T>(key: string): T | undefined => config.get<T>(key),
     };
@@ -100,16 +91,11 @@ export class VSCodeWorkspaceService implements IWorkspaceService {
     });
   }
 
-  onDidChangeConfiguration(
-    callback: (e: MyConfigurationChangeEvent) => void,
-  ): Disposable {
+  onDidChangeConfiguration(callback: (e: MyConfigurationChangeEvent) => void): Disposable {
     return vscode.workspace.onDidChangeConfiguration((e) => {
       callback({
         affectsConfiguration: (section, scope) =>
-          e.affectsConfiguration(
-            section,
-            scope ? scope as vscode.Uri : undefined,
-          ),
+          e.affectsConfiguration(section, scope ? (scope as vscode.Uri) : undefined),
       });
     });
   }

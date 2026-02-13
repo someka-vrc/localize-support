@@ -22,9 +22,13 @@ suite("IntervalQueue", () => {
 
   test("lastOnly strategy keeps only last item", async () => {
     const processed: number[] = [];
-    const q = new IntervalQueue<number>(10, async (n) => {
-      processed.push(n);
-    }, OrganizeStrategies.lastOnly);
+    const q = new IntervalQueue<number>(
+      10,
+      async (n) => {
+        processed.push(n);
+      },
+      OrganizeStrategies.lastOnly,
+    );
     q.start();
 
     q.push(1);
@@ -41,9 +45,13 @@ suite("IntervalQueue", () => {
     const processedIds: number[] = [];
     type Item = { id: number; key: string };
 
-    const q = new IntervalQueue<Item>(10, async (it) => {
-      processedIds.push(it.id);
-    }, OrganizeStrategies.skipDuplicatesByKey((it) => it.key));
+    const q = new IntervalQueue<Item>(
+      10,
+      async (it) => {
+        processedIds.push(it.id);
+      },
+      OrganizeStrategies.skipDuplicatesByKey((it) => it.key),
+    );
     q.start();
 
     q.push({ id: 1, key: "a" });
@@ -116,14 +124,14 @@ suite("IntervalQueue", () => {
     });
     q.start();
 
-    q.push('');
+    q.push("");
     q.push(false);
-    q.push('ok');
+    q.push("ok");
 
     await sleep(80);
     q.dispose();
 
-    assert.deepStrictEqual(processed, ['', false, 'ok']);
+    assert.deepStrictEqual(processed, ["", false, "ok"]);
   });
 
   test("dispose clears queue and stops further processing", async () => {

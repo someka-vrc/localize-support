@@ -5,16 +5,16 @@ import { EventEmitter } from "events";
 
 /**
  * wasm 言語別バイナリファイル名
- * 
+ *
  * バイナリは https://unpkg.com/tree-sitter-wasms@{version}/out/{wasmFileName} にてホストされている
  * @see webページ: https://app.unpkg.com/tree-sitter-wasms@0.1.13/files/out
  */
 export const WasmFileNames: Record<CodeLanguage, string> = {
-  "csharp": "tree-sitter-c_sharp.wasm",
-  "javascript": "tree-sitter-javascript.wasm",
-  "typescript": "tree-sitter-typescript.wasm",
-  "python": "tree-sitter-python.wasm",
-  "java": "tree-sitter-java.wasm",
+  csharp: "tree-sitter-c_sharp.wasm",
+  javascript: "tree-sitter-javascript.wasm",
+  typescript: "tree-sitter-typescript.wasm",
+  python: "tree-sitter-python.wasm",
+  java: "tree-sitter-java.wasm",
 };
 
 /** 公開: ダウンロードステータス */
@@ -63,10 +63,7 @@ export class WasmDownloader implements Disposable {
    * @param options
    * @returns URI The local URI of the downloaded WASM file.
    */
-  public async retrieveWasmFile(
-    base: string,
-    langType: CodeLanguage
-  ): Promise<URI> {
+  public async retrieveWasmFile(base: string, langType: CodeLanguage): Promise<URI> {
     if (this.disposed) {
       throw new Error("WasmDownloader has been disposed");
     }
@@ -90,11 +87,7 @@ export class WasmDownloader implements Disposable {
       throw new Error("WasmDownloader has been disposed");
     }
 
-    const wasmDir = Utils.joinPath(
-      this.storageUri,
-      "wasm",
-      WASM_LANGUAGE_VERSION,
-    );
+    const wasmDir = Utils.joinPath(this.storageUri, "wasm", WASM_LANGUAGE_VERSION);
     await this.workspace.createDirectory(wasmDir);
 
     const wasmFileName = WasmFileNames[langType];
@@ -116,9 +109,7 @@ export class WasmDownloader implements Disposable {
       // Replace the placeholder first, then URL-encode the resulting base and
       // append the wasm filename. This avoids percent-encoding braces and
       // ensures the final remote URL is a properly-encoded string.
-      const baseWithVersion = base.includes("{version}")
-        ? base.replace("{version}", WASM_LANGUAGE_VERSION)
-        : base;
+      const baseWithVersion = base.includes("{version}") ? base.replace("{version}", WASM_LANGUAGE_VERSION) : base;
 
       // ensure no trailing slash duplication and encode
       const normalizedBase = baseWithVersion.replace(/\/+$/, "");
@@ -141,7 +132,11 @@ export class WasmDownloader implements Disposable {
           const newStatus = "downloading" as const;
           this.progresses.set(langType, { downloaded: newDownloaded, total: newTotal, status: newStatus });
           try {
-            this.progressEmitter.emit("progress", langType, { downloaded: newDownloaded, total: newTotal, status: newStatus });
+            this.progressEmitter.emit("progress", langType, {
+              downloaded: newDownloaded,
+              total: newTotal,
+              status: newStatus,
+            });
           } catch {}
 
           // 既存のコールバックも呼ぶ
@@ -153,7 +148,11 @@ export class WasmDownloader implements Disposable {
       const final = this.progresses.get(langType) ?? { downloaded: 0, total: 0, status: "done" };
       this.progresses.set(langType, { downloaded: final.downloaded, total: final.total, status: "done" });
       try {
-        this.progressEmitter.emit("progress", langType, { downloaded: final.downloaded, total: final.total, status: "done" });
+        this.progressEmitter.emit("progress", langType, {
+          downloaded: final.downloaded,
+          total: final.total,
+          status: "done",
+        });
       } catch {}
 
       return localWasmUri;
@@ -175,9 +174,7 @@ export class WasmDownloader implements Disposable {
     });
 
     if (!response.ok) {
-      throw new Error(
-        `Failed to fetch WASM: ${response.status} ${response.statusText}`,
-      );
+      throw new Error(`Failed to fetch WASM: ${response.status} ${response.statusText}`);
     }
 
     const total = parseInt(response.headers.get("content-length") ?? "0", 10);

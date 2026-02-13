@@ -25,8 +25,12 @@ suite("CodeManager (unit)", () => {
 
     const wasmBase = "https://cdn.example/{version}/out";
     sinon.stub(workspace, "findFiles").resolves([sampleUri]);
-    sinon.stub(workspace, "getTextDocumentContent").callsFake(async (u: URI) => (u.path === sampleUri.path ? code : ""));
-    sinon.stub(workspace, "stat").resolves({ type: MyFileType.Directory, ctime: Date.now(), mtime: Date.now(), size: 0 });
+    sinon
+      .stub(workspace, "getTextDocumentContent")
+      .callsFake(async (u: URI) => (u.path === sampleUri.path ? code : ""));
+    sinon
+      .stub(workspace, "stat")
+      .resolves({ type: MyFileType.Directory, ctime: Date.now(), mtime: Date.now(), size: 0 });
     sinon.stub(workspace, "createFileSystemWatcher").callsFake((pattern: string | MyRelativePattern, cb: any) => {
       (workspace as any)._fsWatcherCallback = cb;
       return { dispose: () => {} } as any;
@@ -35,7 +39,7 @@ suite("CodeManager (unit)", () => {
       (workspace as any)._editCallback = cb;
       return { dispose: () => {} } as any;
     });
-    sinon.stub(workspace, "getConfiguration").callsFake(() => ({ get: <T>(_k?: string) => (wasmBase as unknown as T) }));
+    sinon.stub(workspace, "getConfiguration").callsFake(() => ({ get: <T>(_k?: string) => wasmBase as unknown as T }));
 
     // stub CodeParser.parse to return a deterministic fragment (avoid wasm)
     const parseStub = sinon.stub((CodeParser as any).prototype, "parse").resolves([
@@ -95,7 +99,9 @@ suite("CodeManager (unit)", () => {
 
     sinon.stub(workspace, "findFiles").resolves([uri]);
     sinon.stub(workspace, "getTextDocumentContent").callsFake(async (u: URI) => (u.path === uri.path ? initial : ""));
-    sinon.stub(workspace, "stat").resolves({ type: MyFileType.Directory, ctime: Date.now(), mtime: Date.now(), size: 0 });
+    sinon
+      .stub(workspace, "stat")
+      .resolves({ type: MyFileType.Directory, ctime: Date.now(), mtime: Date.now(), size: 0 });
     sinon.stub(workspace, "createFileSystemWatcher").callsFake((pattern: string | MyRelativePattern, cb: any) => {
       (workspace as any)._fsWatcherCallback = cb;
       return { dispose: () => {} } as any;
@@ -107,15 +113,15 @@ suite("CodeManager (unit)", () => {
 
     // parse stub returns different values depending on content (simulate)
     const wasmBase = "https://cdn.example/{version}/out";
-    sinon.stub(workspace, "getConfiguration").callsFake(() => ({ get: <T>(_k?: string) => (wasmBase as unknown as T) }));
+    sinon.stub(workspace, "getConfiguration").callsFake(() => ({ get: <T>(_k?: string) => wasmBase as unknown as T }));
     const parseStub = sinon.stub((CodeParser as any).prototype, "parse");
     parseStub.callsFake(async (...args: any[]) => {
       const content: string = args[2] || "";
       const uriArg: URI = args[3];
       if (content.includes('"A"')) {
-        return [ { key: "A", location: vscTypeHelper.newLocation(uriArg, vscTypeHelper.newRange(0,0,0,3)) } ];
+        return [{ key: "A", location: vscTypeHelper.newLocation(uriArg, vscTypeHelper.newRange(0, 0, 0, 3)) }];
       }
-      return [ { key: "B", location: vscTypeHelper.newLocation(uriArg, vscTypeHelper.newRange(0,0,0,3)) } ];
+      return [{ key: "B", location: vscTypeHelper.newLocation(uriArg, vscTypeHelper.newRange(0, 0, 0, 3)) }];
     });
 
     const target: L10nTarget = {
@@ -178,12 +184,12 @@ suite("CodeManager (unit)", () => {
     await new Promise<void>((res, rej) => {
       const to = setTimeout(() => rej(new Error("deleted rebuild not fired")), 500);
       const iv = setInterval(() => {
-if (!mgr.codes.has(uri.path)) {
-            clearTimeout(to);
-            clearInterval(iv);
-            res();
-          }
-        }, 10);
+        if (!mgr.codes.has(uri.path)) {
+          clearTimeout(to);
+          clearInterval(iv);
+          res();
+        }
+      }, 10);
     });
 
     assert.ok(!mgr.codes.has(uri.path));

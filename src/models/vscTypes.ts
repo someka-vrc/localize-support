@@ -1,4 +1,4 @@
-import {Utils, URI} from "vscode-uri";
+import { Utils, URI } from "vscode-uri";
 import { Disposable, DiagnosticCollection } from "vscode";
 // types.ts などの共通ファイルに定義
 export interface MyPosition {
@@ -28,7 +28,7 @@ export interface MyDiagnostic {
   severity: MyDiagnosticSeverity;
 }
 
-export {Disposable, DiagnosticCollection};
+export { Disposable, DiagnosticCollection };
 
 export enum MyFileType {
   Unknown = 0,
@@ -52,8 +52,6 @@ export interface MyConfigurationChangeEvent {
   /** 指定したセクションが変更されたかどうかを判定する */
   affectsConfiguration(section: string, scope?: URI): boolean;
 }
-
-
 
 export interface IWorkspaceService {
   // ファイル操作
@@ -80,9 +78,7 @@ export interface IWorkspaceService {
   /** ドキュメントが開かれたり、メモリ上で編集された時のイベント */
   onDidChangeTextDocument(callback: (uri: URI) => void): Disposable;
   /** 設定が変更された時のイベント */
-  onDidChangeConfiguration(
-    callback: (e: MyConfigurationChangeEvent) => void,
-  ): Disposable;
+  onDidChangeConfiguration(callback: (e: MyConfigurationChangeEvent) => void): Disposable;
 
   // --- ディスク監視 (FileSystemWatcher) ---
   /** ディスク上のファイル作成・変更・削除を監視する */
@@ -110,11 +106,7 @@ function newRange(startLine: number, startChar: number, endLine: number, endChar
 function newLocation(uri: URI, range: MyRange): MyLocation {
   return { uri, range };
 }
-function newDiagnostic(
-  range: MyRange,
-  message: string,
-  severity: MyDiagnosticSeverity,
-): MyDiagnostic {
+function newDiagnostic(range: MyRange, message: string, severity: MyDiagnosticSeverity): MyDiagnostic {
   return { range, message, severity };
 }
 

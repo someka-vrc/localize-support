@@ -30,10 +30,6 @@ export async function normalizeDirPath(
   if (!settingDir) {
     return undefined;
   }
-  const resolved = relativeFromSettingDir
-    ? Utils.joinPath(settingDir, relativeFromSettingDir)
-    : settingDir;
-  return (await workspace.validateDirectoryPath(resolved))
-    ? resolved
-    : undefined;
+  const resolved = relativeFromSettingDir ? Utils.joinPath(settingDir, relativeFromSettingDir) : settingDir;
+  return (await workspace.validateDirectoryPath(resolved)) ? resolved : undefined;
 }

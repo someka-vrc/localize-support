@@ -77,9 +77,7 @@ export class MockWorkspaceService implements IWorkspaceService {
     return { dispose: () => {} };
   }
 
-  onDidChangeConfiguration(
-    callback: (e: MyConfigurationChangeEvent) => void,
-  ): Disposable {
+  onDidChangeConfiguration(callback: (e: MyConfigurationChangeEvent) => void): Disposable {
     return { dispose: () => {} };
   }
 
@@ -110,11 +108,7 @@ class MockDiagnosticCollection implements DiagnosticCollection {
     throw new Error("Method not implemented.");
   }
   forEach(
-    callback: (
-      uri: Uri,
-      diagnostics: readonly Diagnostic[],
-      collection: DiagnosticCollection,
-    ) => any,
+    callback: (uri: Uri, diagnostics: readonly Diagnostic[], collection: DiagnosticCollection) => any,
     thisArg?: any,
   ): void {
     throw new Error("Method not implemented.");
@@ -128,11 +122,7 @@ class MockDiagnosticCollection implements DiagnosticCollection {
   dispose(): void {
     throw new Error("Method not implemented.");
   }
-  [Symbol.iterator](): Iterator<
-    [uri: Uri, diagnostics: readonly Diagnostic[]],
-    any,
-    any
-  > {
+  [Symbol.iterator](): Iterator<[uri: Uri, diagnostics: readonly Diagnostic[]], any, any> {
     throw new Error("Method not implemented.");
   }
 }

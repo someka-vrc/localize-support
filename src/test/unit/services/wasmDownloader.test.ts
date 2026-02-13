@@ -2,10 +2,7 @@ import * as assert from "assert";
 import * as http from "http";
 import { Utils, URI } from "vscode-uri";
 import { copyWorkspaceIfExists, type DisposablePath } from "../unitTestHelper";
-import {
-  WasmDownloader,
-  WasmFileNames,
-} from "../../../services/wasmDownloader";
+import { WasmDownloader, WasmFileNames } from "../../../services/wasmDownloader";
 import { CodeLanguage } from "../../../models/l10nTypes";
 import { MyFileStat, MyFileType } from "../../../models/vscTypes";
 import sinon from "sinon";
@@ -24,16 +21,13 @@ suite("WasmDownloader (unit)", () => {
 
   test("downloads wasm file, writes to storage and reuses existing file (unit)", async () => {
     // fixture workspace をコピーして URI を用意（実際のファイルI/Oは sinon スタブで扱う）
-    const workspaceFixture: DisposablePath | undefined =
-      await copyWorkspaceIfExists("unitTestHelper");
+    const workspaceFixture: DisposablePath | undefined = await copyWorkspaceIfExists("unitTestHelper");
     assert.ok(workspaceFixture, "fixture workspace must exist for unit test");
     const workspacePath = workspaceFixture!.path;
     const workspaceUri = URI.file(workspacePath);
 
     // small valid-ish wasm binary (magic + version)
-    const wasmContent = Buffer.from([
-      0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00,
-    ]);
+    const wasmContent = Buffer.from([0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00]);
     const lang: CodeLanguage = "javascript";
     const wasmFileName = WasmFileNames[lang];
 
@@ -56,9 +50,7 @@ suite("WasmDownloader (unit)", () => {
       res.end();
     });
 
-    await new Promise<void>((resolve) =>
-      server.listen(0, "127.0.0.1", () => resolve()),
-    );
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", () => resolve()));
     // @ts-ignore address is AddressInfo
     const port: number = (server.address() as any).port;
 
@@ -66,17 +58,13 @@ suite("WasmDownloader (unit)", () => {
     const storage = new Map<string, Uint8Array>();
 
     // stub workspace methods (MockWorkspaceService + sinon)
-    sinon
-      .stub(workspace, "getWorkspaceFolders")
-      .returns([{ uri: workspaceUri, name: "unitTestHelper", index: 0 }]);
+    sinon.stub(workspace, "getWorkspaceFolders").returns([{ uri: workspaceUri, name: "unitTestHelper", index: 0 }]);
 
     sinon.stub(workspace, "createDirectory").resolves();
 
-    sinon
-      .stub(workspace, "writeFile")
-      .callsFake(async (uri: URI, content: Uint8Array) => {
-        storage.set(uri.fsPath, new Uint8Array(content));
-      });
+    sinon.stub(workspace, "writeFile").callsFake(async (uri: URI, content: Uint8Array) => {
+      storage.set(uri.fsPath, new Uint8Array(content));
+    });
 
     sinon.stub(workspace, "readFile").callsFake(async (uri: URI) => {
       const v = storage.get(uri.fsPath);
@@ -118,9 +106,7 @@ suite("WasmDownloader (unit)", () => {
       lang: CodeLanguage;
       progress: { downloaded: number; total: number; status: string };
     }> = [];
-    const sub = downloader.onDidProgress((l, p) =>
-      captured.push({ lang: l, progress: p }),
-    );
+    const sub = downloader.onDidProgress((l, p) => captured.push({ lang: l, progress: p }));
 
     let lastProgress: { downloaded: number; total: number } | null = null;
     const localUri = await downloader.retrieveWasmFileInner(base, lang, {
@@ -131,10 +117,7 @@ suite("WasmDownloader (unit)", () => {
 
     // file should exist in stubbed storage and contents must match
     const data = await workspace.readFile(localUri);
-    assert.strictEqual(
-      Buffer.from(data).toString("hex"),
-      wasmContent.toString("hex"),
-    );
+    assert.strictEqual(Buffer.from(data).toString("hex"), wasmContent.toString("hex"));
 
     // progress callback should have been called at least once and show final size
     assert.ok(lastProgress, "onProgress should be called");
@@ -156,11 +139,7 @@ suite("WasmDownloader (unit)", () => {
     await new Promise<void>((resolve) => server.close(() => resolve()));
 
     const localUri2 = await downloader.retrieveWasmFileInner(base, lang);
-    assert.strictEqual(
-      localUri.fsPath,
-      localUri2.fsPath,
-      "should return same local URI when file exists",
-    );
+    assert.strictEqual(localUri.fsPath, localUri2.fsPath, "should return same local URI when file exists");
 
     sub.dispose();
     await workspaceFixture!.dispose();
@@ -193,7 +172,10 @@ suite("WasmDownloader (unit)", () => {
 
     // URI may percent-encode reserved characters (e.g. '@' -> '%40') —
     // compare against the decoded form so both encoded/unencoded forms pass.
-    assert.strictEqual(decodeURI(capturedUrl), "https://unpkg.com/tree-sitter-wasms@0.1.13/out/tree-sitter-javascript.wasm");
+    assert.strictEqual(
+      decodeURI(capturedUrl),
+      "https://unpkg.com/tree-sitter-wasms@0.1.13/out/tree-sitter-javascript.wasm",
+    );
 
     // ensure returned local uri points to expected filename
     assert.ok(local.fsPath.endsWith("tree-sitter-javascript.wasm"));

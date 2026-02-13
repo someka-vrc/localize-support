@@ -5,18 +5,16 @@ const dateStr = new Date().toISOString().substring(0, 10);
 const timeStr = new Date().toISOString().substring(11, 19).replace(/:/g, "-");
 
 export type DisposablePath = {
-    path: string;
-    dispose: () => Promise<void>;
+  path: string;
+  dispose: () => Promise<void>;
 };
 
 /**
  * ワークスペースのフィクスチャフォルダを一時コピーする
  * @param subPath `src/test/bar/foo.test.ts` の場合 `bar/foo`
- * @returns 
+ * @returns
  */
-export async function copyWorkspaceIfExists(
-  subPath: string,
-): Promise<DisposablePath | undefined> {
+export async function copyWorkspaceIfExists(subPath: string): Promise<DisposablePath | undefined> {
   const srcDir = path.join(process.cwd(), "fixtures/workspaces/unit", subPath);
   let exists = false;
   let destDir = undefined;
@@ -25,7 +23,7 @@ export async function copyWorkspaceIfExists(
     exists = true;
   } catch {}
   if (exists) {
-    destDir = path.join(process.cwd(), ".tmp/fixtures", dateStr, timeStr, 'unit', subPath);
+    destDir = path.join(process.cwd(), ".tmp/fixtures", dateStr, timeStr, "unit", subPath);
     await fs.cp(srcDir, destDir, { recursive: true });
   }
   return destDir

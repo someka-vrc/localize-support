@@ -1,8 +1,4 @@
-import {
-  Disposable,
-  MyRelativePattern,
-  IWorkspaceService,
-} from "../models/vscTypes";
+import { Disposable, MyRelativePattern, IWorkspaceService } from "../models/vscTypes";
 import { URI } from "vscode-uri";
 import { EventEmitter } from "events";
 import { L10nTarget } from "../models/l10nTypes";
@@ -38,11 +34,8 @@ export class TranslationManager implements Disposable {
   ) {
     this.rebuildIntervalQueue = new IntervalQueue<RebuildQueueItem>(
       rebuildIntervalMs,
-      async (item: RebuildQueueItem) =>
-        await item.thisArg.rebuildCache(item.uri, item.reason, item.text),
-      OrganizeStrategies.skipDuplicatesByKey<RebuildQueueItem>(
-        (item) => item.uri.path + "-" + item.reason,
-      ),
+      async (item: RebuildQueueItem) => await item.thisArg.rebuildCache(item.uri, item.reason, item.text),
+      OrganizeStrategies.skipDuplicatesByKey<RebuildQueueItem>((item) => item.uri.path + "-" + item.reason),
     );
   }
 
@@ -66,7 +59,7 @@ export class TranslationManager implements Disposable {
   }
 
   public async init() {
-    console.log('[localize-support][TranslationManager] init for', this.target.settingsLocation);
+    console.log("[localize-support][TranslationManager] init for", this.target.settingsLocation);
     if (this.disposed) {
       return;
     }
@@ -81,10 +74,7 @@ export class TranslationManager implements Disposable {
     }
 
     // ファイル監視
-    const baseUri = await normalizeDirPath(
-      this.workspace,
-      this.target.settingsLocation,
-    );
+    const baseUri = await normalizeDirPath(this.workspace, this.target.settingsLocation);
     if (!baseUri) {
       throw new Error("Failed to normalize base directory path.");
     }
@@ -92,9 +82,8 @@ export class TranslationManager implements Disposable {
       baseUri,
       pattern: "**/*" + this.target.l10nExtension,
     } as MyRelativePattern;
-    const fsWatcher = this.workspace.createFileSystemWatcher(
-      l10nFilePattern,
-      (type, uri) => this.handleL10nFileEvent(uri, type),
+    const fsWatcher = this.workspace.createFileSystemWatcher(l10nFilePattern, (type, uri) =>
+      this.handleL10nFileEvent(uri, type),
     );
     this.disposables["fsWatcher"] = [fsWatcher];
 
@@ -125,14 +114,8 @@ export class TranslationManager implements Disposable {
    * @param uri
    * @param reason
    */
-  private async handleL10nFileEvent(
-    uri: URI,
-    reason: "created" | "changed" | "deleted",
-  ): Promise<void> {
-    const fullText =
-      reason === "deleted"
-        ? undefined
-        : (await this.workspace.getTextDocumentContent(uri)) || "";
+  private async handleL10nFileEvent(uri: URI, reason: "created" | "changed" | "deleted"): Promise<void> {
+    const fullText = reason === "deleted" ? undefined : (await this.workspace.getTextDocumentContent(uri)) || "";
     this.rebuildIntervalQueue.push({ thisArg: this, uri, reason, text: fullText });
   }
 
@@ -155,12 +138,8 @@ export class TranslationManager implements Disposable {
    * @param reason イベントの理由
    * @param text ファイルの内容（削除の場合は undefined）
    */
-  private async rebuildCache(
-    uri: URI,
-    reason: "created" | "changed" | "deleted",
-    text: string | undefined,
-  ) {
-    console.log('[localize-support][TranslationManager] rebuildCache', uri.path, reason);
+  private async rebuildCache(uri: URI, reason: "created" | "changed" | "deleted", text: string | undefined) {
+    console.log("[localize-support][TranslationManager] rebuildCache", uri.path, reason);
     let didChange = false;
     switch (reason) {
       case "created":

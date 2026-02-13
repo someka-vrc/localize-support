@@ -93,7 +93,11 @@ suite("L10nTargetManager diagnostics (unit)", () => {
 
     const items = mgr.getMatchDiagnostics();
     const forJa = items.find((it) => it.uri.path === ja.path)?.diagnostics || [];
-    assert.ok(forJa.some((d) => /Missing translation for key 'hello'/.test(d.message) && d.severity === MyDiagnosticSeverity.Warning));
+    assert.ok(
+      forJa.some(
+        (d) => /Missing translation for key 'hello'/.test(d.message) && d.severity === MyDiagnosticSeverity.Warning,
+      ),
+    );
   });
 
   test("integration: code uses key present in one lang -> no undefined; missing lang diagnostic emitted", () => {
@@ -111,14 +115,22 @@ suite("L10nTargetManager diagnostics (unit)", () => {
     mgr.l10ns.set(en.path, {
       success: true,
       diagnostics: [],
-      entries: { en: { greet: { translation: "hi", location: vscTypeHelper.newLocation(en, vscTypeHelper.newRange(1, 0, 1, 5)) } } },
+      entries: {
+        en: {
+          greet: { translation: "hi", location: vscTypeHelper.newLocation(en, vscTypeHelper.newRange(1, 0, 1, 5)) },
+        },
+      },
     } as any);
 
     // ja missing greet but has unused 'onlyInJa'
     mgr.l10ns.set(ja.path, {
       success: true,
       diagnostics: [],
-      entries: { ja: { onlyInJa: { translation: "x", location: vscTypeHelper.newLocation(ja, vscTypeHelper.newRange(2, 0, 2, 4)) } } },
+      entries: {
+        ja: {
+          onlyInJa: { translation: "x", location: vscTypeHelper.newLocation(ja, vscTypeHelper.newRange(2, 0, 2, 4)) },
+        },
+      },
     } as any);
 
     const items = mgr.getMatchDiagnostics();

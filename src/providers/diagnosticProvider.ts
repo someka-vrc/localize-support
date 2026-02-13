@@ -13,14 +13,11 @@ export class DiagnosticProvider implements Disposable {
     this.collection = vscode.languages.createDiagnosticCollection(name);
     this.disposables.push(
       l10nService.onReloaded(() => {
-        this.updateDiagnostics(l10nService.getDiagnostics().diags).catch((e) =>
-          console.error(e),
-        );
+        this.updateDiagnostics(l10nService.getDiagnostics().diags).catch((e) => console.error(e));
       }),
     );
 
-    this.updateDiagnostics(l10nService.getDiagnostics().diags)
-      .catch((e) => console.error(e));
+    this.updateDiagnostics(l10nService.getDiagnostics().diags).catch((e) => console.error(e));
   }
 
   dispose() {

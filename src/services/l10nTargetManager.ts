@@ -36,7 +36,7 @@ export class L10nTargetManager implements Disposable {
     }
 
     const pushDiagToBucket = (uriOrPath: URI | string, diag: MyDiagnostic) => {
-      const key = typeof uriOrPath === 'string' ? uriOrPath : uriOrPath.path;
+      const key = typeof uriOrPath === "string" ? uriOrPath : uriOrPath.path;
       const arr = buckets.get(key) || [];
       arr.push(diag);
       buckets.set(key, arr);
@@ -139,18 +139,11 @@ export class L10nTargetManager implements Disposable {
     public target: L10nTarget,
     reloadIntervalMs: number = 500,
   ) {
-    this.l10nTranslationManager = new TranslationManager(
-      this.workspace,
-      this.target,
-    );
-    const transDisposable = this.l10nTranslationManager.onRebuilt(() =>
-      this.reloadIntervalQueue.push("translation"),
-    );
+    this.l10nTranslationManager = new TranslationManager(this.workspace, this.target);
+    const transDisposable = this.l10nTranslationManager.onRebuilt(() => this.reloadIntervalQueue.push("translation"));
     this.disposables.push(this.l10nTranslationManager, transDisposable);
     this.codeManager = new CodeManager(this.workspace, this.target);
-    const codeDisposable = this.codeManager.onRebuilt(() =>
-      this.reloadIntervalQueue.push("code"),
-    );
+    const codeDisposable = this.codeManager.onRebuilt(() => this.reloadIntervalQueue.push("code"));
     this.disposables.push(this.codeManager, codeDisposable);
 
     this.reloadIntervalQueue = new IntervalQueue<string>(
@@ -183,25 +176,16 @@ export class L10nTargetManager implements Disposable {
   }
 
   public async init() {
-    console.log(
-      "[localize-support][L10nTargetManager] init for",
-      this.target.settingsLocation,
-    );
+    console.log("[localize-support][L10nTargetManager] init for", this.target.settingsLocation);
     // initialize both translation and code managers
     await this.l10nTranslationManager.init();
     await this.codeManager.init();
     this.reloadIntervalQueue.start();
-    console.log(
-      "[localize-support][L10nTargetManager] init completed for",
-      this.target.settingsLocation,
-    );
+    console.log("[localize-support][L10nTargetManager] init completed for", this.target.settingsLocation);
   }
 
   public dispose() {
-    console.log(
-      "[localize-support][L10nTargetManager] dispose for",
-      this.target.settingsLocation,
-    );
+    console.log("[localize-support][L10nTargetManager] dispose for", this.target.settingsLocation);
     for (const disposable of this.disposables) {
       if (disposable) {
         disposable.dispose();

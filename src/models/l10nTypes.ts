@@ -6,13 +6,7 @@ export const L10nFormats = ["po"] as const;
 /** 対応ローカライズ形式 */
 export type L10nFormat = (typeof L10nFormats)[number];
 /** 対応コード言語 */
-export const CodeLanguages = [
-  "csharp",
-  "javascript",
-  "typescript",
-  "python",
-  "java",
-] as const;
+export const CodeLanguages = ["csharp", "javascript", "typescript", "python", "java"] as const;
 /** 対応コード言語 */
 export type CodeLanguage = (typeof CodeLanguages)[number];
 
@@ -24,11 +18,11 @@ export type L10nEntry = {
 
 export type L10nLangEntries = {
   [key: string]: L10nEntry;
-}
+};
 
 export type L10nEntries = {
   [lang: string]: L10nLangEntries;
-}
+};
 
 /** ローカライズ関数呼び出し（ファイル位置を含む） */
 export type L10nCode = {

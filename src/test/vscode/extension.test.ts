@@ -15,23 +15,12 @@ suite("Fixture Test", () => {
 
   test("Copied fixture files should exist", async () => {
     const wsfs = vscode.workspace.workspaceFolders;
-    assert.strictEqual(
-      wsfs?.length ?? 0,
-      1,
-      "There should be at least one workspace folder",
-    );
+    assert.strictEqual(wsfs?.length ?? 0, 1, "There should be at least one workspace folder");
     const wsf = wsfs?.[0];
     if (wsf) {
-      assert.strictEqual(
-        wsf.name,
-        "extension",
-        "The workspace folder name should be 'extension'",
-      );
+      assert.strictEqual(wsf.name, "extension", "The workspace folder name should be 'extension'");
       const foo = await vscode.workspace.findFiles("foo.txt");
-      assert.ok(
-        foo.length > 0 && foo[0].path.endsWith("extension/foo.txt"),
-        "foo.txt should exist in the workspace",
-      );
+      assert.ok(foo.length > 0 && foo[0].path.endsWith("extension/foo.txt"), "foo.txt should exist in the workspace");
       const hoge = await vscode.workspace.findFiles("bar/hoge.txt");
       assert.ok(
         hoge.length > 0 && hoge[0].path.endsWith("extension/bar/hoge.txt"),
