@@ -344,6 +344,41 @@ export class L10nService implements Disposable {
     return result as MyLocation[];
   }
 
+  /**
+   * 指定されたキーに対する翻訳（テキスト + ファイル情報）を取得する
+   * - Hover や他の UI 用に翻訳文字列と出所ファイル名 / パス / 言語を返す
+   */
+  public getTranslationsForKey(key: string): { translation: string; uri: URI; fileName: string; path: string; lang: string; location?: MyLocation }[] {
+    const result: { translation: string; uri: URI; fileName: string; path: string; lang: string; location?: MyLocation }[] = [];
+    for (const tgtUnits of this.managers.values()) {
+      for (const tu of tgtUnits) {
+        const l10ns = tu.manager?.l10ns;
+        if (!l10ns) {
+          continue;
+        }
+        for (const [l10nUri, parsed] of l10ns.entries()) {
+          const langs = Object.keys(parsed?.entries || {});
+          for (const lang of langs) {
+            const entries = (parsed!.entries as any)[lang] || {};
+            if (entries[key] && typeof entries[key].translation === "string") {
+              const uriObj = URI.parse(l10nUri);
+              const fileName = uriObj.path.split('/').pop() || l10nUri;
+              result.push({
+                translation: entries[key].translation,
+                uri: uriObj,
+                fileName,
+                path: uriObj.path,
+                lang,
+                location: entries[key].location,
+              });
+            }
+          }
+        }
+      }
+    }
+    return result;
+  }
+
   public findCodeReferencesForKey(key: string) {
     const result: any[] = [];
     for (const tgtUnits of this.managers.values()) {

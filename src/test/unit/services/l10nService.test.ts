@@ -195,6 +195,16 @@ suite("L10nService (unit)", () => {
     assert.strictEqual(trans.length, 1);
     assert.strictEqual(trans[0].uri.path, en.path);
 
+    const translations = svc.getTranslationsForKey("greet");
+    assert.strictEqual(translations.length, 1);
+    assert.strictEqual(translations[0].translation, "hi");
+    assert.strictEqual(translations[0].uri.path, en.path);
+    assert.strictEqual(translations[0].fileName, "en.po");
+    assert.strictEqual(translations[0].lang, "en");
+    assert.ok(translations[0].location);
+    assert.strictEqual(translations[0].location!.uri.path, en.path);
+    assert.strictEqual(translations[0].location!.range.start.line, 1);
+
     const refs = svc.findCodeReferencesForKey("greet");
     assert.strictEqual(refs.length, 1);
     assert.strictEqual(refs[0].uri.path, codeUri.path);
