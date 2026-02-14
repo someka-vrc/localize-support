@@ -98,6 +98,11 @@ export interface IWorkspaceService {
   ): Disposable;
 
   createDiagnosticCollection(name: string): DiagnosticCollection;
+  /** ファイルを表示する（テスト用に抽象化）。範囲を指定すると選択状態で開く */
+  showTextDocument(uri: URI, options?: { selection?: MyRange }): Promise<void>;
+
+  /** コマンドを登録する（vscode.commands.registerCommand の抽象化） */
+  registerCommand(command: string, callback: (...args: any[]) => any): Disposable;
 
   logger: LogOutputChannel;
 }

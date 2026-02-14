@@ -57,11 +57,6 @@ suite("L10nService (unit)", () => {
     const res = await svc.normalizeSettingsObject(rawTargets, settingUri);
     assert.strictEqual(res.targets.length, 1);
     const t = res.targets[0];
-    // debug output for normalized dirs
-    console.debug(
-      "normalized codeDirs:",
-      t.codeDirs.map((d) => d.path),
-    );
     // only the existing code dir should be normalized
     assert.strictEqual(t.codeDirs.length, 1);
     assert.ok(t.codeDirs[0].path.endsWith("/src/exists"));

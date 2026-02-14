@@ -49,54 +49,14 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(vscode.languages.registerDefinitionProvider(docSelectors, defProvider));
   context.subscriptions.push(vscode.languages.registerReferenceProvider(docSelectors, refProvider));
 
-  // コマンド: Hover のファイルリンクから指定位置で開く
-  context.subscriptions.push(
-    vscode.commands.registerCommand("localize-support.openLocation", async (arg: any) => {
-      try {
-        const payload = Array.isArray(arg) ? arg[0] : arg;
-        const uri = typeof payload.uri === "string" ? vscode.Uri.parse(payload.uri) : payload.uri;
-        const loc = payload.location || payload.range;
-        const options: vscode.TextDocumentShowOptions = {};
-        if (loc && loc.range) {
-          const r = loc.range;
-          options.selection = new vscode.Range(r.start.line, r.start.character, r.end.line, r.end.character);
-        }
-        await vscode.window.showTextDocument(uri, options);
-      } catch (err) {
-        console.error("localize-support.openLocation failed", err);
-      }
-    }),
-  );
+  // openLocation コマンドを別ファイルに分離して登録
+  const { registerOpenLocationCommand } = await import("./commands/openLocationCommand.js");
+  context.subscriptions.push(registerOpenLocationCommand(workspaceService));
 
-  // --- Hover provider -------------------------------------------------
-  context.subscriptions.push(
-    vscode.languages.registerHoverProvider(docSelectors, {
-      provideHover(document: vscode.TextDocument, position: vscode.Position) {
-        const myPos = { line: position.line, character: position.character } as any;
-        const key = l10nService.getKeyAtPosition(document.uri as any, myPos);
-        if (!key) {
-          return null;
-        }
+  // HoverProvider を別ファイルに分離して登録
+  const { HoverProvider } = await import("./providers/hoverProvider.js");
+  context.subscriptions.push(vscode.languages.registerHoverProvider(docSelectors, new HoverProvider(l10nService)));
 
-        const items = l10nService.getTranslationsForKey(key) || [];
-        if (!items || items.length === 0) {
-          return null;
-        }
-
-        const md = new vscode.MarkdownString();
-        md.isTrusted = true;
-        md.appendMarkdown("localize-support:\n");
-        for (const it of items) {
-          md.appendMarkdown("- ");
-          md.appendText(it.translation || "");
-          const payload = { uri: (it.uri as any).toString(), location: it.location };
-          const arg = encodeURIComponent(JSON.stringify([payload]));
-          md.appendMarkdown(` [${it.fileName}](command:localize-support.openLocation?${arg})\n`);
-        }
-        return new vscode.Hover(md);
-      },
-    }),
-  );
 
   workspaceService.logger.info("localize-support activated");
 }

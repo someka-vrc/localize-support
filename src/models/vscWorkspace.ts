@@ -8,6 +8,7 @@ import {
   MyConfigurationChangeEvent,
   MyFileType,
   MyLocation,
+  MyRange,
 } from "./vscTypes";
 import { URI } from "vscode-uri";
 import { LogOutputChannel } from "vscode";
@@ -140,6 +141,20 @@ export class VSCodeWorkspaceService implements IWorkspaceService {
 
   createDiagnosticCollection(name: string): vscode.DiagnosticCollection {
     return vscode.languages.createDiagnosticCollection(name);
+  }
+
+  registerCommand(command: string, callback: (...args: any[]) => any): Disposable {
+    return vscode.commands.registerCommand(command, callback);
+  }
+
+  async showTextDocument(uri: URI, options?: { selection?: MyRange }): Promise<void> {
+    const vscUri = vscode.Uri.parse((uri as any).toString());
+    const showOptions: vscode.TextDocumentShowOptions = {};
+    if (options && options.selection) {
+      const r = options.selection;
+      showOptions.selection = new vscode.Range(r.start.line, r.start.character, r.end.line, r.end.character);
+    }
+    await vscode.window.showTextDocument(vscUri, showOptions);
   }
   
   private outputChannel = vscode.window.createOutputChannel("Localize Support", { log: true });

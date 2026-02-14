@@ -8,6 +8,7 @@ import {
   MyConfigurationChangeEvent,
   MyFileType,
   DiagnosticCollection,
+  MyRange,
 } from "../../../models/vscTypes";
 import { URI } from "vscode-uri";
 
@@ -90,6 +91,22 @@ export class MockWorkspaceService implements IWorkspaceService {
 
   createDiagnosticCollection(name: string): DiagnosticCollection {
     return new MockDiagnosticCollection(name);
+  }
+
+  async showTextDocument(uri: URI, options?: { selection?: MyRange }): Promise<void> {
+    // テスト用モックでは呼び出しを記録しておく
+    (this as any)._lastShown = { uri: uri, options };
+    return;
+  }
+
+  registerCommand(command: string, callback: (...args: any[]) => any): Disposable {
+    (this as any)._commands = (this as any)._commands || new Map<string, any>();
+    (this as any)._commands.set(command, callback);
+    return {
+      dispose: () => {
+        (this as any)._commands.delete(command);
+      },
+    } as Disposable;
   }
 
   logger = {
