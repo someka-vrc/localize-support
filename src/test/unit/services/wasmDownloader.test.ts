@@ -4,15 +4,15 @@ import { Utils, URI } from "vscode-uri";
 import { copyWorkspaceIfExists, type DisposablePath } from "../unitTestHelper";
 import { WasmDownloader, WasmFileNames } from "../../../services/wasmDownloader";
 import { CodeLanguage } from "../../../models/l10nTypes";
-import { MyFileStat, MyFileType } from "../../../models/vscTypes";
+import { FileStat, FileType } from "../../../models/vscTypes";
 import sinon from "sinon";
-import { MockWorkspaceService } from "../mocks/mockWorkspaceService";
+import { MockWorkspaceWrapper, MockLogOutputChannel } from "../mocks/mockWorkspaceService";
 
 suite("WasmDownloader (unit)", () => {
-  let workspace: MockWorkspaceService;
+  let workspace: MockWorkspaceWrapper;
 
   setup(() => {
-    workspace = new MockWorkspaceService();
+    workspace = new MockWorkspaceWrapper();
   });
 
   teardown(() => {
@@ -60,13 +60,13 @@ suite("WasmDownloader (unit)", () => {
     // stub workspace methods (MockWorkspaceService + sinon)
     sinon.stub(workspace, "getWorkspaceFolders").returns([{ uri: workspaceUri, name: "unitTestHelper", index: 0 }]);
 
-    sinon.stub(workspace, "createDirectory").resolves();
+    sinon.stub(workspace.fs, "createDirectory").resolves();
 
-    sinon.stub(workspace, "writeFile").callsFake(async (uri: URI, content: Uint8Array) => {
+    sinon.stub(workspace.fs, "writeFile").callsFake(async (uri: URI, content: Uint8Array) => {
       storage.set(uri.fsPath, new Uint8Array(content));
     });
 
-    sinon.stub(workspace, "readFile").callsFake(async (uri: URI) => {
+    sinon.stub(workspace.fs, "readFile").callsFake(async (uri: URI) => {
       const v = storage.get(uri.fsPath);
       if (!v) {
         throw new Error("file not found");
@@ -74,32 +74,32 @@ suite("WasmDownloader (unit)", () => {
       return v;
     });
 
-    sinon.stub(workspace, "stat").callsFake(async (uri: URI) => {
+    sinon.stub(workspace.fs, "stat").callsFake(async (uri: URI) => {
       const p = uri.fsPath;
       if (storage.has(p)) {
         const b = storage.get(p)!;
         return {
-          type: MyFileType.File,
+          type: 1 as FileType,
           ctime: Date.now(),
           mtime: Date.now(),
           size: b.length,
-        } as MyFileStat;
+        } as FileStat;
       }
       // directory checks (storage root) can be treated as existing
       if (p.endsWith(".wasm-test-storage") || p.includes("/wasm/")) {
         return {
-          type: MyFileType.Directory,
+          type: 2 as FileType,
           ctime: Date.now(),
           mtime: Date.now(),
           size: 0,
-        } as MyFileStat;
+        } as FileStat;
       }
       throw new Error("not found");
     });
 
     const storageUri = Utils.joinPath(workspaceUri, ".wasm-test-storage");
 
-    const downloader = new WasmDownloader(workspace, storageUri);
+    const downloader = new WasmDownloader(workspace, new MockLogOutputChannel(), storageUri);
     const base = `http://127.0.0.1:${port}/out`;
 
     const captured: Array<{
@@ -116,7 +116,7 @@ suite("WasmDownloader (unit)", () => {
     });
 
     // file should exist in stubbed storage and contents must match
-    const data = await workspace.readFile(localUri);
+    const data = await workspace.fs.readFile(localUri);
     assert.strictEqual(Buffer.from(data).toString("hex"), wasmContent.toString("hex"));
 
     // progress callback should have been called at least once and show final size
@@ -146,15 +146,15 @@ suite("WasmDownloader (unit)", () => {
   }).timeout(30_000);
 
   test("constructs correct remote URL when base contains {version}", async () => {
-    const workspace = new MockWorkspaceService();
+    const workspace = new MockWorkspaceWrapper();
 
     // force download path by making stat throw
-    sinon.stub(workspace, "createDirectory").resolves();
-    sinon.stub(workspace, "stat").rejects(new Error("not found"));
-    sinon.stub(workspace, "writeFile").resolves();
+    sinon.stub(workspace.fs, "createDirectory").resolves();
+    sinon.stub(workspace.fs, "stat").rejects(new Error("not found"));
+    sinon.stub(workspace.fs, "writeFile").resolves();
 
     const storageUri = Utils.joinPath(URI.file(process.cwd()), ".tmp/wasm-url-test");
-    const downloader = new WasmDownloader(workspace, storageUri);
+    const downloader = new WasmDownloader(workspace, new MockLogOutputChannel(), storageUri);
 
     const base = "https://unpkg.com/tree-sitter-wasms@{version}/out";
 
@@ -165,7 +165,7 @@ suite("WasmDownloader (unit)", () => {
       const dest = args[1] as URI;
       capturedUrl = url;
       // simulate a successful write so retrieveWasmFileInner completes
-      await workspace.writeFile(dest, new Uint8Array([1]));
+      await workspace.fs.writeFile(dest, new Uint8Array([1]));
     });
 
     const local = await downloader.retrieveWasmFileInner(base, "javascript");

@@ -1,6 +1,6 @@
 import { EventEmitter } from "events";
 import { URI } from "vscode-uri";
-import { IWorkspaceService, MyRelativePattern, Disposable, MyFileType } from "../models/vscTypes";
+import { IWorkspaceWrapper, LogOutputChannel, MyRelativePattern, Disposable, FileType } from "../models/vscTypes";
 import { L10nTarget, L10nCode, CodeLanguage, CodeLanguageFileExtMap } from "../models/l10nTypes";
 import { IntervalQueue, OrganizeStrategies } from "../utils/intervalQueue";
 import { CodeParser } from "./codeParser";
@@ -26,19 +26,20 @@ export class CodeManager implements Disposable {
   private readonly wasmDownloader: WasmDownloader;
 
   constructor(
-    private workspace: IWorkspaceService,
+    private workspace: IWorkspaceWrapper,
+    private logger: LogOutputChannel,
     private target: L10nTarget,
     rebuildIntervalMs: number = 500,
   ) {
     this.rebuildIntervalQueue = new IntervalQueue<RebuildQueueItem>(
       rebuildIntervalMs,
       async (item: RebuildQueueItem) => await item.thisArg.rebuildCache(item.uri, item.reason, item.text),
-      this.workspace,
+      this.logger,
       OrganizeStrategies.skipDuplicatesByKey<RebuildQueueItem>((item) => item.uri.path + "-" + item.reason),
     );
 
     // default wasm storage under project .tmp/wasms — tests may stub parsing instead of downloading
-    this.wasmDownloader = new WasmDownloader(this.workspace, URI.file(path.join(process.cwd(), ".tmp/wasms")));
+    this.wasmDownloader = new WasmDownloader(this.workspace, this.logger, URI.file(path.join(process.cwd(), ".tmp/wasms")));
     this.disposables.push(this.wasmDownloader);
   }
 
@@ -50,7 +51,7 @@ export class CodeManager implements Disposable {
           (this.rebuiltEmitter as any).off?.("rebuilt", listener);
           this.rebuiltEmitter.removeListener("rebuilt", listener as any);
         } catch (err) {
-          this.workspace.logger.warn("CodeManager.onRebuilt.dispose failed", err);
+          this.logger.warn("CodeManager.onRebuilt.dispose failed", err);
         }
       },
     };
@@ -70,7 +71,10 @@ export class CodeManager implements Disposable {
       const pattern = this.buildGlobForLanguages(this.target.codeLanguages);
       const rel: MyRelativePattern = { baseUri, pattern } as MyRelativePattern;
 
-      const fsWatcher = this.workspace.createFileSystemWatcher(rel, (type, uri) => this.handleFileEvent(uri, type));
+      const fsWatcher = this.workspace.createFileSystemWatcher(rel);
+      fsWatcher.onDidCreate((uri) => this.handleFileEvent(uri, "created"));
+      fsWatcher.onDidChange((uri) => this.handleFileEvent(uri, "changed"));
+      fsWatcher.onDidDelete((uri) => this.handleFileEvent(uri, "deleted"));
       this.disposables.push(fsWatcher);
 
       const editWatcher = this.workspace.onDidChangeTextDocument((uri) => {
@@ -140,7 +144,7 @@ export class CodeManager implements Disposable {
         }
         try {
           const content = text ?? (await this.workspace.getTextDocumentContent(uri));
-          const parser = new CodeParser(this.wasmDownloader, lang, this.workspace);
+          const parser = new CodeParser(this.wasmDownloader, lang, this.workspace, this.logger);
           // always read wasm CDN base URL from configuration (do not cache)
           const cfg = this.workspace.getConfiguration("localize-support");
           const wasmCdnBaseUrl = (cfg && cfg.get<string>("wasmCdnBaseUrl")) || "";
@@ -153,7 +157,7 @@ export class CodeManager implements Disposable {
           didChange = true;
         } catch (err) {
           // swallow parse errors — do not propagate to caller
-          this.workspace.logger.warn("CodeManager.rebuildCache: parse failed", err);
+          this.logger.warn("CodeManager.rebuildCache: parse failed", err);
         }
         break;
       case "deleted":
@@ -168,7 +172,7 @@ export class CodeManager implements Disposable {
       try {
         this.rebuiltEmitter.emit("rebuilt");
       } catch (err) {
-        this.workspace.logger.warn("CodeManager.rebuildCache: emitting rebuilt failed", err);
+        this.logger.warn("CodeManager.rebuildCache: emitting rebuilt failed", err);
       }
     }
   }
@@ -184,13 +188,13 @@ export class CodeManager implements Disposable {
       try {
         await d.dispose();
       } catch (err) {
-        this.workspace.logger.warn("CodeManager.dispose: disposing resource failed", err);
+        this.logger.warn("CodeManager.dispose: disposing resource failed", err);
       }
     }
     try {
       this.rebuiltEmitter.removeAllListeners();
     } catch (err) {
-      this.workspace.logger.warn("CodeManager.dispose: removeAllListeners failed", err);
+      this.logger.warn("CodeManager.dispose: removeAllListeners failed", err);
     }
   }
 }

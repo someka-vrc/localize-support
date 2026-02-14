@@ -1,18 +1,17 @@
 import assert from "assert";
 import sinon from "sinon";
 import { URI } from "vscode-uri";
-import { MockWorkspaceService } from "../mocks/mockWorkspaceService";
+import { MockWorkspaceWrapper, MockLogOutputChannel } from "../mocks/mockWorkspaceService";
 import { CodeManager } from "../../../services/codeManager";
 import { L10nTarget } from "../../../models/l10nTypes";
-import { MyRelativePattern, MyFileType } from "../../../models/vscTypes";
 import { CodeParser } from "../../../services/codeParser";
-import { vscTypeHelper } from "../../../models/vscTypes";
+import { vscTypeHelper, MyRelativePattern, FileType } from "../../../models/vscTypes";
 
 suite("CodeManager (unit)", () => {
-  let workspace: MockWorkspaceService;
+  let workspace: MockWorkspaceWrapper;
 
   setup(() => {
-    workspace = new MockWorkspaceService();
+    workspace = new MockWorkspaceWrapper();
   });
 
   teardown(() => {
@@ -27,19 +26,24 @@ suite("CodeManager (unit)", () => {
     sinon.stub(workspace, "findFiles").resolves([sampleUri]);
     sinon
       .stub(workspace, "getTextDocumentContent")
-      .callsFake(async (u: URI) => (u.path === sampleUri.path ? code : ""));
+      .callsFake(async (u: any) => (u.path === sampleUri.path ? code : ""));
     sinon
-      .stub(workspace, "stat")
-      .resolves({ type: MyFileType.Directory, ctime: Date.now(), mtime: Date.now(), size: 0 });
-    sinon.stub(workspace, "createFileSystemWatcher").callsFake((pattern: string | MyRelativePattern, cb: any) => {
-      (workspace as any)._fsWatcherCallback = cb;
-      return { dispose: () => {} } as any;
+      .stub(workspace.fs, "stat")
+      .resolves({ type: 2 as FileType, ctime: Date.now(), mtime: Date.now(), size: 0 });
+    sinon.stub(workspace as any, "createFileSystemWatcher").callsFake((pattern: any) => {
+      const watcher = {
+        onDidCreate: (cb: (u: URI) => void) => { (workspace as any)._fsWatcherOnCreate = cb; return { dispose: () => {} } as any; },
+        onDidChange: (cb: (u: URI) => void) => { (workspace as any)._fsWatcherOnChange = cb; return { dispose: () => {} } as any; },
+        onDidDelete: (cb: (u: URI) => void) => { (workspace as any)._fsWatcherOnDelete = cb; return { dispose: () => {} } as any; },
+        dispose: () => {},
+      } as any;
+      return watcher as any;
     });
     sinon.stub(workspace, "onDidChangeTextDocument").callsFake((cb: any) => {
       (workspace as any)._editCallback = cb;
       return { dispose: () => {} } as any;
     });
-    sinon.stub(workspace, "getConfiguration").callsFake(() => ({ get: <T>(_k?: string) => wasmBase as unknown as T }));
+    sinon.stub(workspace as any, "getConfiguration").callsFake(() => ({ get: <T>(_k?: string) => wasmBase as unknown as T } as any));
 
     // stub CodeParser.parse to return a deterministic fragment (avoid wasm)
     const parseStub = sinon.stub((CodeParser as any).prototype, "parse").resolves([
@@ -59,7 +63,7 @@ suite("CodeManager (unit)", () => {
       settingsLocation: URI.file("d:/proj"),
     };
 
-    const mgr = new CodeManager(workspace, target, 10);
+    const mgr = new CodeManager(workspace, new MockLogOutputChannel(), target, 10);
 
     let rebuilt = false;
     const sub = mgr.onRebuilt(() => (rebuilt = true));
@@ -98,13 +102,18 @@ suite("CodeManager (unit)", () => {
     const changed = `t("B");`;
 
     sinon.stub(workspace, "findFiles").resolves([uri]);
-    sinon.stub(workspace, "getTextDocumentContent").callsFake(async (u: URI) => (u.path === uri.path ? initial : ""));
+    sinon.stub(workspace, "getTextDocumentContent").callsFake(async (u: any) => (u.path === uri.path ? initial : ""));
     sinon
-      .stub(workspace, "stat")
-      .resolves({ type: MyFileType.Directory, ctime: Date.now(), mtime: Date.now(), size: 0 });
-    sinon.stub(workspace, "createFileSystemWatcher").callsFake((pattern: string | MyRelativePattern, cb: any) => {
-      (workspace as any)._fsWatcherCallback = cb;
-      return { dispose: () => {} } as any;
+      .stub(workspace.fs, "stat")
+      .resolves({ type: 2 as FileType, ctime: Date.now(), mtime: Date.now(), size: 0 });
+    sinon.stub(workspace as any, "createFileSystemWatcher").callsFake((pattern: any) => {
+      const watcher = {
+        onDidCreate: (cb: (u: URI) => void) => { (workspace as any)._fsWatcherOnCreate = cb; return { dispose: () => {} } as any; },
+        onDidChange: (cb: (u: URI) => void) => { (workspace as any)._fsWatcherOnChange = cb; return { dispose: () => {} } as any; },
+        onDidDelete: (cb: (u: URI) => void) => { (workspace as any)._fsWatcherOnDelete = cb; return { dispose: () => {} } as any; },
+        dispose: () => {},
+      } as any;
+      return watcher as any;
     });
     sinon.stub(workspace, "onDidChangeTextDocument").callsFake((cb: any) => {
       (workspace as any)._editCallback = cb;
@@ -113,7 +122,7 @@ suite("CodeManager (unit)", () => {
 
     // parse stub returns different values depending on content (simulate)
     const wasmBase = "https://cdn.example/{version}/out";
-    sinon.stub(workspace, "getConfiguration").callsFake(() => ({ get: <T>(_k?: string) => wasmBase as unknown as T }));
+    sinon.stub(workspace as any, "getConfiguration").callsFake(() => ({ get: <T>(_k?: string) => wasmBase as unknown as T } as any));
     const parseStub = sinon.stub((CodeParser as any).prototype, "parse");
     parseStub.callsFake(async (...args: any[]) => {
       const content: string = args[2] || "";
@@ -134,7 +143,7 @@ suite("CodeManager (unit)", () => {
       settingsLocation: URI.file("d:/proj"),
     };
 
-    const mgr = new CodeManager(workspace, target, 10);
+    const mgr = new CodeManager(workspace, new MockLogOutputChannel(), target, 10);
 
     let rebuildCount = 0;
     const sub = mgr.onRebuilt(() => rebuildCount++);
@@ -178,7 +187,7 @@ suite("CodeManager (unit)", () => {
     assert.strictEqual(parsed![0].key, "B");
 
     // simulate delete via fsWatcher callback
-    (workspace as any)._fsWatcherCallback("deleted", uri);
+    (workspace as any)._fsWatcherOnDelete(uri);
 
     // wait for delete to be processed
     await new Promise<void>((res, rej) => {

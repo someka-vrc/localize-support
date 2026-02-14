@@ -1,163 +1,133 @@
-import { Uri, Diagnostic } from "vscode";
 import {
-  IWorkspaceService,
-  MyFileStat,
-  MyConfiguration,
+  IWorkspaceWrapper,
+  ICommandWrapper,
+  IWindowWrapper,
+  ILanguagesWrapper,
+  FileStat,
+  WorkspaceConfiguration,
   Disposable,
   MyRelativePattern,
   MyConfigurationChangeEvent,
-  MyFileType,
+  FileType,
   DiagnosticCollection,
   MyRange,
+  FileSystemWatcher,
+  IFileSystemWrapper,
+  LogLevel,
+  LogOutputChannel,
 } from "../../../models/vscTypes";
+import { Event as vtEvent } from "../../../models/vscTypes";
 import { URI } from "vscode-uri";
 
-/**
- * IWorkspaceService のモッククラス。
- */
-export class MockWorkspaceService implements IWorkspaceService {
-  // --- ファイル操作 ---
-
-  async findFiles(pattern: string | MyRelativePattern): Promise<URI[]> {
-    return [];
+export class MockFileSystemWrapper implements IFileSystemWrapper {
+  readFile(uri: URI): Promise<Uint8Array> {
+    return Promise.reject(new Error("MockFileSystemWrapper.readFile not stubbed"));
   }
-
-  async readFile(uri: URI): Promise<Uint8Array> {
-    return new Uint8Array();
+  writeFile(uri: URI, content: Uint8Array): Promise<void> {
+    return Promise.reject(new Error("MockFileSystemWrapper.writeFile not stubbed"));
   }
-
-  async writeFile(uri: URI, content: Uint8Array): Promise<void> {
-    return;
+  deleteFile(uri: URI): Promise<void> {
+    return Promise.reject(new Error("MockFileSystemWrapper.deleteFile not stubbed"));
   }
-
-  async deleteFile(uri: URI): Promise<void> {
-    return;
+  stat(uri: URI): Promise<FileStat> {
+    return Promise.reject(new Error("MockFileSystemWrapper.stat not stubbed"));
   }
-
-  async stat(uri: URI): Promise<MyFileStat> {
-    return {
-      type: MyFileType.File,
-      ctime: Date.now(),
-      mtime: Date.now(),
-      size: 0,
-    };
+  validateDirectoryPath(uri: URI): Promise<boolean> {
+    return Promise.reject(new Error("MockFileSystemWrapper.validateDirectoryPath not stubbed"));
   }
-
-  async validateDirectoryPath(uri: URI): Promise<boolean> {
-    try {
-      const stats = await this.stat(uri);
-      return stats.type === MyFileType.Directory;
-    } catch {
-      return false;
-    }
+  createDirectory(uri: URI): Promise<void> {
+    return Promise.reject(new Error("MockFileSystemWrapper.createDirectory not stubbed"));
   }
-
-  async getTextDocumentContent(uri: URI): Promise<string> {
-    return "";
-  }
-
-  // --- 設定・フォルダ ---
-
-  getWorkspaceFolders(): { uri: URI; name: string; index: number }[] {
-    return [];
-  }
-
-  getConfiguration(section: string, scope?: URI): MyConfiguration {
-    return {
-      get: <T>(key: string): T | undefined => undefined,
-    };
-  }
-
-  async createDirectory(uri: URI): Promise<void> {
-    return;
-  }
-
-  // --- 監視 (Event Listeners) ---
-
-  onDidChangeTextDocument(callback: (uri: URI) => void): Disposable {
-    return { dispose: () => {} };
-  }
-
-  onDidChangeConfiguration(callback: (e: MyConfigurationChangeEvent) => void): Disposable {
-    return { dispose: () => {} };
-  }
-
-  createFileSystemWatcher(
-    pattern: string | MyRelativePattern,
-    callback: (type: "created" | "changed" | "deleted", uri: URI) => void,
-  ): Disposable {
-    return { dispose: () => {} };
-  }
-
-  createDiagnosticCollection(name: string): DiagnosticCollection {
-    return new MockDiagnosticCollection(name);
-  }
-
-  async showTextDocument(uri: URI, options?: { selection?: MyRange }): Promise<void> {
-    // テスト用モックでは呼び出しを記録しておく
-    (this as any)._lastShown = { uri: uri, options };
-    return;
-  }
-
-  registerCommand(command: string, callback: (...args: any[]) => any): Disposable {
-    (this as any)._commands = (this as any)._commands || new Map<string, any>();
-    (this as any)._commands.set(command, callback);
-    return {
-      dispose: () => {
-        (this as any)._commands.delete(command);
-      },
-    } as Disposable;
-  }
-
-  logger = {
-    trace: (message: string, ...args: any[]) => {
-      console.log("[trace]", message, ...args);
-    },
-    debug: (message: string, ...args: any[]) => {
-      console.log("[debug]", message, ...args);
-    },
-    info: (message: string, ...args: any[]) => {
-      console.log("[info]", message, ...args);
-    },
-    warn: (message: string, ...args: any[]) => {
-      console.warn("[warn]", message, ...args);
-    },
-    error: (error: string | Error, ...args: any[]) => {
-      console.error("[error]", error, ...args);
-    },
-  };
 }
-
-class MockDiagnosticCollection implements DiagnosticCollection {
+export class MockWorkspaceWrapper implements IWorkspaceWrapper {
+  fs: IFileSystemWrapper = new MockFileSystemWrapper();
+  findFiles(pattern: string | MyRelativePattern): Promise<URI[]> {
+    return Promise.reject(new Error("MockWorkspaceWrapper.findFiles not stubbed"));
+  }
+  getTextDocumentContent(uri: URI): Promise<string> {
+    return Promise.reject(new Error("MockWorkspaceWrapper.getTextDocumentContent not stubbed"));
+  }
+  getWorkspaceFolders(): { uri: URI; name: string; index: number }[] {
+    throw new Error("MockWorkspaceWrapper.getWorkspaceFolders not stubbed");
+  }
+  getConfiguration(section: string, scope?: URI): WorkspaceConfiguration {
+    throw new Error("MockWorkspaceWrapper.getConfiguration not stubbed");
+  }
+  onDidChangeTextDocument(callback: (uri: URI) => void): Disposable {
+    throw new Error("MockWorkspaceWrapper.onDidChangeTextDocument not stubbed");
+  }
+  onDidChangeConfiguration(callback: (e: MyConfigurationChangeEvent) => void): Disposable {
+    throw new Error("MockWorkspaceWrapper.onDidChangeConfiguration not stubbed");
+  }
+  createFileSystemWatcher(pattern: string | MyRelativePattern): FileSystemWatcher {
+    throw new Error("MockWorkspaceWrapper.createFileSystemWatcher not stubbed");
+  }
+}
+export class MockCommandWrapper implements ICommandWrapper {
+  registerCommand(command: string, callback: (...args: any[]) => any): Disposable {
+    throw new Error(`MockCommandWrapper.registerCommand not stubbed: ${command}`);
+  }
+}
+/**
+ * A channel for containing log output.
+ *
+ * To get an instance of a `LogOutputChannel` use
+ * {@link window.createOutputChannel createOutputChannel}.
+ */
+export class MockLogOutputChannel implements LogOutputChannel {
   name: string;
-  constructor(name: string) {
+  /**
+   * The current log level of the channel. Defaults to {@link env.logLevel editor log level}.
+   */
+  readonly logLevel: LogLevel;
+
+  /**
+   * An {@link Event} which fires when the log level of the channel changes.
+   */
+  readonly onDidChangeLogLevel: vtEvent<LogLevel>;
+
+  constructor(name: string = "mock") {
     this.name = name;
+    this.logLevel = 1;
+    this.onDidChangeLogLevel = () => {
+      return { dispose: () => {} };
+    };
   }
-  set(uri: unknown, diagnostics?: unknown): void {
-    throw new Error("Method not implemented.");
+
+  append(value: string): void {}
+  appendLine(value: string): void {}
+  replace(value: string): void {}
+  clear(): void {}
+  show(column?: unknown, preserveFocus?: unknown): void {}
+  hide(): void {}
+  dispose(): void {}
+
+  trace(message: string, ...args: any[]): void {
+    console.debug(message, ...args);
   }
-  delete(uri: Uri): void {
-    throw new Error("Method not implemented.");
+  debug(message: string, ...args: any[]): void {
+    console.debug(message, ...args);
   }
-  clear(): void {
-    throw new Error("Method not implemented.");
+  info(message: string, ...args: any[]): void {
+    console.info(message, ...args);
   }
-  forEach(
-    callback: (uri: Uri, diagnostics: readonly Diagnostic[], collection: DiagnosticCollection) => any,
-    thisArg?: any,
-  ): void {
-    throw new Error("Method not implemented.");
+  warn(message: string, ...args: any[]): void {
+    console.warn(message, ...args);
   }
-  get(uri: Uri): readonly Diagnostic[] | undefined {
-    throw new Error("Method not implemented.");
+  error(error: string | Error, ...args: any[]): void {
+    console.error(error, ...args);
   }
-  has(uri: Uri): boolean {
-    throw new Error("Method not implemented.");
+}
+export class MockIWindowWrapper implements IWindowWrapper {
+  showTextDocument(uri: URI, options?: { selection?: MyRange }): Promise<void> {
+    return Promise.reject(new Error("MockIWindowWrapper.showTextDocument not stubbed"));
   }
-  dispose(): void {
-    throw new Error("Method not implemented.");
+  get logger(): LogOutputChannel {
+    return new MockLogOutputChannel();
   }
-  [Symbol.iterator](): Iterator<[uri: Uri, diagnostics: readonly Diagnostic[]], any, any> {
-    throw new Error("Method not implemented.");
+}
+export class MockILanguagesWrapper implements ILanguagesWrapper {
+  createDiagnosticCollection(name: string): DiagnosticCollection {
+    throw new Error("MockILanguagesWrapper.createDiagnosticCollection not stubbed");
   }
 }

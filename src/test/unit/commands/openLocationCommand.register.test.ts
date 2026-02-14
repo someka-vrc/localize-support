@@ -1,13 +1,15 @@
 import * as assert from "assert";
 import sinon from "sinon";
 import { registerOpenLocationCommand } from "../../../commands/openLocationCommand";
-import { MockWorkspaceService } from "../mocks/mockWorkspaceService";
+import { MockCommandWrapper, MockIWindowWrapper } from "../mocks/mockWorkspaceService";
 
 suite("registerOpenLocationCommand (unit)", () => {
-  let workspace: MockWorkspaceService;
+  let command: MockCommandWrapper;
+  let win: MockIWindowWrapper;
 
   setup(() => {
-    workspace = new MockWorkspaceService();
+    command = new MockCommandWrapper();
+    win = new MockIWindowWrapper();
   });
 
   teardown(() => {
@@ -16,14 +18,15 @@ suite("registerOpenLocationCommand (unit)", () => {
 
   test("should register workspace command and callback should open document", async () => {
     let registeredCallback: any = null;
-    const regStub = (sinon.stub(workspace as any, "registerCommand") as any).callsFake((cmd: string, cb: any) => {
+    const regStub = (sinon.stub(command as any, "registerCommand") as any).callsFake((cmd: string, cb: any) => {
       registeredCallback = cb;
       return { dispose: () => {} };
     });
 
-    const showStub = sinon.stub(workspace as any, "showTextDocument").resolves();
+    const showStub = sinon.stub(win as any, "showTextDocument").resolves();
 
-    const disp = registerOpenLocationCommand(workspace as any);
+    const logger = win.logger as any;
+    const disp = registerOpenLocationCommand(command as any, logger, win as any);
 
     assert.ok(regStub.calledOnce);
     assert.strictEqual(regStub.getCall(0).args[0], "localize-support.openLocation");
@@ -35,5 +38,29 @@ suite("registerOpenLocationCommand (unit)", () => {
     assert.ok(showStub.calledOnce);
     const calledUri = showStub.getCall(0).args[0];
     assert.ok(calledUri.toString().endsWith("/proj/locales/en.po"));
+  });
+
+  test("should call logger.error when handler throws", async () => {
+    let registeredCallback: any = null;
+    (sinon.stub(command as any, "registerCommand") as any).callsFake((cmd: string, cb: any) => {
+      registeredCallback = cb;
+      return { dispose: () => {} };
+    });
+
+    // make showTextDocument reject to cause handler to throw
+    const err = new Error("boom");
+    sinon.stub(win as any, "showTextDocument").rejects(err);
+
+    const logger = win.logger as any;
+    // stub logger.error so the underlying MockLogOutputChannel.error doesn't print to console during test
+    const loggerErrorSpy = sinon.stub(logger, "error").callsFake(() => {});
+
+    registerOpenLocationCommand(command as any, logger, win as any);
+
+    const payload = { uri: "file:///proj/locales/en.po" };
+    await registeredCallback([payload]);
+
+    assert.ok(loggerErrorSpy.calledOnce, "logger.error should be called on handler failure");
+    assert.strictEqual((loggerErrorSpy.getCall(0).args[0] as string).indexOf("localize-support.openLocation failed") !== -1, true);
   });
 });

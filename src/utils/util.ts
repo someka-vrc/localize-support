@@ -1,5 +1,5 @@
 // import { Disposable, FileType, RelativePattern, Uri, workspace } from "vscode";
-import { IWorkspaceService, MyFileType } from "../models/vscTypes";
+import { IWorkspaceWrapper, FileType } from "../models/vscTypes";
 import { URI, Utils } from "vscode-uri";
 /**
  * ディレクトリパスを正規化する
@@ -8,7 +8,7 @@ import { URI, Utils } from "vscode-uri";
  * @returns 正規化されたディレクトリの Uri、存在しない場合は undefined
  */
 export async function normalizeDirPath(
-  workspace: IWorkspaceService,
+  workspace: IWorkspaceWrapper,
   file: URI | number,
   relativeFromSettingDir: any = "",
 ): Promise<URI | undefined> {
@@ -31,5 +31,5 @@ export async function normalizeDirPath(
     return undefined;
   }
   const resolved = relativeFromSettingDir ? Utils.joinPath(settingDir, relativeFromSettingDir) : settingDir;
-  return (await workspace.validateDirectoryPath(resolved)) ? resolved : undefined;
+  return (await workspace.fs.validateDirectoryPath(resolved)) ? resolved : undefined;
 }

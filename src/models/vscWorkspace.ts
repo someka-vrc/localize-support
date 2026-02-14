@@ -1,164 +1,142 @@
 import * as vscode from "vscode";
 import {
-  IWorkspaceService,
-  MyFileStat,
-  MyConfiguration,
+  IFileSystemWrapper,
+  IWorkspaceWrapper,
+  ICommandWrapper,
+  IWindowWrapper,
+  FileSystemWatcher,
+  WorkspaceConfiguration,
   Disposable,
   MyRelativePattern,
   MyConfigurationChangeEvent,
-  MyFileType,
-  MyLocation,
   MyRange,
+  DiagnosticCollection,
+  FileStat,
+  LogOutputChannel,
+  IVSCodeWrapper,
+  ILanguagesWrapper,
 } from "./vscTypes";
 import { URI } from "vscode-uri";
-import { LogOutputChannel } from "vscode";
 
-/**
- * vscode API をラップして IWorkspaceService に適合させる本番用実装
- */
-export class VSCodeWorkspaceService implements IWorkspaceService {
-  // --- ヘルパーメソッド ---
+function toVscUri(uri: URI): vscode.Uri {
+  return uri as vscode.Uri;
+}
 
-  private toVscPattern(pattern: string | MyRelativePattern): string | vscode.RelativePattern {
-    if (typeof pattern === "string") {
-      return pattern;
-    }
-    return new vscode.RelativePattern(pattern.baseUri as vscode.Uri, pattern.pattern);
+function toVscPattern(pattern: string | MyRelativePattern): string | vscode.RelativePattern {
+  if (typeof pattern === "string") {
+    return pattern;
   }
+  return new vscode.RelativePattern(pattern.baseUri as vscode.Uri, pattern.pattern);
+}
 
-  /**
-   * Convert internal MyLocation -> vscode.Location
-   */
-  public toVscLocation(loc: MyLocation): vscode.Location {
-    const uri = vscode.Uri.parse((loc.uri as any).toString());
-    const range = new vscode.Range(
-      loc.range.start.line,
-      loc.range.start.character,
-      loc.range.end.line,
-      loc.range.end.character,
-    );
-    return new vscode.Location(uri, range);
-  }
+function toVscRange(range: MyRange): vscode.Range {
+  return new vscode.Range(range.start.line, range.start.character, range.end.line, range.end.character);
+}
 
-  // --- IWorkspaceService の実装 ---
-
-  async findFiles(pattern: string | MyRelativePattern): Promise<URI[]> {
-    const files = await vscode.workspace.findFiles(this.toVscPattern(pattern));
-    return files as unknown as URI[];
-  }
-
+export class FileSystemWrapper implements IFileSystemWrapper {
   async readFile(uri: URI): Promise<Uint8Array> {
-    return await vscode.workspace.fs.readFile(uri as vscode.Uri);
+    return vscode.workspace.fs.readFile(toVscUri(uri));
   }
-
   async writeFile(uri: URI, content: Uint8Array): Promise<void> {
-    return await vscode.workspace.fs.writeFile(uri as vscode.Uri, content);
+    return vscode.workspace.fs.writeFile(toVscUri(uri), content);
   }
-
   async deleteFile(uri: URI): Promise<void> {
-    return await vscode.workspace.fs.delete(uri as vscode.Uri);
+    return vscode.workspace.fs.delete(toVscUri(uri));
   }
-
-  async stat(uri: URI): Promise<MyFileStat> {
-    const stats = await vscode.workspace.fs.stat(uri as vscode.Uri);
-    return {
-      type: stats.type as unknown as MyFileType,
-      ctime: stats.ctime,
-      mtime: stats.mtime,
-      size: stats.size,
-    };
+  async stat(uri: URI): Promise<FileStat> {
+    return vscode.workspace.fs.stat(toVscUri(uri));
   }
-
   async validateDirectoryPath(uri: URI): Promise<boolean> {
     try {
-      const stats = await this.stat(uri);
-      return stats.type === MyFileType.Directory;
-    } catch (err) {
-      this.logger.warn("validateDirectoryPath failed", err);
+      const stat = await this.stat(uri);
+      return stat.type === vscode.FileType.Directory;
+    } catch {
       return false;
     }
   }
+  async createDirectory(uri: URI): Promise<void> {
+    await vscode.workspace.fs.createDirectory(toVscUri(uri));
+  }
+}
 
+export class WorkspaceWrapper implements IWorkspaceWrapper {
+  fs: IFileSystemWrapper;
+  constructor() {
+    this.fs = new FileSystemWrapper();
+  }
+  async findFiles(pattern: string | MyRelativePattern): Promise<URI[]> {
+    return vscode.workspace.findFiles(toVscPattern(pattern)).then((uris) => uris.map((u) => u as any as URI));
+  }
   async getTextDocumentContent(uri: URI): Promise<string> {
-    const doc = await vscode.workspace.openTextDocument(uri as vscode.Uri);
+    const doc = await vscode.workspace.openTextDocument(toVscUri(uri));
     return doc.getText();
   }
-
   getWorkspaceFolders(): { uri: URI; name: string; index: number }[] {
-    return (vscode.workspace.workspaceFolders || []).map((f) => ({
-      uri: f.uri as unknown as URI,
-      name: f.name,
-      index: f.index,
-    }));
+    const folders = vscode.workspace.workspaceFolders || [];
+    return folders.map((f, i) => ({ uri: f.uri as any as URI, name: f.name, index: i }));
   }
-
-  getConfiguration(section: string, scope?: URI): MyConfiguration {
-    const config = vscode.workspace.getConfiguration(section, scope ? (scope as vscode.Uri) : undefined);
-    return {
-      get: <T>(key: string): T | undefined => config.get<T>(key),
-    };
-  }
-
-  async createDirectory(uri: URI): Promise<void> {
-    return vscode.workspace.fs.createDirectory(uri as vscode.Uri);
+  getConfiguration(section: string, scope?: URI): WorkspaceConfiguration {
+    return vscode.workspace.getConfiguration(section, scope ? (scope as any as vscode.Uri) : undefined);
   }
 
   onDidChangeTextDocument(callback: (uri: URI) => void): Disposable {
     return vscode.workspace.onDidChangeTextDocument((e) => {
-      callback(e.document.uri as unknown as URI);
+      callback(e.document.uri as any as URI);
     });
   }
-
   onDidChangeConfiguration(callback: (e: MyConfigurationChangeEvent) => void): Disposable {
     return vscode.workspace.onDidChangeConfiguration((e) => {
       callback({
-        affectsConfiguration: (section, scope) =>
-          e.affectsConfiguration(section, scope ? (scope as vscode.Uri) : undefined),
+        affectsConfiguration: (section: string, scope?: URI) => {
+          return e.affectsConfiguration(section, scope ? (scope as any as vscode.Uri) : undefined);
+        },
       });
     });
   }
-
-  createFileSystemWatcher(
-    pattern: string | MyRelativePattern,
-    callback: (type: "created" | "changed" | "deleted", uri: URI) => void,
-  ): Disposable {
-    const vscPattern = this.toVscPattern(pattern);
-    const watcher = vscode.workspace.createFileSystemWatcher(vscPattern);
-
-    const subs = [
-      watcher.onDidCreate((uri) => callback("created", uri as unknown as URI)),
-      watcher.onDidChange((uri) => callback("changed", uri as unknown as URI)),
-      watcher.onDidDelete((uri) => callback("deleted", uri as unknown as URI)),
-    ];
-
-    return {
-      dispose: () => {
-        subs.forEach((s) => s.dispose());
-        watcher.dispose();
-      },
-    };
+  createFileSystemWatcher(pattern: string | MyRelativePattern): FileSystemWatcher {
+    return vscode.workspace.createFileSystemWatcher(toVscPattern(pattern));
   }
+}
 
-  createDiagnosticCollection(name: string): vscode.DiagnosticCollection {
-    return vscode.languages.createDiagnosticCollection(name);
-  }
-
+export class CommandWrapper implements ICommandWrapper {
   registerCommand(command: string, callback: (...args: any[]) => any): Disposable {
     return vscode.commands.registerCommand(command, callback);
   }
+}
 
+
+export class WindowWrapper implements IWindowWrapper {
   async showTextDocument(uri: URI, options?: { selection?: MyRange }): Promise<void> {
-    const vscUri = vscode.Uri.parse((uri as any).toString());
-    const showOptions: vscode.TextDocumentShowOptions = {};
-    if (options && options.selection) {
-      const r = options.selection;
-      showOptions.selection = new vscode.Range(r.start.line, r.start.character, r.end.line, r.end.character);
+    const vscOptions: vscode.TextDocumentShowOptions = {};
+    if (options?.selection) {
+      vscOptions.selection = toVscRange(options.selection);
     }
-    await vscode.window.showTextDocument(vscUri, showOptions);
+    return vscode.window.showTextDocument(toVscUri(uri), vscOptions).then(() => {});
   }
-  
-  private outputChannel = vscode.window.createOutputChannel("Localize Support", { log: true });
+  private _outputChannel: LogOutputChannel | null = null;
   get logger(): LogOutputChannel {
-    return this.outputChannel;
+    if (!this._outputChannel) {
+      this._outputChannel = vscode.window.createOutputChannel("localize-support", { log: true });
+    }
+    return this._outputChannel;
+  }
+}
+
+export class LanguagesWrapper implements ILanguagesWrapper {
+  createDiagnosticCollection(name: string): DiagnosticCollection {
+    return vscode.languages.createDiagnosticCollection(name);
+  }
+}
+
+export class VSCoderWrapper implements IVSCodeWrapper {
+  workspace: IWorkspaceWrapper;
+  command: ICommandWrapper;
+  languages: ILanguagesWrapper;
+  window: IWindowWrapper;
+  constructor() {
+    this.workspace = new WorkspaceWrapper();
+    this.command = new CommandWrapper();
+    this.window = new WindowWrapper();
+    this.languages = new LanguagesWrapper();
   }
 }

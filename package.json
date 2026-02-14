@@ -115,7 +115,7 @@
     "spec": "out/test/unit/**/*.test.js"
   },
   "c8": {
-    "reporter": "lcovonly",
+    "reporter": "istanbul-reporter-html-dark",
     "report-dir": "coverage",
     "exclude": "src/test/**",
     "excludeAfterRemap": true
@@ -125,7 +125,7 @@
     "compile": "yarn lint && tsc -p ./",
     "watch": "tsc -watch -p ./",
     "lint": "eslint src",
-    "pretest:unit": "yarn compile && yarn lint",
+    "pretest:unit": "yarn compile",
     "test:unit": "cross-env NODE_OPTIONS=--enable-source-maps c8 mocha",
     "pretest:integration": "yarn compile && yarn lint",
     "test:integration": "vscode-test",
@@ -146,6 +146,7 @@
     "c8": "^10.1.3",
     "cross-env": "^10.1.0",
     "eslint": "^9.39.2",
+    "istanbul-reporter-html-dark": "^1.0.1",
     "sinon": "^21.0.1",
     "source-map-support": "^0.5.21",
     "ts-node": "^10.9.2",

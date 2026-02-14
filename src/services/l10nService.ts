@@ -5,7 +5,8 @@ import {
   MyPosition,
   MyLocation,
   MyDiagnosticSeverity,
-  IWorkspaceService,
+  IWorkspaceWrapper,
+  LogOutputChannel,
 } from "../models/vscTypes";
 import { URI } from "vscode-uri";
 import type { DiagOrStatus } from "../models/interfaces";
@@ -34,7 +35,8 @@ export class L10nService implements Disposable {
   private readonly reloadedEmitter = new EventEmitter();
 
   constructor(
-    private workspace: IWorkspaceService,
+    private workspace: IWorkspaceWrapper,
+    private logger: LogOutputChannel,
     reloadIntervalMs: number = 500,
   ) {
     this.reloadIntervalQueue = new IntervalQueue<L10nService>(
@@ -42,7 +44,7 @@ export class L10nService implements Disposable {
       async (thisArg) => {
         thisArg.reloadedEmitter.emit("reloaded", thisArg);
       },
-      this.workspace,
+      this.logger,
       OrganizeStrategies.lastOnly,
     );
   }
@@ -66,13 +68,10 @@ export class L10nService implements Disposable {
     }
 
     // ファイルの変更
-    const fsWatcher = this.workspace.createFileSystemWatcher(settingsGlob, async (type, uri) => {
-      if (type === "changed" || type === "created") {
-        await this.reload(uri);
-      } else if (type === "deleted") {
-        await this.unload(uri);
-      }
-    });
+    const fsWatcher = this.workspace.createFileSystemWatcher(settingsGlob);
+    fsWatcher.onDidCreate(async (uri) => await this.reload(uri));
+    fsWatcher.onDidChange(async (uri) => await this.reload(uri));
+    fsWatcher.onDidDelete(async (uri) => await this.unload(uri));
     this.settingsWatchers.push(fsWatcher);
 
     // 保存時のみ捕捉するのでコメントアウト
@@ -132,7 +131,7 @@ export class L10nService implements Disposable {
    * @returns エラーメッセージの配列
    */
   async reload(settingFile: URI | number): Promise<void> {
-    // reload requested for: 
+    // reload requested for:
     let rawTargets: any[] = [];
     let isConfig = typeof settingFile === "number";
 
@@ -154,7 +153,7 @@ export class L10nService implements Disposable {
     } else {
       let json: any;
       try {
-        const buf = await this.workspace.readFile(settingFile as URI);
+        const buf = await this.workspace.fs.readFile(settingFile as URI);
         const content = Buffer.from(buf).toString();
         json = JSON.parse(content);
       } catch (error) {
@@ -171,7 +170,7 @@ export class L10nService implements Disposable {
     // 新しいマネージャーを作成、登録
     const managers = await Promise.all(
       targets.map(async (t) => {
-        const manager = new L10nTargetManager(this.workspace, t);
+        const manager = new L10nTargetManager(this.workspace, this.logger, t);
         try {
           await manager.init();
         } catch (error) {
@@ -211,7 +210,7 @@ export class L10nService implements Disposable {
           // fallback
           this.reloadedEmitter.removeListener("reloaded", listener as any);
         } catch (err) {
-          this.workspace.logger.warn("L10nService.onReloaded.dispose failed", err);
+          this.logger.warn("L10nService.onReloaded.dispose failed", err);
         }
       },
     };
@@ -268,7 +267,7 @@ export class L10nService implements Disposable {
             diagsMap.get(key)?.push(...arr);
           }
         } catch (err) {
-          this.workspace.logger.warn("L10nService.getDiagnostics: matching diagnostics failed", err);
+          this.logger.warn("L10nService.getDiagnostics: matching diagnostics failed", err);
         }
       }
       // ensure settings without managers but with diagnostics were already added above
@@ -348,8 +347,17 @@ export class L10nService implements Disposable {
    * 指定されたキーに対する翻訳（テキスト + ファイル情報）を取得する
    * - Hover や他の UI 用に翻訳文字列と出所ファイル名 / パス / 言語を返す
    */
-  public getTranslationsForKey(key: string): { translation: string; uri: URI; fileName: string; path: string; lang: string; location?: MyLocation }[] {
-    const result: { translation: string; uri: URI; fileName: string; path: string; lang: string; location?: MyLocation }[] = [];
+  public getTranslationsForKey(
+    key: string,
+  ): { translation: string; uri: URI; fileName: string; path: string; lang: string; location?: MyLocation }[] {
+    const result: {
+      translation: string;
+      uri: URI;
+      fileName: string;
+      path: string;
+      lang: string;
+      location?: MyLocation;
+    }[] = [];
     for (const tgtUnits of this.managers.values()) {
       for (const tu of tgtUnits) {
         const l10ns = tu.manager?.l10ns;
@@ -362,7 +370,7 @@ export class L10nService implements Disposable {
             const entries = (parsed!.entries as any)[lang] || {};
             if (entries[key] && typeof entries[key].translation === "string") {
               const uriObj = URI.parse(l10nUri);
-              const fileName = uriObj.path.split('/').pop() || l10nUri;
+              const fileName = uriObj.path.split("/").pop() || l10nUri;
               result.push({
                 translation: entries[key].translation,
                 uri: uriObj,

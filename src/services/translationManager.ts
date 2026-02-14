@@ -1,4 +1,4 @@
-import { Disposable, MyRelativePattern, IWorkspaceService } from "../models/vscTypes";
+import { Disposable, MyRelativePattern, IWorkspaceWrapper, LogOutputChannel } from "../models/vscTypes";
 import { URI } from "vscode-uri";
 import { EventEmitter } from "events";
 import { L10nTarget } from "../models/l10nTypes";
@@ -28,14 +28,15 @@ export class TranslationManager implements Disposable {
   private readonly rebuiltEmitter = new EventEmitter();
 
   constructor(
-    private workspace: IWorkspaceService,
+    private workspace: IWorkspaceWrapper,
+    private logger: LogOutputChannel,
     public target: L10nTarget,
     rebuildIntervalMs: number = 500,
   ) {
     this.rebuildIntervalQueue = new IntervalQueue<RebuildQueueItem>(
       rebuildIntervalMs,
       async (item: RebuildQueueItem) => await item.thisArg.rebuildCache(item.uri, item.reason, item.text),
-      this.workspace,
+      this.logger,
       OrganizeStrategies.skipDuplicatesByKey<RebuildQueueItem>((item) => item.uri.path + "-" + item.reason),
     );
   }
@@ -55,7 +56,7 @@ export class TranslationManager implements Disposable {
           // fallback
           this.rebuiltEmitter.removeListener("rebuilt", listener as any);
         } catch (err) {
-          this.workspace.logger.warn("TranslationManager.onRebuilt.dispose failed", err);
+          this.logger.warn("TranslationManager.onRebuilt.dispose failed", err);
         }
       },
     };
@@ -84,9 +85,11 @@ export class TranslationManager implements Disposable {
       baseUri,
       pattern: "**/*" + this.target.l10nExtension,
     } as MyRelativePattern;
-    const fsWatcher = this.workspace.createFileSystemWatcher(l10nFilePattern, (type, uri) =>
-      this.handleL10nFileEvent(uri, type),
+    const fsWatcher = this.workspace.createFileSystemWatcher(l10nFilePattern,
     );
+    fsWatcher.onDidCreate((uri) => this.handleL10nFileEvent(uri as any as URI, "created"));
+    fsWatcher.onDidChange((uri) => this.handleL10nFileEvent(uri as any as URI, "changed"));
+    fsWatcher.onDidDelete((uri) => this.handleL10nFileEvent(uri as any as URI, "deleted"));
     this.disposables["fsWatcher"] = [fsWatcher];
 
     const editWatcher = this.workspace.onDidChangeTextDocument((uri) => {
@@ -177,7 +180,7 @@ export class TranslationManager implements Disposable {
       try {
         this.rebuiltEmitter.emit("rebuilt");
       } catch (err) {
-        this.workspace.logger.warn("TranslationManager.rebuildCache: emit failed", err);
+        this.logger.warn("TranslationManager.rebuildCache: emit failed", err);
       }
     }
   }
@@ -194,7 +197,7 @@ export class TranslationManager implements Disposable {
         try {
           await disposable.dispose();
         } catch (err) {
-          this.workspace.logger.warn("TranslationManager.dispose: disposing failed", err);
+          this.logger.warn("TranslationManager.dispose: disposing failed", err);
         }
       }
     }
@@ -202,7 +205,7 @@ export class TranslationManager implements Disposable {
     try {
       this.rebuiltEmitter.removeAllListeners();
     } catch (err) {
-      this.workspace.logger.warn("TranslationManager.dispose: removeAllListeners failed", err);
+      this.logger.warn("TranslationManager.dispose: removeAllListeners failed", err);
     }
   }
 }

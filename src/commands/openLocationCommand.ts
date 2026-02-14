@@ -1,10 +1,10 @@
-import { IWorkspaceService, MyRange } from "../models/vscTypes";
+import { IWindowWrapper, ICommandWrapper, MyRange, LogOutputChannel } from "../models/vscTypes";
 import { URI } from "vscode-uri";
 
 /**
  * コマンドの本体（単体テスト可能）
  */
-export async function openLocationHandler(workspace: IWorkspaceService, arg: any): Promise<void> {
+export async function openLocationHandler(window: IWindowWrapper, arg: any): Promise<void> {
   const payload = Array.isArray(arg) ? arg[0] : arg;
   const uriStr = typeof payload.uri === "string" ? payload.uri : (payload.uri && payload.uri.toString());
   if (!uriStr) {
@@ -16,18 +16,20 @@ export async function openLocationHandler(workspace: IWorkspaceService, arg: any
   if (loc && loc.range) {
     options.selection = loc.range;
   }
-  await workspace.showTextDocument(uri as any, options);
+  await window.showTextDocument(uri as any, options);
 }
 
 /**
  * extension.ts から呼ぶための登録ヘルパー
  */
-export function registerOpenLocationCommand(workspace: IWorkspaceService) {
-  return workspace.registerCommand("localize-support.openLocation", async (arg: any) => {
+export function registerOpenLocationCommand(command: ICommandWrapper, logger: LogOutputChannel, window?: IWindowWrapper) {
+  return command.registerCommand("localize-support.openLocation", async (arg: any) => {
     try {
-      await openLocationHandler(workspace, arg);
+      if (window) {
+        await openLocationHandler(window, arg);
+      }
     } catch (err) {
-      console.error("localize-support.openLocation failed", err);
+      logger.error("localize-support.openLocation failed", err as Error);
     }
   });
 }

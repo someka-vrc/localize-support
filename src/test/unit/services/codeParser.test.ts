@@ -6,40 +6,37 @@ import { copyWorkspaceIfExists, type DisposablePath } from "../unitTestHelper";
 import { CodeParser } from "../../../services/codeParser";
 import { WasmDownloader, WasmFileNames } from "../../../services/wasmDownloader";
 import { CodeLanguage } from "../../../models/l10nTypes";
-import { MyFileStat, MyFileType } from "../../../models/vscTypes";
+import { FileStat, FileType } from "../../../models/vscTypes";
 
 import sinon from "sinon";
-import { MockWorkspaceService } from "../mocks/mockWorkspaceService";
+import { MockWorkspaceWrapper, MockLogOutputChannel } from "../mocks/mockWorkspaceService";
 
-function makeDiskBackedWorkspace(): MockWorkspaceService {
-  const ws = new MockWorkspaceService();
+function makeDiskBackedWorkspace(): MockWorkspaceWrapper {
+  const ws = new MockWorkspaceWrapper();
 
-  sinon.stub(ws, "readFile").callsFake(async (uri: URI) => {
+  sinon.stub(ws.fs, "readFile").callsFake(async (uri: URI) => {
     return fs.readFile(uri.fsPath);
   });
 
-  sinon.stub(ws, "writeFile").callsFake(async (uri: URI, content: Uint8Array) => {
+  sinon.stub(ws.fs, "writeFile").callsFake(async (uri: URI, content: Uint8Array) => {
     await fs.mkdir(path.dirname(uri.fsPath), { recursive: true });
     return fs.writeFile(uri.fsPath, Buffer.from(content));
   });
 
-  sinon.stub(ws, "deleteFile").callsFake(async (uri: URI) => {
+  sinon.stub(ws.fs, "deleteFile").callsFake(async (uri: URI) => {
     try {
       await fs.unlink(uri.fsPath);
     } catch {}
   });
 
-  sinon.stub(ws, "stat").callsFake(async (uri: URI) => {
+  sinon.stub(ws.fs, "stat").callsFake(async (uri: URI) => {
     const s = await fs.stat(uri.fsPath);
     return {
-      type: s.isDirectory() ? MyFileType.Directory : MyFileType.File,
-      ctime: s.ctimeMs,
-      mtime: s.mtimeMs,
-      size: s.size,
-    } as MyFileStat;
+      type: s.isDirectory() ? (2 as FileType) : (1 as FileType),
+    } as FileStat;
   });
 
-  sinon.stub(ws, "validateDirectoryPath").callsFake(async (uri: URI) => {
+  sinon.stub(ws.fs, "validateDirectoryPath").callsFake(async (uri: URI) => {
     try {
       const s = await fs.stat(uri.fsPath);
       return s.isDirectory();
@@ -48,7 +45,7 @@ function makeDiskBackedWorkspace(): MockWorkspaceService {
     }
   });
 
-  sinon.stub(ws, "createDirectory").callsFake(async (uri: URI) => {
+  sinon.stub(ws.fs, "createDirectory").callsFake(async (uri: URI) => {
     await fs.mkdir(uri.fsPath, { recursive: true });
   });
 
@@ -82,8 +79,8 @@ suite("CodeParser (unit, integration with wasm)", () => {
     this.timeout(30_000);
 
     const diskWorkspace = makeDiskBackedWorkspace();
-    const downloader = new WasmDownloader(diskWorkspace, storageUri);
-    const parser = new CodeParser(downloader, "javascript", diskWorkspace);
+    const downloader = new WasmDownloader(diskWorkspace, new MockLogOutputChannel(), storageUri);
+    const parser = new CodeParser(downloader, "javascript", diskWorkspace, new MockLogOutputChannel());
 
     // pre-warm / retry download so transient network/404 doesn't make the test flaky
     const maxAttempts = 3;
@@ -147,8 +144,8 @@ suite("CodeParser (unit, integration with wasm)", () => {
   // helper used by multiple language test cases
   async function runParserLangTest(language: CodeLanguage, src: string, expectedKeys: string[]) {
     const diskWorkspace = makeDiskBackedWorkspace();
-    const downloader = new WasmDownloader(diskWorkspace, storageUri);
-    const parser = new CodeParser(downloader, language, diskWorkspace);
+    const downloader = new WasmDownloader(diskWorkspace, new MockLogOutputChannel(), storageUri);
+    const parser = new CodeParser(downloader, language, diskWorkspace, new MockLogOutputChannel());
 
     // pre-warm / retry download so transient network/404 doesn't make the test flaky
     const maxAttempts = 3;
@@ -246,8 +243,8 @@ suite("CodeParser (unit, integration with wasm)", () => {
   test("rejects computed-property calls, interpolated and concatenated strings (javascript)", async function () {
     this.timeout(30_000);
     const diskWorkspace = makeDiskBackedWorkspace();
-    const downloader = new WasmDownloader(diskWorkspace, storageUri);
-    const parser = new CodeParser(downloader, "javascript", diskWorkspace);
+    const downloader = new WasmDownloader(diskWorkspace, new MockLogOutputChannel(), storageUri);
+    const parser = new CodeParser(downloader, "javascript", diskWorkspace, new MockLogOutputChannel());
 
     // pre-warm
     await downloader.retrieveWasmFile(wasmCdnBase, "javascript");
@@ -282,8 +279,8 @@ suite("CodeParser (unit, integration with wasm)", () => {
   test("rejects computed-property calls and templates (typescript)", async function () {
     this.timeout(30_000);
     const diskWorkspace = makeDiskBackedWorkspace();
-    const downloader = new WasmDownloader(diskWorkspace, storageUri);
-    const parser = new CodeParser(downloader, "typescript", diskWorkspace);
+    const downloader = new WasmDownloader(diskWorkspace, new MockLogOutputChannel(), storageUri);
+    const parser = new CodeParser(downloader, "typescript", diskWorkspace, new MockLogOutputChannel());
 
     await downloader.retrieveWasmFile(wasmCdnBase, "typescript");
 
@@ -314,8 +311,8 @@ suite("CodeParser (unit, integration with wasm)", () => {
   test("Python: f-strings ignored, triple-quoted captured; implicit concatenation ignored", async function () {
     this.timeout(30_000);
     const diskWorkspace = makeDiskBackedWorkspace();
-    const downloader = new WasmDownloader(diskWorkspace, storageUri);
-    const parser = new CodeParser(downloader, "python", diskWorkspace);
+    const downloader = new WasmDownloader(diskWorkspace, new MockLogOutputChannel(), storageUri);
+    const parser = new CodeParser(downloader, "python", diskWorkspace, new MockLogOutputChannel());
 
     await downloader.retrieveWasmFile(wasmCdnBase, "python");
 
@@ -348,8 +345,8 @@ suite("CodeParser (unit, integration with wasm)", () => {
   test("C#: verbatim captured, interpolated ignored", async function () {
     this.timeout(30_000);
     const diskWorkspace = makeDiskBackedWorkspace();
-    const downloader = new WasmDownloader(diskWorkspace, storageUri);
-    const parser = new CodeParser(downloader, "csharp", diskWorkspace);
+    const downloader = new WasmDownloader(diskWorkspace, new MockLogOutputChannel(), storageUri);
+    const parser = new CodeParser(downloader, "csharp", diskWorkspace, new MockLogOutputChannel());
 
     await downloader.retrieveWasmFile(wasmCdnBase, "csharp");
 
@@ -378,8 +375,8 @@ suite("CodeParser (unit, integration with wasm)", () => {
   test("Java: concatenation ignored, simple/member calls captured", async function () {
     this.timeout(30_000);
     const diskWorkspace = makeDiskBackedWorkspace();
-    const downloader = new WasmDownloader(diskWorkspace, storageUri);
-    const parser = new CodeParser(downloader, "java", diskWorkspace);
+    const downloader = new WasmDownloader(diskWorkspace, new MockLogOutputChannel(), storageUri);
+    const parser = new CodeParser(downloader, "java", diskWorkspace, new MockLogOutputChannel());
 
     await downloader.retrieveWasmFile(wasmCdnBase, "java");
 

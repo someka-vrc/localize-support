@@ -2,7 +2,7 @@ import { Utils, URI } from "vscode-uri";
 import * as vscode from "vscode";
 
 export type Disposable = { dispose(): void };
-// types.ts などの共通ファイルに定義
+
 export interface MyPosition {
   readonly line: number;
   readonly character: number;
@@ -32,19 +32,9 @@ export interface MyDiagnostic {
 
 export type DiagnosticCollection = vscode.DiagnosticCollection;
 
-export enum MyFileType {
-  Unknown = 0,
-  File = 1,
-  Directory = 2,
-  SymbolicLink = 64,
-}
+export type FileType = vscode.FileType;
 
-export interface MyFileStat {
-  type: MyFileType;
-  ctime: number;
-  mtime: number;
-  size: number;
-}
+export type FileStat = vscode.FileStat;
 export interface MyRelativePattern {
   baseUri: URI;
   pattern: string;
@@ -55,61 +45,7 @@ export interface MyConfigurationChangeEvent {
   affectsConfiguration(section: string, scope?: URI): boolean;
 }
 
-interface LogOutputChannel {
-  trace(message: string, ...args: any[]): void;
-  debug(message: string, ...args: any[]): void;
-  info(message: string, ...args: any[]): void;
-  warn(message: string, ...args: any[]): void;
-  error(error: string | Error, ...args: any[]): void;
-}
-
-export interface IWorkspaceService {
-  // ファイル操作
-  findFiles(pattern: string | MyRelativePattern): Promise<URI[]>;
-  readFile(uri: URI): Promise<Uint8Array>;
-  writeFile(uri: URI, content: Uint8Array): Promise<void>;
-  deleteFile(uri: URI): Promise<void>;
-  stat(uri: URI): Promise<MyFileStat>;
-  /**
-   * Validate whether the given uri is a directory.
-   * @param uri The uri to validate.
-   * @returns True if the uri is a directory; otherwise, false.
-   */
-  validateDirectoryPath(uri: URI): Promise<boolean>;
-  /** openTextDocument().getText() の代わり */
-  getTextDocumentContent(uri: URI): Promise<string>;
-
-  // 設定・フォルダ
-  getWorkspaceFolders(): { uri: URI; name: string; index: number }[];
-  getConfiguration(section: string, scope?: URI): MyConfiguration;
-  createDirectory(uri: URI): Promise<void>;
-
-  // 監視 (Event Listeners)
-  /** ドキュメントが開かれたり、メモリ上で編集された時のイベント */
-  onDidChangeTextDocument(callback: (uri: URI) => void): Disposable;
-  /** 設定が変更された時のイベント */
-  onDidChangeConfiguration(callback: (e: MyConfigurationChangeEvent) => void): Disposable;
-
-  // --- ディスク監視 (FileSystemWatcher) ---
-  /** ディスク上のファイル作成・変更・削除を監視する */
-  createFileSystemWatcher(
-    pattern: string | MyRelativePattern,
-    callback: (type: "created" | "changed" | "deleted", uri: URI) => void,
-  ): Disposable;
-
-  createDiagnosticCollection(name: string): DiagnosticCollection;
-  /** ファイルを表示する（テスト用に抽象化）。範囲を指定すると選択状態で開く */
-  showTextDocument(uri: URI, options?: { selection?: MyRange }): Promise<void>;
-
-  /** コマンドを登録する（vscode.commands.registerCommand の抽象化） */
-  registerCommand(command: string, callback: (...args: any[]) => any): Disposable;
-
-  logger: LogOutputChannel;
-}
-
-export interface MyConfiguration {
-  get<T>(key: string): T | undefined;
-}
+export type WorkspaceConfiguration = vscode.WorkspaceConfiguration;
 
 function newPosition(line: number, character: number): MyPosition {
   return { line, character };
@@ -134,3 +70,49 @@ export const vscTypeHelper = {
   newLocation,
   newDiagnostic,
 };
+
+export interface IFileSystemWrapper {
+  readFile(uri: URI): Promise<Uint8Array>;
+  writeFile(uri: URI, content: Uint8Array): Promise<void>;
+  deleteFile(uri: URI): Promise<void>;
+  stat(uri: URI): Promise<FileStat>;
+  validateDirectoryPath(uri: URI): Promise<boolean>;
+  createDirectory(uri: URI): Promise<void>;
+}
+
+export type FileSystemWatcher = vscode.FileSystemWatcher;
+export interface IWorkspaceWrapper {
+  fs: IFileSystemWrapper;
+  findFiles(pattern: string | MyRelativePattern): Promise<URI[]>;
+  getTextDocumentContent(uri: URI): Promise<string>;
+  getWorkspaceFolders(): { uri: URI; name: string; index: number }[];
+  getConfiguration(section: string, scope?: URI): WorkspaceConfiguration;
+  onDidChangeTextDocument(callback: (uri: URI) => void): Disposable;
+  onDidChangeConfiguration(callback: (e: MyConfigurationChangeEvent) => void): Disposable;
+  createFileSystemWatcher(
+    pattern: string | MyRelativePattern
+  ): FileSystemWatcher ;
+}
+
+export interface ICommandWrapper {
+  registerCommand(command: string, callback: (...args: any[]) => any): Disposable;
+}
+
+export type LogLevel = vscode.LogLevel;
+export type Event<T> = vscode.Event<T>;
+export type LogOutputChannel = vscode.LogOutputChannel;
+export interface IWindowWrapper {
+  showTextDocument(uri: URI, options?: { selection?: MyRange }): Promise<void>;
+  get logger(): LogOutputChannel;
+}
+
+export interface ILanguagesWrapper {
+  createDiagnosticCollection(name: string): DiagnosticCollection;
+}
+
+export interface IVSCodeWrapper {
+  readonly workspace: IWorkspaceWrapper;
+  readonly command: ICommandWrapper;
+  readonly window: IWindowWrapper;
+  readonly languages: ILanguagesWrapper;
+}

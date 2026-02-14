@@ -1,7 +1,7 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from "vscode";
-import { VSCodeWorkspaceService } from "./models/vscWorkspace";
+import { VSCoderWrapper } from "./models/vscWorkspace";
 import { L10nService } from "./services/l10nService";
 import { DiagnosticProvider } from "./providers/diagnosticProvider";
 import { DefinitionProvider } from "./providers/definitionProvider";
@@ -22,12 +22,13 @@ export async function activate(context: vscode.ExtensionContext) {
   );
 
   // --- L10nService -----------------------------------
-  const workspaceService = new VSCodeWorkspaceService();
-  const l10nService = new L10nService(workspaceService);
+  const vscodeWrapper = new VSCoderWrapper();
+  const logger = vscodeWrapper.window.logger;
+  const l10nService = new L10nService(vscodeWrapper.workspace, logger);
   context.subscriptions.push(l10nService);
-  await l10nService.init().catch((e) => workspaceService.logger.error(e));
+  await l10nService.init().catch((e) => logger.error(e));
 
-  const diagnosticsProvider = new DiagnosticProvider("localize-support", l10nService, workspaceService);
+  const diagnosticsProvider = new DiagnosticProvider("localize-support", l10nService, vscodeWrapper);
   context.subscriptions.push(diagnosticsProvider);
 
   // --- Definition & Reference providers (Go to / Peek / Find References) -----
@@ -51,14 +52,14 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // openLocation コマンドを別ファイルに分離して登録
   const { registerOpenLocationCommand } = await import("./commands/openLocationCommand.js");
-  context.subscriptions.push(registerOpenLocationCommand(workspaceService));
+  context.subscriptions.push(registerOpenLocationCommand(vscodeWrapper.command, vscodeWrapper.window.logger, vscodeWrapper.window));
 
   // HoverProvider を別ファイルに分離して登録
   const { HoverProvider } = await import("./providers/hoverProvider.js");
   context.subscriptions.push(vscode.languages.registerHoverProvider(docSelectors, new HoverProvider(l10nService)));
 
 
-  workspaceService.logger.info("localize-support activated");
+  logger.info("localize-support activated");
 }
 
 // This method is called when your extension is deactivated

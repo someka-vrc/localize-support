@@ -1,12 +1,12 @@
 import assert from "assert";
 import { URI } from "vscode-uri";
-import { MockWorkspaceService } from "../mocks/mockWorkspaceService";
+import { MockWorkspaceWrapper, MockLogOutputChannel } from "../mocks/mockWorkspaceService";
 import { L10nTargetManager } from "../../../services/l10nTargetManager";
 import { L10nTarget } from "../../../models/l10nTypes";
 import { vscTypeHelper, MyDiagnosticSeverity } from "../../../models/vscTypes";
 
 suite("L10nTargetManager diagnostics (unit)", () => {
-  let workspace: MockWorkspaceService;
+  let workspace: MockWorkspaceWrapper;
   const baseTarget: L10nTarget = {
     codeLanguages: ["javascript" as any],
     codeDirs: [URI.file("d:/proj/src")],
@@ -18,11 +18,11 @@ suite("L10nTargetManager diagnostics (unit)", () => {
   };
 
   setup(() => {
-    workspace = new MockWorkspaceService();
+    workspace = new MockWorkspaceWrapper();
   });
 
   test("undefined key used in code -> warning on code URI", () => {
-    const mgr = new L10nTargetManager(workspace, baseTarget, 1);
+    const mgr = new L10nTargetManager(workspace, new MockLogOutputChannel(), baseTarget, 1);
     const codeUri = URI.file("d:/proj/src/foo.js");
 
     // simulate code uses key 'missing.key'
@@ -40,7 +40,7 @@ suite("L10nTargetManager diagnostics (unit)", () => {
   });
 
   test("unused translation entry -> information on l10n URI", () => {
-    const mgr = new L10nTargetManager(workspace, baseTarget, 1);
+    const mgr = new L10nTargetManager(workspace, new MockLogOutputChannel(), baseTarget, 1);
     const luri = URI.file("d:/proj/locales/ja.po");
 
     // simulate translation file with key 'unused.key'
@@ -64,7 +64,7 @@ suite("L10nTargetManager diagnostics (unit)", () => {
   });
 
   test("missing translation in other language -> warning on that language file", () => {
-    const mgr = new L10nTargetManager(workspace, baseTarget, 1);
+    const mgr = new L10nTargetManager(workspace, new MockLogOutputChannel(), baseTarget, 1);
     const en = URI.file("d:/proj/locales/en.po");
     const ja = URI.file("d:/proj/locales/ja.po");
 
@@ -101,7 +101,7 @@ suite("L10nTargetManager diagnostics (unit)", () => {
   });
 
   test("integration: code uses key present in one lang -> no undefined; missing lang diagnostic emitted", () => {
-    const mgr = new L10nTargetManager(workspace, baseTarget, 1);
+    const mgr = new L10nTargetManager(workspace, new MockLogOutputChannel(), baseTarget, 1);
     const codeUri = URI.file("d:/proj/src/app.js");
     const en = URI.file("d:/proj/locales/en.po");
     const ja = URI.file("d:/proj/locales/ja.po");

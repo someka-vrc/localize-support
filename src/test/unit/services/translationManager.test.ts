@@ -1,15 +1,15 @@
 import assert from "assert";
 import { TranslationManager } from "../../../services/translationManager";
-import { Disposable, MyRelativePattern, MyFileType } from "../../../models/vscTypes";
+import { Disposable, MyRelativePattern, FileType } from "../../../models/vscTypes";
 import { URI } from "vscode-uri";
 import { L10nTarget } from "../../../models/l10nTypes";
 import sinon from "sinon";
-import { MockWorkspaceService } from "../mocks/mockWorkspaceService";
+import { MockWorkspaceWrapper, MockLogOutputChannel } from "../mocks/mockWorkspaceService";
 
 suite("TranslationManager (unit)", () => {
-  let workspace: MockWorkspaceService;
+  let workspace: MockWorkspaceWrapper;
   setup(() => {
-    workspace = new MockWorkspaceService();
+    workspace = new MockWorkspaceWrapper();
   });
 
   teardown(() => {
@@ -24,21 +24,28 @@ suite("TranslationManager (unit)", () => {
     sinon.stub(workspace, "getTextDocumentContent").callsFake(async (uri: URI) => {
       return uri.path === sampleUri.path ? poContent : "";
     });
-    sinon.stub(workspace, "stat").resolves({
-      type: MyFileType.Directory,
+    sinon.stub(workspace.fs, "stat").resolves({
+      type: 2 as FileType,
       ctime: Date.now(),
       mtime: Date.now(),
       size: 0,
+    } as any);
+    // validate l10n dirs used by normalizeDirPath
+    sinon.stub(workspace.fs, "validateDirectoryPath").resolves(true);
+    sinon.stub(workspace as any, "createFileSystemWatcher").callsFake((pattern: any) => {
+      const watcher = {
+        onDidCreate: (cb: (u: URI) => void) => { (workspace as any)._fsWatcherOnCreate = cb; return { dispose: () => {} } as any; },
+        onDidChange: (cb: (u: URI) => void) => { (workspace as any)._fsWatcherOnChange = cb; return { dispose: () => {} } as any; },
+        onDidDelete: (cb: (u: URI) => void) => { (workspace as any)._fsWatcherOnDelete = cb; return { dispose: () => {} } as any; },
+        dispose: () => {},
+      } as any;
+      return watcher as any;
     });
-    sinon.stub(workspace, "createFileSystemWatcher").callsFake((pattern: string | MyRelativePattern, cb: any) => {
-      (workspace as any)._fsWatcherCallback = cb;
-      return { dispose: () => {} };
-    });
-    sinon.stub(workspace, "onDidChangeTextDocument").callsFake((cb: any) => {
+    sinon.stub(workspace as any, "onDidChangeTextDocument").callsFake((cb: any) => {
       (workspace as any)._editCallback = cb;
-      return { dispose: () => {} };
+      return { dispose: () => {} } as any;
     });
-    sinon.stub(workspace, "getConfiguration").callsFake(() => ({ get: <T>() => undefined }));
+    sinon.stub(workspace as any, "getConfiguration").callsFake(() => ({ get: <T>() => undefined } as any));
 
     const target: L10nTarget = {
       codeLanguages: ["javascript" as any],
@@ -50,7 +57,7 @@ suite("TranslationManager (unit)", () => {
       settingsLocation: URI.file("d:/proj"),
     };
 
-    const mgr = new TranslationManager(workspace, target, 10);
+    const mgr = new TranslationManager(workspace, new MockLogOutputChannel(), target, 10);
 
     let rebuilt = false;
     const disp = mgr.onRebuilt(() => (rebuilt = true));
@@ -85,24 +92,31 @@ suite("TranslationManager (unit)", () => {
     const changed = 'msgid "A"\nmsgstr "壱"\n';
 
     sinon.stub(workspace, "findFiles").resolves([uri]);
-    sinon.stub(workspace, "getTextDocumentContent").callsFake(async (u: URI) => {
+    sinon.stub(workspace, "getTextDocumentContent").callsFake(async (u: any) => {
       return u.path === uri.path ? initial : "";
     });
-    sinon.stub(workspace, "stat").resolves({
-      type: MyFileType.Directory,
+    sinon.stub(workspace.fs, "stat").resolves({
+      type: 2 as FileType,
       ctime: Date.now(),
       mtime: Date.now(),
       size: 0,
+    } as any);
+    // validate l10n dirs used by normalizeDirPath
+    sinon.stub(workspace.fs, "validateDirectoryPath").resolves(true);
+    sinon.stub(workspace as any, "createFileSystemWatcher").callsFake((pattern: any) => {
+      const watcher = {
+        onDidCreate: (cb: (u: URI) => void) => { (workspace as any)._fsWatcherOnCreate = cb; return { dispose: () => {} } as any; },
+        onDidChange: (cb: (u: URI) => void) => { (workspace as any)._fsWatcherOnChange = cb; return { dispose: () => {} } as any; },
+        onDidDelete: (cb: (u: URI) => void) => { (workspace as any)._fsWatcherOnDelete = cb; return { dispose: () => {} } as any; },
+        dispose: () => {},
+      } as any;
+      return watcher as any;
     });
-    sinon.stub(workspace, "createFileSystemWatcher").callsFake((pattern: string | MyRelativePattern, cb: any) => {
-      (workspace as any)._fsWatcherCallback = cb;
-      return { dispose: () => {} };
-    });
-    sinon.stub(workspace, "onDidChangeTextDocument").callsFake((cb: any) => {
+    sinon.stub(workspace as any, "onDidChangeTextDocument").callsFake((cb: any) => {
       (workspace as any)._editCallback = cb;
-      return { dispose: () => {} };
+      return { dispose: () => {} } as any;
     });
-    sinon.stub(workspace, "getConfiguration").callsFake(() => ({ get: <T>() => undefined }));
+    sinon.stub(workspace as any, "getConfiguration").callsFake(() => ({ get: <T>() => undefined } as any));
 
     const target: L10nTarget = {
       codeLanguages: ["javascript" as any],
@@ -114,7 +128,7 @@ suite("TranslationManager (unit)", () => {
       settingsLocation: URI.file("d:/proj"),
     };
 
-    const mgr = new TranslationManager(workspace, target, 10);
+    const mgr = new TranslationManager(workspace, new MockLogOutputChannel(), target, 10);
 
     let rebuildCount = 0;
     const sub = mgr.onRebuilt(() => rebuildCount++);
@@ -158,7 +172,7 @@ suite("TranslationManager (unit)", () => {
     assert.strictEqual(parsed.entries["en"]["A"].translation, "壱");
 
     // simulate delete via fsWatcher callback
-    (workspace as any)._fsWatcherCallback("deleted", uri);
+    (workspace as any)._fsWatcherOnDelete(uri);
 
     // wait for delete to be processed
     await new Promise<void>((res, rej) => {

@@ -1,6 +1,6 @@
 import EventEmitter from "events";
 import { L10nTarget } from "../models/l10nTypes";
-import { IWorkspaceService, Disposable, MyDiagnostic, MyDiagnosticSeverity, vscTypeHelper } from "../models/vscTypes";
+import { IWorkspaceWrapper, LogOutputChannel, Disposable, MyDiagnostic, MyDiagnosticSeverity, vscTypeHelper } from "../models/vscTypes";
 import { URI } from "vscode-uri";
 import { TranslationManager } from "./translationManager";
 import { CodeManager } from "./codeManager";
@@ -135,14 +135,15 @@ export class L10nTargetManager implements Disposable {
   }
 
   constructor(
-    private workspace: IWorkspaceService,
+    private workspace: IWorkspaceWrapper,
+    private logger: LogOutputChannel,
     public target: L10nTarget,
     reloadIntervalMs: number = 500,
   ) {
-    this.l10nTranslationManager = new TranslationManager(this.workspace, this.target);
+    this.l10nTranslationManager = new TranslationManager(this.workspace, this.logger, this.target);
     const transDisposable = this.l10nTranslationManager.onRebuilt(() => this.reloadIntervalQueue.push("translation"));
     this.disposables.push(this.l10nTranslationManager, transDisposable);
-    this.codeManager = new CodeManager(this.workspace, this.target);
+    this.codeManager = new CodeManager(this.workspace, this.logger, this.target);
     const codeDisposable = this.codeManager.onRebuilt(() => this.reloadIntervalQueue.push("code"));
     this.disposables.push(this.codeManager, codeDisposable);
 
@@ -151,7 +152,7 @@ export class L10nTargetManager implements Disposable {
       async () => {
         this.rebuiltEmitter.emit("rebuilt");
       },
-      this.workspace,
+      this.logger,
       OrganizeStrategies.skipDuplicatesByKey<string>((item) => item),
     );
     this.disposables.push(this.reloadIntervalQueue);
@@ -172,7 +173,7 @@ export class L10nTargetManager implements Disposable {
           // fallback
           this.rebuiltEmitter.removeListener("rebuilt", listener as any);
         } catch (err) {
-          this.workspace.logger.warn("L10nTargetManager.onRebuilt.dispose failed", err);
+          this.logger.warn("L10nTargetManager.onRebuilt.dispose failed", err);
         }
       },
     };

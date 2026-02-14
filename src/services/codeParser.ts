@@ -2,7 +2,7 @@ import { URI } from "vscode-uri";
 import Parser from "web-tree-sitter";
 import { CodeLanguage, L10nCode } from "../models/l10nTypes";
 import { WasmDownloader } from "./wasmDownloader";
-import { vscTypeHelper, IWorkspaceService } from "../models/vscTypes";
+import { vscTypeHelper, IWorkspaceWrapper, LogOutputChannel } from "../models/vscTypes";
 
 /**
  * Lightweight code parser using tree-sitter.
@@ -18,7 +18,8 @@ export class CodeParser {
   constructor(
     private wasmDownloader: WasmDownloader,
     private language: CodeLanguage,
-    private workspace: IWorkspaceService,
+    private workspace: IWorkspaceWrapper,
+    private logger: LogOutputChannel,
   ) {}
 
   private static async ensureParserInitialized(): Promise<void> {
@@ -45,13 +46,13 @@ export class CodeParser {
     try {
       if (!loadedLanguage) {
         const wasmUri = await this.wasmDownloader.retrieveWasmFile(wasmCdnBaseUrl, this.language);
-        const wasmBytes = await this.workspace.readFile(wasmUri);
+        const wasmBytes = await this.workspace.fs.readFile(wasmUri);
         loadedLanguage = await Parser.Language.load(wasmBytes);
         CodeParser.languageCache.set(this.language, loadedLanguage);
       }
     } catch (err) {
       // fail-safe: log and return empty list rather than throwing internal parser errors
-      this.workspace.logger.warn(`CodeParser: failed to load language for ${this.language}:`, err);
+      this.logger.warn(`CodeParser: failed to load language for ${this.language}:`, err);
       return [];
     }
 
@@ -140,7 +141,7 @@ export class CodeParser {
             // DEBUG: if we couldn't find the quote, log context to help diagnosis
             if (qi < 0) {
               /* istanbul ignore next: debug-only branch */
-              this.workspace.logger.debug("CodeParser: python f-string detection — no opening quote found", {
+              this.logger.debug("CodeParser: python f-string detection — no opening quote found", {
                 snippet: content.slice(Math.max(0, offset - 30), offset + 30),
                 startPos: node.startPosition,
               });
@@ -195,7 +196,7 @@ export class CodeParser {
 
       return captures;
     } catch (err) {
-      this.workspace.logger.warn("CodeParser.parse failed:", err);
+      this.logger.warn("CodeParser.parse failed:", err);
       return [];
     }
   }
