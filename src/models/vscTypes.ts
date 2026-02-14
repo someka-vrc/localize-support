@@ -1,5 +1,7 @@
 import { Utils, URI } from "vscode-uri";
-import { Disposable, DiagnosticCollection } from "vscode";
+import * as vscode from "vscode";
+
+export type Disposable = { dispose(): void };
 // types.ts などの共通ファイルに定義
 export interface MyPosition {
   readonly line: number;
@@ -28,7 +30,7 @@ export interface MyDiagnostic {
   severity: MyDiagnosticSeverity;
 }
 
-export { Disposable, DiagnosticCollection };
+export type DiagnosticCollection = vscode.DiagnosticCollection;
 
 export enum MyFileType {
   Unknown = 0,
