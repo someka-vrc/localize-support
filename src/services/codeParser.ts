@@ -44,9 +44,9 @@ export class CodeParser {
     let loadedLanguage: Parser.Language | undefined = CodeParser.languageCache.get(this.language);
     try {
       if (!loadedLanguage) {
-        const uri = await this.wasmDownloader.retrieveWasmFile(wasmCdnBaseUrl, this.language);
-        // pass a filesystem path (not a file:// URI string) — Language.load expects a file path
-        loadedLanguage = await Parser.Language.load(uri.fsPath);
+        const wasmUri = await this.wasmDownloader.retrieveWasmFile(wasmCdnBaseUrl, this.language);
+        const wasmBytes = await this.workspace.readFile(wasmUri);
+        loadedLanguage = await Parser.Language.load(wasmBytes);
         CodeParser.languageCache.set(this.language, loadedLanguage);
       }
     } catch (err) {
