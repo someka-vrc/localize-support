@@ -387,6 +387,63 @@ export class L10nService implements Disposable {
     return result;
   }
 
+  /**
+   * Return a deduplicated, sorted list of all known localization keys
+   * collected from both parsed code occurrences and translation files.
+   */
+  public getAllKeys(): string[] {
+    const set = new Set<string>();
+    for (const tgtUnits of this.managers.values()) {
+      for (const tu of tgtUnits) {
+        // collect keys from code fragments
+        const codes = tu.manager?.codes;
+        if (codes) {
+          for (const [, list] of codes.entries()) {
+            for (const c of list) {
+              if (c && c.key) {
+                set.add(c.key);
+              }
+            }
+          }
+        }
+
+        // collect keys from translation files
+        const l10ns = tu.manager?.l10ns;
+        if (l10ns) {
+          for (const [, parsed] of l10ns.entries()) {
+            const langs = Object.keys(parsed?.entries || {});
+            for (const lang of langs) {
+              const entries = (parsed!.entries as any)[lang] || {};
+              for (const k of Object.keys(entries)) {
+                set.add(k);
+              }
+            }
+          }
+        }
+      }
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }
+
+  /**
+   * Aggregate configured localization function names across all targets.
+   * Used by the CompletionProvider to detect invocation sites.
+   */
+  public getAllFuncNames(): string[] {
+    const set = new Set<string>();
+    for (const tgtUnits of this.managers.values()) {
+      for (const tu of tgtUnits) {
+        const fns = (tu.manager?.target && tu.manager?.target.l10nFuncNames) || [];
+        for (const f of fns) {
+          if (f && f.trim()) {
+            set.add(f.trim());
+          }
+        }
+      }
+    }
+    return Array.from(set);
+  }
+
   public findCodeReferencesForKey(key: string) {
     const result: any[] = [];
     for (const tgtUnits of this.managers.values()) {

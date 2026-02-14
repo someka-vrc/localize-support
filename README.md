@@ -11,6 +11,7 @@
 - 定義へジャンプ `F12`: ソース中のロケールキーから翻訳ファイルへ移動
 - 参照検索 `Shift+F12`: 翻訳キーが使われている箇所を一覧表示
 - ホバー翻訳プレビュー: 翻訳文の即時プレビュー
+- 補完 `Ctrl+Space`: ローカライズ関数の引数内で既存のキー候補と翻訳プレビューを表示
 - リネーム連携 `F2`: 翻訳キー名の変更をコードと翻訳ファイルへ反映
 - 診断: 翻訳不足・未使用キーなどの警告表示
 
@@ -120,6 +121,7 @@ MIT
 - Go to definition `F12`: jump from locale keys in code to translation files
 - Find references `Shift+F12`: list locations where a translation key is used
 - Hover translation preview: instant preview of translated strings
+- IntelliSense / completion `Ctrl+Space`: suggest localization keys and show translation previews while typing inside localization function arguments
 - Rename integration `F2`: propagate locale key name changes to code and translation files
 - Diagnostics: warnings for missing translations or unused keys
 
@@ -209,7 +211,7 @@ MIT
 
 ## Release notes
 
-- 0.0.1 — Initial implementation: go-to-definition, references, hover, rename, PO parsing, Tree‑sitter integration
+- 0.0.1 — Initial implementation: go-to-definition, references, hover, rename, completion, PO parsing, Tree‑sitter integration
 
 ## Feedback
 

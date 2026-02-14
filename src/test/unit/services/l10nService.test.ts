@@ -208,6 +208,73 @@ suite("L10nService (unit)", () => {
     assert.strictEqual(foundRefs[0].uri.path, codeUri.path);
   });
 
+  test("getAllKeys() returns unique keys from code and translation indexes (unit)", () => {
+    const target = {
+      codeLanguages: ["javascript"],
+      codeDirs: [URI.file("d:/proj/src")],
+      l10nFormat: "po",
+      l10nDirs: [URI.file("d:/proj/locales")],
+      l10nExtension: ".po",
+      l10nFuncNames: ["t"],
+      settingsLocation: URI.file("d:/proj"),
+    } as any;
+
+    const mgr = new L10nTargetManager(workspace as any, new MockLogOutputChannel(), target, 1);
+
+    const codeUri = URI.file("d:/proj/src/foo.js");
+    mgr.codes.set(codeUri.path, [ { key: "code.one", location: vscTypeHelper.newLocation(codeUri, vscTypeHelper.newRange(0,0,0,1)) }, { key: "shared", location: vscTypeHelper.newLocation(codeUri, vscTypeHelper.newRange(1,0,1,1)) } ] as any);
+
+    const en = URI.file("d:/proj/locales/en.po");
+    mgr.l10ns.set(en.path, {
+      success: true,
+      diagnostics: [],
+      entries: { en: { "po.one": { translation: "x", location: vscTypeHelper.newLocation(en, vscTypeHelper.newRange(0,0,0,1)) }, shared: { translation: "y", location: vscTypeHelper.newLocation(en, vscTypeHelper.newRange(1,0,1,1)) } } },
+    } as any);
+
+    (svc as any).managers.set("/path/to/setting", [{ manager: mgr, listenerDisposable: { dispose: () => {} } }]);
+
+    const all = svc.getAllKeys();
+    // should contain unique keys from both sources
+    assert.ok(all.includes("code.one"));
+    assert.ok(all.includes("po.one"));
+    assert.ok(all.includes("shared"));
+    // uniqueness
+    const uniq = new Set(all);
+    assert.strictEqual(uniq.size, all.length);
+  });
+
+  test("getAllFuncNames() aggregates configured function names (unit)", () => {
+    const t1 = {
+      codeLanguages: ["javascript"],
+      codeDirs: [URI.file("d:/p/src")],
+      l10nFormat: "po",
+      l10nDirs: [URI.file("d:/p/l10n")],
+      l10nExtension: ".po",
+      l10nFuncNames: ["t", "_"],
+      settingsLocation: URI.file("d:/p"),
+    } as any;
+    const t2 = {
+      codeLanguages: ["javascript"],
+      codeDirs: [URI.file("d:/q/src")],
+      l10nFormat: "po",
+      l10nDirs: [URI.file("d:/q/l10n")],
+      l10nExtension: ".po",
+      l10nFuncNames: ["G"],
+      settingsLocation: URI.file("d:/q"),
+    } as any;
+
+    const m1 = new L10nTargetManager(workspace as any, new MockLogOutputChannel(), t1 as any, 1);
+    const m2 = new L10nTargetManager(workspace as any, new MockLogOutputChannel(), t2 as any, 1);
+
+    (svc as any).managers.set("/s1", [{ manager: m1 as any, listenerDisposable: { dispose: () => {} } }]);
+    (svc as any).managers.set("/s2", [{ manager: m2 as any, listenerDisposable: { dispose: () => {} } }]);
+
+    const fns = svc.getAllFuncNames();
+    assert.ok(fns.includes("t"));
+    assert.ok(fns.includes("_"));
+    assert.ok(fns.includes("G"));
+  });
+
   test("collectLocationsForKeyAt / canRenameKey behaviour (unit)", () => {
     const target = {
       codeLanguages: ["javascript"],

@@ -77,6 +77,92 @@ suite("L10n Definition/Reference (integration)", () => {
     assert.ok(codeRef, "should find a reference in chsharp.cs");
   });
 
+  test("Completion fuzzy-match: 'exu' should suggest 'Execute'", async function () {
+    this.timeout(4000);
+
+    const codeUris = await vscode.workspace.findFiles("**/chsharp.cs");
+    assert.ok(codeUris.length > 0, "chsharp.cs must exist in fixture");
+    const codeUri = codeUris[0];
+
+    const codeDoc = await vscode.workspace.openTextDocument(codeUri);
+    const codeText = codeDoc.getText();
+    const execIndex = codeText.indexOf('"Execute"');
+    assert.ok(execIndex >= 0, 'chsharp.cs must contain "Execute"');
+    const beforeExec = codeText.slice(0, execIndex);
+    const execLine = (beforeExec.match(/\n/g) || []).length; // 0-based
+    const execChar = codeDoc.lineAt(execLine).text.indexOf('"Execute"') + 1; // inside quotes
+
+    // replace inner string with 'exu' to simulate fuzzy typing
+    const original = "Execute";
+    const replaceEdit = new vscode.WorkspaceEdit();
+    replaceEdit.replace(codeUri, new vscode.Range(execLine, execChar, execLine, execChar + original.length), "exu");
+    const applied = await vscode.workspace.applyEdit(replaceEdit as any);
+    assert.ok(applied, "applyEdit should succeed");
+
+    await new Promise((r) => setTimeout(r, 200));
+
+    const completionRes: any = await vscode.commands.executeCommand(
+      "vscode.executeCompletionItemProvider",
+      codeUri,
+      new vscode.Position(execLine, execChar + 3),
+    );
+
+    // restore original content so subsequent tests remain deterministic
+    const restoreEdit = new vscode.WorkspaceEdit();
+    restoreEdit.replace(codeUri, new vscode.Range(execLine, execChar, execLine, execChar + "exu".length), original);
+    await vscode.workspace.applyEdit(restoreEdit as any);
+
+    assert.ok(completionRes && (completionRes.items || Array.isArray(completionRes)), "completion result expected");
+    const items = completionRes.items || completionRes;
+    const found = items.find((it: any) => String(it.label) === "Execute");
+    assert.ok(found, "fuzzy match should suggest 'Execute' for prefix 'exu'");
+  });
+
+  test("Completion inside localization function shows known keys and translations (integration)", async function () {
+    this.timeout(6000);
+
+    const codeUris = await vscode.workspace.findFiles("**/chsharp.cs");
+    assert.ok(codeUris.length > 0, "chsharp.cs must exist in fixture");
+    const codeUri = codeUris[0];
+
+    const codeDoc = await vscode.workspace.openTextDocument(codeUri);
+    const codeText = codeDoc.getText();
+    const execIndex = codeText.indexOf('"Execute"');
+    assert.ok(execIndex >= 0, 'chsharp.cs must contain "Execute"');
+    const beforeExec = codeText.slice(0, execIndex);
+    const execLine = (beforeExec.match(/\n/g) || []).length; // 0-based
+    const execChar = codeDoc.lineAt(execLine).text.indexOf('"Execute"') + 1; // inside quotes
+
+    // wait until indexing/providers are ready (use definition provider as a readiness indicator)
+    const waitForReady = async (uri: vscode.Uri, pos: vscode.Position, timeout = 4000) => {
+      const start = Date.now();
+      while (Date.now() - start < timeout) {
+        const res: any = await vscode.commands.executeCommand("vscode.executeDefinitionProvider", uri, pos);
+        if (res && res.length > 0) {
+          return;
+        }
+        await new Promise((r) => setTimeout(r, 100));
+      }
+      throw new Error("provider not ready");
+    };
+
+    await waitForReady(codeUri, new vscode.Position(execLine, execChar));
+
+    const completionRes: any = await vscode.commands.executeCommand(
+      "vscode.executeCompletionItemProvider",
+      codeUri,
+      new vscode.Position(execLine, execChar),
+    );
+
+    assert.ok(completionRes && (completionRes.items || Array.isArray(completionRes)), "completion result expected");
+
+    const items = completionRes.items || completionRes;
+    const found = items.find((it: any) => String(it.label) === "Execute");
+    assert.ok(found, "should contain completion for 'Execute'");
+    // detail should include translation from fixture (ja.po -> "実行")
+    assert.ok(found.detail && String(found.detail).includes("実行"));
+  });
+
   test("Rename key in code updates .po and code references (integration)", async function () {
     this.timeout(8000);
 

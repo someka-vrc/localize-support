@@ -10,6 +10,7 @@ import { CodeLanguages, CodeLanguageFileExtMap } from "./models/l10nTypes";
 import { registerOpenLocationCommand } from "./commands/openLocationCommand";
 import { HoverProvider } from "./providers/hoverProvider";
 import { RenameProvider } from "./providers/renameProvider";
+import { CompletionProvider } from "./providers/completionProvider";
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -37,6 +38,7 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(vscode.languages.registerDefinitionProvider(docSelectors, new DefinitionProvider(l10nService)));
   context.subscriptions.push(vscode.languages.registerReferenceProvider(docSelectors, new ReferenceProvider(l10nService)));
   context.subscriptions.push(vscode.languages.registerRenameProvider(docSelectors, new RenameProvider(l10nService)));
+  context.subscriptions.push(vscode.languages.registerCompletionItemProvider(docSelectors, new CompletionProvider(l10nService), "'", '"', "`"));
 
   context.subscriptions.push(registerOpenLocationCommand(vscodeWrapper.command, vscodeWrapper.window.logger, vscodeWrapper.window));
   context.subscriptions.push(vscode.languages.registerHoverProvider(docSelectors, new HoverProvider(l10nService)));
