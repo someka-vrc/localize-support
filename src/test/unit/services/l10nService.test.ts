@@ -115,4 +115,96 @@ suite("L10nService (unit)", () => {
     const codeDiags = diags.get(codeUri.path) || [];
     assert.ok(codeDiags.some((d) => /missing.key/.test(d.message)));
   });
+
+  test("getKeyAtPosition() returns key from code and .po; position outside returns null", () => {
+    const target = {
+      codeLanguages: ["javascript"],
+      codeDirs: [URI.file("d:/proj/src")],
+      l10nFormat: "po",
+      l10nDirs: [URI.file("d:/proj/locales")],
+      l10nExtension: ".po",
+      l10nFuncNames: ["t"],
+      settingsLocation: URI.file("d:/proj"),
+    } as any;
+
+    const mgr = new L10nTargetManager(workspace as any, target, 1);
+
+    const codeUri = URI.file("d:/proj/src/app.js");
+    const codeRange = vscTypeHelper.newRange(3, 2, 3, 20);
+    mgr.codes.set(codeUri.path, [
+      { key: "code.key", location: vscTypeHelper.newLocation(codeUri, codeRange) },
+    ] as any);
+
+    const luri = URI.file("d:/proj/locales/en.po");
+    mgr.l10ns.set(luri.path, {
+      success: true,
+      diagnostics: [],
+      entries: {
+        en: {
+          "po.key": {
+            translation: "v",
+            location: vscTypeHelper.newLocation(luri, vscTypeHelper.newRange(10, 0, 10, 7)),
+          },
+        },
+      },
+    } as any);
+
+    (svc as any).managers.set("/path/to/setting", [{ manager: mgr, listenerDisposable: { dispose: () => {} } }]);
+
+    // inside code range
+    const keyFromCode = svc.getKeyAtPosition(codeUri, { line: 3, character: 5 } as any);
+    assert.strictEqual(keyFromCode, "code.key");
+
+    // outside any known range
+    const none = svc.getKeyAtPosition(codeUri, { line: 0, character: 0 } as any);
+    assert.strictEqual(none, null);
+
+    // inside po msgid range
+    const keyFromPo = svc.getKeyAtPosition(luri, { line: 10, character: 2 } as any);
+    assert.strictEqual(keyFromPo, "po.key");
+  });
+
+  test("findTranslationLocationsForKey / findCodeReferencesForKey / findDefinition / findReferences", () => {
+    const target = {
+      codeLanguages: ["javascript"],
+      codeDirs: [URI.file("d:/proj/src")],
+      l10nFormat: "po",
+      l10nDirs: [URI.file("d:/proj/locales")],
+      l10nExtension: ".po",
+      l10nFuncNames: ["t"],
+      settingsLocation: URI.file("d:/proj"),
+    } as any;
+
+    const mgr = new L10nTargetManager(workspace as any, target, 1);
+
+    const codeUri = URI.file("d:/proj/src/foo.js");
+    const codeLoc = vscTypeHelper.newLocation(codeUri, vscTypeHelper.newRange(0, 0, 0, 10));
+    mgr.codes.set(codeUri.path, [ { key: "greet", location: codeLoc } ] as any);
+
+    const en = URI.file("d:/proj/locales/en.po");
+    const entryLoc = vscTypeHelper.newLocation(en, vscTypeHelper.newRange(1, 0, 1, 5));
+    mgr.l10ns.set(en.path, {
+      success: true,
+      diagnostics: [],
+      entries: { en: { greet: { translation: "hi", location: entryLoc } } },
+    } as any);
+
+    (svc as any).managers.set("/path/to/setting", [{ manager: mgr, listenerDisposable: { dispose: () => {} } }]);
+
+    const trans = svc.findTranslationLocationsForKey("greet");
+    assert.strictEqual(trans.length, 1);
+    assert.strictEqual(trans[0].uri.path, en.path);
+
+    const refs = svc.findCodeReferencesForKey("greet");
+    assert.strictEqual(refs.length, 1);
+    assert.strictEqual(refs[0].uri.path, codeUri.path);
+
+    const def = svc.findDefinition(codeUri, { line: 0, character: 1 } as any);
+    assert.strictEqual(def.length, 1);
+    assert.strictEqual(def[0].uri.path, en.path);
+
+    const foundRefs = svc.findReferences(en, { line: 1, character: 1 } as any);
+    assert.strictEqual(foundRefs.length, 1);
+    assert.strictEqual(foundRefs[0].uri.path, codeUri.path);
+  });
 });

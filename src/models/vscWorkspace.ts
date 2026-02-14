@@ -7,6 +7,7 @@ import {
   MyRelativePattern,
   MyConfigurationChangeEvent,
   MyFileType,
+  MyLocation,
 } from "./vscTypes";
 import { URI } from "vscode-uri";
 
@@ -21,6 +22,20 @@ export class VSCodeWorkspaceService implements IWorkspaceService {
       return pattern;
     }
     return new vscode.RelativePattern(pattern.baseUri as vscode.Uri, pattern.pattern);
+  }
+
+  /**
+   * Convert internal MyLocation -> vscode.Location
+   */
+  public toVscLocation(loc: MyLocation): vscode.Location {
+    const uri = vscode.Uri.parse((loc.uri as any).toString());
+    const range = new vscode.Range(
+      loc.range.start.line,
+      loc.range.start.character,
+      loc.range.end.line,
+      loc.range.end.character,
+    );
+    return new vscode.Location(uri, range);
   }
 
   // --- IWorkspaceService の実装 ---

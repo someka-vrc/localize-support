@@ -3,6 +3,7 @@ import {
   MyDiagnostic,
   MyRange,
   MyPosition,
+  MyLocation,
   MyDiagnosticSeverity,
   IWorkspaceService,
 } from "../models/vscTypes";
@@ -277,6 +278,124 @@ export class L10nService implements Disposable {
     }
 
     return { diags: diagsMap, statuses };
+  }
+
+  /**
+   * ----- 追加: 検索 / 定義参照ヘルパー -----
+   *
+   * サービス層（vscode 依存なし）で以下の機能を提供する：
+   * - コード/翻訳ファイル上の位置からキーを取得する
+   * - キーから翻訳エントリの位置を列挙する
+   * - キーからコード参照位置を列挙する
+   * - 高レベル API: findDefinition / findReferences
+   */
+  public getKeyAtPosition(uri: URI, position: MyPosition): string | null {
+    const path = uri.path;
+    for (const tgtUnits of this.managers.values()) {
+      for (const tu of tgtUnits) {
+        // 1) コード内の l10n 呼び出しをチェック
+        const codes = tu.manager?.codes;
+        if (codes && codes.has(path)) {
+          const list = codes.get(path) || [];
+          for (const c of list) {
+            if (this.positionInRange(position, c.location.range)) {
+              return c.key;
+            }
+          }
+        }
+
+        // 2) 翻訳ファイル (.po 等) の msgid 範囲をチェック
+        const l10ns = tu.manager?.l10ns;
+        if (l10ns && l10ns.has(path)) {
+          const parsed = l10ns.get(path);
+          const langs = Object.keys(parsed?.entries || {});
+          for (const lang of langs) {
+            const entries = (parsed!.entries as any)[lang] || {};
+            for (const k of Object.keys(entries)) {
+              const entry = entries[k];
+              if (entry && entry.location && this.positionInRange(position, entry.location.range)) {
+                return k;
+              }
+            }
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  public findTranslationLocationsForKey(key: string) {
+    const result: any[] = [];
+    for (const tgtUnits of this.managers.values()) {
+      for (const tu of tgtUnits) {
+        const l10ns = tu.manager?.l10ns;
+        if (!l10ns) {
+          continue;
+        }
+        for (const [, parsed] of l10ns.entries()) {
+          const langs = Object.keys(parsed?.entries || {});
+          for (const lang of langs) {
+            const entries = (parsed!.entries as any)[lang] || {};
+            if (entries[key] && entries[key].location) {
+              result.push(entries[key].location);
+            }
+          }
+        }
+      }
+    }
+    return result as MyLocation[];
+  }
+
+  public findCodeReferencesForKey(key: string) {
+    const result: any[] = [];
+    for (const tgtUnits of this.managers.values()) {
+      for (const tu of tgtUnits) {
+        const codes = tu.manager?.codes;
+        if (!codes) {
+          continue;
+        }
+        for (const [, list] of codes.entries()) {
+          for (const c of list) {
+            if (c.key === key && c.location) {
+              result.push(c.location);
+            }
+          }
+        }
+      }
+    }
+    return result as MyLocation[];
+  }
+
+  public findDefinition(uri: URI, position: MyPosition): MyLocation[] {
+    const key = this.getKeyAtPosition(uri, position);
+    if (!key) {
+      return [];
+    }
+    return this.findTranslationLocationsForKey(key);
+  }
+
+  public findReferences(uri: URI, position: MyPosition): MyLocation[] {
+    const key = this.getKeyAtPosition(uri, position);
+    if (!key) {
+      return [];
+    }
+    return this.findCodeReferencesForKey(key);
+  }
+
+  private positionInRange(pos: MyPosition, range: MyRange): boolean {
+    if (!range) {
+      return false;
+    }
+    if (pos.line < range.start.line || pos.line > range.end.line) {
+      return false;
+    }
+    if (pos.line === range.start.line && pos.character < range.start.character) {
+      return false;
+    }
+    if (pos.line === range.end.line && pos.character > range.end.character) {
+      return false;
+    }
+    return true;
   }
 
   /**

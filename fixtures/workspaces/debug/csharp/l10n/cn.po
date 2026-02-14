@@ -1,0 +1,34 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: localize-debug\n"
+"POT-Creation-Date: 2026-02-13 00:00+0000\n"
+"Language: cn\n"
+
+#. C# localization test strings
+msgid "Execute"
+msgstr "执行"
+
+msgid "Save changes"
+msgstr "保存更改"
+
+msgid "Connection failed"
+msgstr "连接失败"
+
+msgid "Retry"
+msgstr "重试"
+
+msgid "Cancel"
+msgstr "取消"
+
+# 不正エントリ
+msgid "unused key"
+msgstr "未使用键"
+
+msgid "Duplicate key"
+msgstr "重复键"
+
+msgid "Duplicate key"
+msgstr "重复键"
+
+msgid "Empty string"
+msgstr ""

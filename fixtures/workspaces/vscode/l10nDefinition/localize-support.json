@@ -1,0 +1,12 @@
+{
+  "targets": [
+    {
+      "codeLanguages": ["csharp"],
+      "codeDirs": ["src/"],
+      "l10nFormat": "po",
+      "l10nDirs": ["l10n/"],
+      "l10nExtension": "po",
+      "l10nFuncNames": ["G"]
+    }
+  ]
+}

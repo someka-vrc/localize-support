@@ -4,6 +4,9 @@ import * as vscode from "vscode";
 import { VSCodeWorkspaceService } from "./models/vscWorkspace";
 import { L10nService } from "./services/l10nService";
 import { DiagnosticProvider } from "./providers/diagnosticProvider";
+import { DefinitionProvider } from "./providers/definitionProvider";
+import { ReferenceProvider } from "./providers/referenceProvider";
+import { CodeLanguages } from "./models/l10nTypes";
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -27,6 +30,18 @@ export async function activate(context: vscode.ExtensionContext) {
 
   const diagnosticsProvider = new DiagnosticProvider("localize-support", l10nService);
   context.subscriptions.push(diagnosticsProvider);
+
+  // --- Definition & Reference providers (Go to / Peek / Find References) -----
+  const docSelectors: vscode.DocumentSelector = [
+    ...CodeLanguages.map((l) => ({ language: l } as any)),
+    { scheme: "file", pattern: "**/*.po" },
+  ];
+
+  const defProvider = new DefinitionProvider(l10nService);
+  const refProvider = new ReferenceProvider(l10nService);
+
+  context.subscriptions.push(vscode.languages.registerDefinitionProvider(docSelectors, defProvider));
+  context.subscriptions.push(vscode.languages.registerReferenceProvider(docSelectors, refProvider));
 }
 
 // This method is called when your extension is deactivated

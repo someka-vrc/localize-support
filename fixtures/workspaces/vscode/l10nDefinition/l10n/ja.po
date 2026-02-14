@@ -1,0 +1,34 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: localize-debug\n"
+"POT-Creation-Date: 2026-02-13 00:00+0000\n"
+"Language: ja\n"
+
+#. C# localization test strings
+msgid "Execute"
+msgstr "実行"
+
+msgid "Save changes"
+msgstr "変更を保存"
+
+msgid "Connection failed"
+msgstr "接続に失敗しました"
+
+msgid "Retry"
+msgstr "再試行"
+
+msgid "Cancel"
+msgstr "キャンセル"
+
+# 不正エントリ
+msgid "unused key"
+msgstr "未使用キー"
+
+msgid "Duplicate key"
+msgstr "重複キー"
+
+msgid "Duplicate key"
+msgstr "重複キー"
+
+msgid "Empty string"
+msgstr ""
