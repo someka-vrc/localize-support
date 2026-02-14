@@ -1,12 +1,12 @@
 import * as assert from "assert";
 import * as fs from "fs/promises";
 import * as path from "path";
-import { URI, Utils } from "vscode-uri";
+import { URI } from "vscode-uri";
 import { copyWorkspaceIfExists, type DisposablePath } from "../unitTestHelper";
 import { CodeParser } from "../../../services/codeParser";
 import { WasmDownloader, WasmFileNames } from "../../../services/wasmDownloader";
 import { CodeLanguage } from "../../../models/l10nTypes";
-import { DiagnosticCollection, IWorkspaceService, MyFileStat, MyFileType } from "../../../models/vscTypes";
+import { MyFileStat, MyFileType } from "../../../models/vscTypes";
 
 import sinon from "sinon";
 import { MockWorkspaceService } from "../mocks/mockWorkspaceService";

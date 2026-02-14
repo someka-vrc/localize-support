@@ -6,11 +6,7 @@ const dateStr = new Date().toISOString().substring(0, 10);
 const timeStr = new Date().toISOString().substring(11, 19).replace(/:/g, "-");
 
 async function copyWorkspaceIfExists(subPath) {
-  const srcDir = path.join(
-    process.cwd(),
-    "fixtures/workspaces/vscode",
-    subPath,
-  );
+  const srcDir = path.join(process.cwd(), "fixtures/workspaces/vscode", subPath);
   let exists = false;
   let destDir = undefined;
   try {
@@ -18,14 +14,7 @@ async function copyWorkspaceIfExists(subPath) {
     exists = true;
   } catch {}
   if (exists) {
-    destDir = path.join(
-      process.cwd(),
-      ".tmp/fixtures",
-      dateStr,
-      timeStr,
-      "vscode",
-      subPath,
-    );
+    destDir = path.join(process.cwd(), ".tmp/fixtures", dateStr, timeStr, "vscode", subPath);
     await fs.cp(srcDir, destDir, { recursive: true });
   }
   return destDir;
@@ -34,12 +23,13 @@ async function copyWorkspaceIfExists(subPath) {
 const configs = (await fs.readdir("./src/test/vscode", { recursive: true }))
   .filter((f) => f.endsWith(".test.ts"))
   .map(async (f) => {
+    const launchArgs = ["--trace-deprecation"];
     const subPath = f.substring(0, f.length - 8);
+    const files = path.join(process.cwd(), "out/test/vscode", `${subPath}.test.js`);
     let destDir = await copyWorkspaceIfExists(subPath);
-
-    return {
-      files: path.join(process.cwd(), "out/test/vscode", `${subPath}.test.js`),
-      launchArgs: destDir ? [destDir] : [],
-    };
+    if (destDir) {
+      launchArgs.push(destDir);
+    }
+    return { files, launchArgs };
   });
 export default defineConfig(Promise.all(configs));

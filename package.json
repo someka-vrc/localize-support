@@ -111,6 +111,7 @@
     "ui": "tdd",
     "timeout": 5000,
     "require": "source-map-support/register",
+    "reporter": "min",
     "spec": "out/test/unit/**/*.test.js"
   },
   "c8": {
