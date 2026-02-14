@@ -1,7 +1,7 @@
 import { EventEmitter } from "events";
 import { URI } from "vscode-uri";
 import { IWorkspaceService, MyRelativePattern, Disposable, MyFileType } from "../models/vscTypes";
-import { L10nTarget, L10nCode, CodeLanguage } from "../models/l10nTypes";
+import { L10nTarget, L10nCode, CodeLanguage, CodeLanguageFileExtMap } from "../models/l10nTypes";
 import { IntervalQueue, OrganizeStrategies } from "../utils/intervalQueue";
 import { CodeParser } from "./codeParser";
 import { WasmDownloader } from "./wasmDownloader";
@@ -13,13 +13,7 @@ type RebuildQueueItem = {
   reason: "created" | "changed" | "deleted";
   text?: string;
 };
-const extMap: Map<CodeLanguage, string> = new Map([
-  ["javascript", "js"],
-  ["typescript", "ts"],
-  ["python", "py"],
-  ["csharp", "cs"],
-  ["java", "java"],
-]);
+// file-extension mapping moved to `CodeLanguageFileExtMap` in `src/models/l10nTypes.ts`
 export class CodeManager implements Disposable {
   private readonly disposables: Disposable[] = [];
   private readonly rebuiltEmitter = new EventEmitter();
@@ -102,7 +96,7 @@ export class CodeManager implements Disposable {
   }
 
   private buildGlobForLanguages(langs: CodeLanguage[]): string {
-    const exts = langs.map((l) => extMap.get(l)).filter((e): e is string => !!e);
+    const exts = langs.map((l) => CodeLanguageFileExtMap.get(l)).filter((e): e is string => !!e);
     if (exts.length === 0) {
       return "**/*";
     }
@@ -179,7 +173,7 @@ export class CodeManager implements Disposable {
 
   private inferLanguageFromUri(uri: URI): CodeLanguage | undefined {
     const ext = uri.path.split(".").pop()?.toLowerCase() || "";
-    return [...extMap.entries()].find(([, v]) => v === ext)?.[0] || undefined;
+    return [...CodeLanguageFileExtMap.entries()].find(([, v]) => v === ext)?.[0] || undefined;
   }
 
   public async dispose() {

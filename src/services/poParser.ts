@@ -92,7 +92,7 @@ export class PoParser implements TranslationParser {
                 currentMsgStrEndCol || currentMsgIdEndCol,
               ),
               `empty msgstr for msgid '${msgid}'`,
-              MyDiagnosticSeverity.Error,
+              MyDiagnosticSeverity.Warning,
             ),
           );
           success = false;

@@ -10,6 +10,18 @@ export const CodeLanguages = ["csharp", "javascript", "typescript", "python", "j
 /** 対応コード言語 */
 export type CodeLanguage = (typeof CodeLanguages)[number];
 
+/**
+ * Mapping: CodeLanguage -> primary file extension (used by glob patterns / doc selectors)
+ * ※ 以前 `CodeManager` 内にあった `extMap` をここに移動しました。
+ */
+export const CodeLanguageFileExtMap: Map<CodeLanguage, string> = new Map([
+  ["javascript", "js"],
+  ["typescript", "ts"],
+  ["python", "py"],
+  ["csharp", "cs"],
+  ["java", "java"],
+]);
+
 /** ローカライズエントリ */
 export type L10nEntry = {
   translation: string;

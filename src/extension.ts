@@ -6,7 +6,7 @@ import { L10nService } from "./services/l10nService";
 import { DiagnosticProvider } from "./providers/diagnosticProvider";
 import { DefinitionProvider } from "./providers/definitionProvider";
 import { ReferenceProvider } from "./providers/referenceProvider";
-import { CodeLanguages } from "./models/l10nTypes";
+import { CodeLanguages, CodeLanguageFileExtMap } from "./models/l10nTypes";
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -32,8 +32,16 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(diagnosticsProvider);
 
   // --- Definition & Reference providers (Go to / Peek / Find References) -----
+  const filePatterns = CodeLanguages
+    .map((l) => CodeLanguageFileExtMap.get(l))
+    .filter((e): e is string => !!e)
+    .map((ext) => ({ scheme: "file", pattern: `**/*.${ext}` }));
+
   const docSelectors: vscode.DocumentSelector = [
-    ...CodeLanguages.map((l) => ({ language: l } as any)),
+    // prefer language identifiers when available
+    ...CodeLanguages.map((l): vscode.DocumentFilter => ({ language: l })),
+    // also match common file extensions so features work in test environments
+    ...filePatterns,
     { scheme: "file", pattern: "**/*.po" },
   ];
 

@@ -191,6 +191,7 @@ export class L10nService implements Disposable {
         } as TargetUnit;
       }),
     );
+
     // メッセージを更新
     this.settingDiags.set(this.getSettingPath(settingFile), this.toDiags(settingFile, messages));
     this.managers.set(

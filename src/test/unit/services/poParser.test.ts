@@ -62,14 +62,14 @@ suite("PoParser", () => {
     assert.strictEqual(entries["DUP"].translation, "Two");
   });
 
-  test("reports empty msgstr as error", async () => {
+  test("reports empty msgstr as warning", async () => {
     const parser = new PoParser();
     const uri = { scheme: "file", path: "d:/dummy/empty.po", fsPath: "d:/dummy/empty.po" } as URI;
     const content = `msgid "EMPTY"\nmsgstr ""\n`;
 
     const res = await parser.parse(uri, content);
     assert.strictEqual(res.success, false);
-    assert.ok(res.diagnostics.some((d) => /empty msgstr/.test(d.message) && d.severity === MyDiagnosticSeverity.Error));
+    assert.ok(res.diagnostics.some((d) => /empty msgstr/.test(d.message) && d.severity === MyDiagnosticSeverity.Warning));
   });
 
   test("reports invalid msgstr format (missing quote) as error", async () => {

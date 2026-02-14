@@ -21,7 +21,7 @@ msgid "Cancel"
 msgstr "キャンセル"
 
 # 不正エントリ
-msgid "unused key"
+msgid "Unused key"
 msgstr "未使用キー"
 
 msgid "Duplicate key"
@@ -32,3 +32,6 @@ msgstr "重複キー"
 
 msgid "Empty string"
 msgstr ""
+
+msgid "Japanese only"
+msgstr "日本語以外未定義"

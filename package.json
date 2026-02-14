@@ -110,18 +110,23 @@
   "mocha": {
     "ui": "tdd",
     "timeout": 5000,
-    "require": [
-      "source-map-support/register"
-    ]
+    "require": "source-map-support/register",
+    "spec": "out/test/unit/**/*.test.js"
+  },
+  "c8": {
+    "reporter": "lcovonly",
+    "report-dir": "coverage",
+    "exclude": "src/test/**",
+    "excludeAfterRemap": true
   },
   "scripts": {
     "vscode:prepublish": "yarn compile",
     "compile": "yarn lint && tsc -p ./",
     "watch": "tsc -watch -p ./",
     "lint": "eslint src",
-    "pretest:integration": "yarn compile && yarn lint",
-    "test:unit": "cross-env NODE_OPTIONS=--enable-source-maps c8 --reporter=lcov --report-dir=coverage mocha \"./out/test/unit/**/*.test.js\"",
     "pretest:unit": "yarn compile && yarn lint",
+    "test:unit": "cross-env NODE_OPTIONS=--enable-source-maps c8 mocha",
+    "pretest:integration": "yarn compile && yarn lint",
     "test:integration": "vscode-test",
     "test": "yarn test:unit && yarn test:integration",
     "clean:tmp": "node -e \"const fs = require('fs'); fs.rmSync('.tmp', { recursive: true, force: true })\"",

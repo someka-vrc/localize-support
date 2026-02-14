@@ -31,7 +31,9 @@ namespace LocalizeDebug
                 Console.WriteLine(G("Cancel"));              // 6
             }
             
+            Console.WriteLine(G("Duplicate key"));  
             Console.WriteLine(G("Undefined Key"));  
+            Console.WriteLine(G("Japanese only"));  
 
             // keep program alive briefly so test harness can inspect output if needed
             System.Threading.Thread.Sleep(10);
@@ -45,6 +47,7 @@ namespace LocalizeDebug
 
         static bool ShouldCancel()
         {
+            Console.WriteLine(G("Cancel"));    
             return DateTime.Now.Millisecond % 2 == 0;
         }
     }
