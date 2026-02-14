@@ -42,6 +42,7 @@ export class L10nService implements Disposable {
       async (thisArg) => {
         thisArg.reloadedEmitter.emit("reloaded", thisArg);
       },
+      this.workspace,
       OrganizeStrategies.lastOnly,
     );
   }
@@ -53,7 +54,6 @@ export class L10nService implements Disposable {
    * 再度呼び出すと既存のウォッチャーとターゲットをクリアして再設定する。
    */
   async init(): Promise<void> {
-    console.log("[localize-support][L10nService] init()");
     // clear existing watchers
     await Promise.all(this.settingsWatchers.map((d) => d.dispose()));
     this.settingsWatchers.length = 0;
@@ -115,7 +115,6 @@ export class L10nService implements Disposable {
   }
 
   async dispose(): Promise<void> {
-    console.log("[localize-support][L10nService] dispose()");
     this.reloadIntervalQueue.dispose();
     this.reloadedEmitter.removeAllListeners();
     await Promise.all(this.settingsWatchers.map((d) => d.dispose()));
@@ -133,10 +132,7 @@ export class L10nService implements Disposable {
    * @returns エラーメッセージの配列
    */
   async reload(settingFile: URI | number): Promise<void> {
-    console.log(
-      "[localize-support][L10nService] reload()",
-      typeof settingFile === "number" ? `configIndex=${settingFile}` : (settingFile as URI).path,
-    );
+    // reload requested for: 
     let rawTargets: any[] = [];
     let isConfig = typeof settingFile === "number";
 
@@ -198,7 +194,6 @@ export class L10nService implements Disposable {
       this.getSettingPath(settingFile),
       managers.filter((m) => m !== null),
     );
-    console.log("[localize-support][L10nService] reload() completed for", this.getSettingPath(settingFile));
   }
 
   /**
@@ -215,7 +210,9 @@ export class L10nService implements Disposable {
           (this.reloadedEmitter as any).off?.("reloaded", listener);
           // fallback
           this.reloadedEmitter.removeListener("reloaded", listener as any);
-        } catch {}
+        } catch (err) {
+          this.workspace.logger.warn("L10nService.onReloaded.dispose failed", err);
+        }
       },
     };
   }
@@ -271,7 +268,7 @@ export class L10nService implements Disposable {
             diagsMap.get(key)?.push(...arr);
           }
         } catch (err) {
-          // swallow — matching diagnostics must not break overall diagnostics collection
+          this.workspace.logger.warn("L10nService.getDiagnostics: matching diagnostics failed", err);
         }
       }
       // ensure settings without managers but with diagnostics were already added above

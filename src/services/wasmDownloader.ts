@@ -100,7 +100,9 @@ export class WasmDownloader implements Disposable {
       this.progresses.set(langType, { downloaded: size, total: size, status: "done" });
       try {
         this.progressEmitter.emit("progress", langType, { downloaded: size, total: size, status: "done" });
-      } catch {}
+      } catch (err) {
+        this.workspace.logger.warn("WasmDownloader.progressEmitter.emit failed", err);
+      }
       return localWasmUri;
     } catch {
       // ensure `{version}` placeholder is replaced BEFORE URI encoding/joining,
@@ -120,7 +122,9 @@ export class WasmDownloader implements Disposable {
       this.progresses.set(langType, { downloaded: 0, total: 0, status: "downloading" });
       try {
         this.progressEmitter.emit("progress", langType, { downloaded: 0, total: 0, status: "downloading" });
-      } catch {}
+      } catch (err) {
+        this.workspace.logger.warn("WasmDownloader.progressEmitter.emit failed", err);
+      }
 
       // クラスの signal のみを使用。内部 onProgress をラップして集約状態を更新・通知する
       await this.downloadFile(remoteWasmUrl, localWasmUri, {
@@ -137,7 +141,9 @@ export class WasmDownloader implements Disposable {
               total: newTotal,
               status: newStatus,
             });
-          } catch {}
+          } catch (err) {
+            this.workspace.logger.warn("WasmDownloader.progressEmitter.emit failed", err);
+          }
 
           // 既存のコールバックも呼ぶ
           options?.onProgress?.(downloaded, total);
@@ -153,7 +159,9 @@ export class WasmDownloader implements Disposable {
           total: final.total,
           status: "done",
         });
-      } catch {}
+      } catch (err) {
+        this.workspace.logger.warn("WasmDownloader.progressEmitter.emit failed", err);
+      }
 
       return localWasmUri;
     }
@@ -254,7 +262,9 @@ export class WasmDownloader implements Disposable {
         try {
           (this.progressEmitter as any).off?.("progress", listener as any);
           this.progressEmitter.removeListener("progress", listener as any);
-        } catch {}
+        } catch (err) {
+          this.workspace.logger.warn("WasmDownloader.onDidProgress.dispose failed", err);
+        }
       },
     };
   }
@@ -273,7 +283,9 @@ export class WasmDownloader implements Disposable {
 
     try {
       this.progressEmitter.removeAllListeners();
-    } catch {}
+    } catch (err) {
+      this.workspace.logger.warn("WasmDownloader.dispose: removeAllListeners failed", err);
+    }
 
     this.progresses.clear();
 

@@ -35,6 +35,7 @@ export class TranslationManager implements Disposable {
     this.rebuildIntervalQueue = new IntervalQueue<RebuildQueueItem>(
       rebuildIntervalMs,
       async (item: RebuildQueueItem) => await item.thisArg.rebuildCache(item.uri, item.reason, item.text),
+      this.workspace,
       OrganizeStrategies.skipDuplicatesByKey<RebuildQueueItem>((item) => item.uri.path + "-" + item.reason),
     );
   }
@@ -53,13 +54,14 @@ export class TranslationManager implements Disposable {
           (this.rebuiltEmitter as any).off?.("rebuilt", listener);
           // fallback
           this.rebuiltEmitter.removeListener("rebuilt", listener as any);
-        } catch {}
+        } catch (err) {
+          this.workspace.logger.warn("TranslationManager.onRebuilt.dispose failed", err);
+        }
       },
     };
   }
 
   public async init() {
-    console.log("[localize-support][TranslationManager] init for", this.target.settingsLocation);
     if (this.disposed) {
       return;
     }
@@ -139,7 +141,6 @@ export class TranslationManager implements Disposable {
    * @param text ファイルの内容（削除の場合は undefined）
    */
   private async rebuildCache(uri: URI, reason: "created" | "changed" | "deleted", text: string | undefined) {
-    console.log("[localize-support][TranslationManager] rebuildCache", uri.path, reason);
     let didChange = false;
     switch (reason) {
       case "created":
@@ -175,7 +176,9 @@ export class TranslationManager implements Disposable {
     if (didChange) {
       try {
         this.rebuiltEmitter.emit("rebuilt");
-      } catch {}
+      } catch (err) {
+        this.workspace.logger.warn("TranslationManager.rebuildCache: emit failed", err);
+      }
     }
   }
 
@@ -190,12 +193,16 @@ export class TranslationManager implements Disposable {
       for (const disposable of this.disposables[key]) {
         try {
           await disposable.dispose();
-        } catch {}
+        } catch (err) {
+          this.workspace.logger.warn("TranslationManager.dispose: disposing failed", err);
+        }
       }
     }
 
     try {
       this.rebuiltEmitter.removeAllListeners();
-    } catch {}
+    } catch (err) {
+      this.workspace.logger.warn("TranslationManager.dispose: removeAllListeners failed", err);
+    }
   }
 }

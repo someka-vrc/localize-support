@@ -30,10 +30,10 @@ export class CodeManager implements Disposable {
     private target: L10nTarget,
     rebuildIntervalMs: number = 500,
   ) {
-    console.log("[localize-support][CodeManager] constructor for", target.settingsLocation);
     this.rebuildIntervalQueue = new IntervalQueue<RebuildQueueItem>(
       rebuildIntervalMs,
       async (item: RebuildQueueItem) => await item.thisArg.rebuildCache(item.uri, item.reason, item.text),
+      this.workspace,
       OrganizeStrategies.skipDuplicatesByKey<RebuildQueueItem>((item) => item.uri.path + "-" + item.reason),
     );
 
@@ -49,13 +49,14 @@ export class CodeManager implements Disposable {
         try {
           (this.rebuiltEmitter as any).off?.("rebuilt", listener);
           this.rebuiltEmitter.removeListener("rebuilt", listener as any);
-        } catch {}
+        } catch (err) {
+          this.workspace.logger.warn("CodeManager.onRebuilt.dispose failed", err);
+        }
       },
     };
   }
 
   public async init() {
-    console.log("[localize-support][CodeManager] init for", this.target.settingsLocation);
     if (
       this.target.codeLanguages.length === 0 ||
       this.target.codeDirs.length === 0 ||
@@ -128,7 +129,6 @@ export class CodeManager implements Disposable {
   }
 
   private async rebuildCache(uri: URI, reason: "created" | "changed" | "deleted", text?: string | undefined) {
-    console.log("[localize-support][CodeManager] rebuildCache", uri.path, reason);
     let didChange = false;
     switch (reason) {
       case "created":
@@ -140,7 +140,7 @@ export class CodeManager implements Disposable {
         }
         try {
           const content = text ?? (await this.workspace.getTextDocumentContent(uri));
-          const parser = new CodeParser(this.wasmDownloader, lang);
+          const parser = new CodeParser(this.wasmDownloader, lang, this.workspace);
           // always read wasm CDN base URL from configuration (do not cache)
           const cfg = this.workspace.getConfiguration("localize-support");
           const wasmCdnBaseUrl = (cfg && cfg.get<string>("wasmCdnBaseUrl")) || "";
@@ -153,7 +153,7 @@ export class CodeManager implements Disposable {
           didChange = true;
         } catch (err) {
           // swallow parse errors — do not propagate to caller
-          console.warn("CodeManager.rebuildCache: parse failed", err);
+          this.workspace.logger.warn("CodeManager.rebuildCache: parse failed", err);
         }
         break;
       case "deleted":
@@ -167,7 +167,9 @@ export class CodeManager implements Disposable {
     if (didChange) {
       try {
         this.rebuiltEmitter.emit("rebuilt");
-      } catch {}
+      } catch (err) {
+        this.workspace.logger.warn("CodeManager.rebuildCache: emitting rebuilt failed", err);
+      }
     }
   }
 
@@ -181,10 +183,14 @@ export class CodeManager implements Disposable {
     for (const d of this.disposables) {
       try {
         await d.dispose();
-      } catch {}
+      } catch (err) {
+        this.workspace.logger.warn("CodeManager.dispose: disposing resource failed", err);
+      }
     }
     try {
       this.rebuiltEmitter.removeAllListeners();
-    } catch {}
+    } catch (err) {
+      this.workspace.logger.warn("CodeManager.dispose: removeAllListeners failed", err);
+    }
   }
 }

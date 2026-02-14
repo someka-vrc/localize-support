@@ -1,4 +1,4 @@
-import { Disposable } from "../models/vscTypes";
+import { Disposable, IWorkspaceService } from "../models/vscTypes";
 
 type SkippableItem<T> = {
   item: T;
@@ -15,6 +15,7 @@ export class IntervalQueue<T> implements Disposable {
   private disposed: boolean = false;
   private intervalMs: number;
   private processItem: (item: T) => Promise<void>;
+  private workspace: IWorkspaceService;
   private organize: ((items: SkippableItem<T>[]) => SkippableItem<T>[])[];
   /**
    * コンストラクタ
@@ -26,11 +27,13 @@ export class IntervalQueue<T> implements Disposable {
   constructor(
     intervalMs: number,
     processItem: (item: T) => Promise<void>,
+    workspace: IWorkspaceService,
     ...organize: ((items: SkippableItem<T>[]) => SkippableItem<T>[])[]
   ) {
     // プロパティへの代入
     this.intervalMs = intervalMs;
     this.processItem = processItem;
+    this.workspace = workspace;
     this.organize = organize;
   }
 
@@ -76,7 +79,7 @@ export class IntervalQueue<T> implements Disposable {
             try {
               await this.processItem(item);
             } catch (err) {
-              console.error("IntervalQueue item processing failed:", err);
+              this.workspace.logger.error("IntervalQueue item processing failed:", err);
             }
           }
         }

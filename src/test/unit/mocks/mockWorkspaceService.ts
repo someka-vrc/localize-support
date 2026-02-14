@@ -91,6 +91,24 @@ export class MockWorkspaceService implements IWorkspaceService {
   createDiagnosticCollection(name: string): DiagnosticCollection {
     return new MockDiagnosticCollection(name);
   }
+
+  logger = {
+    trace: (message: string, ...args: any[]) => {
+      console.log("[trace]", message, ...args);
+    },
+    debug: (message: string, ...args: any[]) => {
+      console.log("[debug]", message, ...args);
+    },
+    info: (message: string, ...args: any[]) => {
+      console.log("[info]", message, ...args);
+    },
+    warn: (message: string, ...args: any[]) => {
+      console.warn("[warn]", message, ...args);
+    },
+    error: (error: string | Error, ...args: any[]) => {
+      console.error("[error]", error, ...args);
+    },
+  };
 }
 
 class MockDiagnosticCollection implements DiagnosticCollection {

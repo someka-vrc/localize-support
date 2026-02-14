@@ -12,8 +12,7 @@ import { CodeLanguages, CodeLanguageFileExtMap } from "./models/l10nTypes";
 // Your extension is activated the very first time the command is executed
 export async function activate(context: vscode.ExtensionContext) {
   // Use the console to output diagnostic information (console.log) and errors (console.error)
-  // This line of code will only be executed once when your extension is activated
-  console.log('Congratulations, your extension "localize-support" is now active!');
+
 
   // --- existing example command -------------------------------------------------
   context.subscriptions.push(
@@ -26,14 +25,13 @@ export async function activate(context: vscode.ExtensionContext) {
   const workspaceService = new VSCodeWorkspaceService();
   const l10nService = new L10nService(workspaceService);
   context.subscriptions.push(l10nService);
-  await l10nService.init().catch((e) => console.error(e));
+  await l10nService.init().catch((e) => workspaceService.logger.error(e));
 
-  const diagnosticsProvider = new DiagnosticProvider("localize-support", l10nService);
+  const diagnosticsProvider = new DiagnosticProvider("localize-support", l10nService, workspaceService);
   context.subscriptions.push(diagnosticsProvider);
 
   // --- Definition & Reference providers (Go to / Peek / Find References) -----
-  const filePatterns = CodeLanguages
-    .map((l) => CodeLanguageFileExtMap.get(l))
+  const filePatterns = CodeLanguages.map((l) => CodeLanguageFileExtMap.get(l))
     .filter((e): e is string => !!e)
     .map((ext) => ({ scheme: "file", pattern: `**/*.${ext}` }));
 
@@ -50,6 +48,8 @@ export async function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(vscode.languages.registerDefinitionProvider(docSelectors, defProvider));
   context.subscriptions.push(vscode.languages.registerReferenceProvider(docSelectors, refProvider));
+
+  workspaceService.logger.info("localize-support activated");
 }
 
 // This method is called when your extension is deactivated

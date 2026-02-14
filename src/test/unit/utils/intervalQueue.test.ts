@@ -1,5 +1,6 @@
 import assert from "assert";
 import { IntervalQueue, OrganizeStrategies } from "../../../utils/intervalQueue";
+import { MockWorkspaceService } from "../mocks/mockWorkspaceService";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -8,7 +9,7 @@ suite("IntervalQueue", () => {
     const processed: number[] = [];
     const q = new IntervalQueue<number>(10, async (n) => {
       processed.push(n);
-    });
+    }, new MockWorkspaceService());
     q.start();
 
     q.push(1);
@@ -27,6 +28,7 @@ suite("IntervalQueue", () => {
       async (n) => {
         processed.push(n);
       },
+      new MockWorkspaceService(),
       OrganizeStrategies.lastOnly,
     );
     q.start();
@@ -50,6 +52,7 @@ suite("IntervalQueue", () => {
       async (it) => {
         processedIds.push(it.id);
       },
+      new MockWorkspaceService(),
       OrganizeStrategies.skipDuplicatesByKey((it) => it.key),
     );
     q.start();
@@ -69,9 +72,11 @@ suite("IntervalQueue", () => {
     const processed: number[] = [];
     const errors: any[] = [];
 
-    // stub console.error
-    const origConsoleError = console.error;
-    console.error = (...args: any[]) => {
+    const ws = new MockWorkspaceService();
+
+    // stub workspace logger.error
+    const origLoggerError = ws.logger.error;
+    ws.logger.error = (...args: any[]) => {
       errors.push(args);
     };
 
@@ -80,7 +85,7 @@ suite("IntervalQueue", () => {
         throw new Error("fail");
       }
       processed.push(n);
-    });
+    }, ws);
     q.start();
 
     q.push(1);
@@ -91,7 +96,7 @@ suite("IntervalQueue", () => {
     q.dispose();
 
     // restore
-    console.error = origConsoleError;
+    ws.logger.error = origLoggerError;
 
     assert.deepStrictEqual(processed, [1, 3]);
     assert.ok(errors.length > 0, "console.error should be called on processing error");
@@ -105,7 +110,7 @@ suite("IntervalQueue", () => {
     const processed: number[] = [];
     const q = new IntervalQueue<number>(10, async (n) => {
       processed.push(n);
-    });
+    }, new MockWorkspaceService());
     q.start();
 
     q.push(0);
@@ -121,7 +126,7 @@ suite("IntervalQueue", () => {
     const processed: Array<string | boolean> = [];
     const q = new IntervalQueue<string | boolean>(10, async (v) => {
       processed.push(v);
-    });
+    }, new MockWorkspaceService());
     q.start();
 
     q.push("");
@@ -138,7 +143,7 @@ suite("IntervalQueue", () => {
     const processed: number[] = [];
     const q = new IntervalQueue<number>(20, async (n) => {
       processed.push(n);
-    });
+    }, new MockWorkspaceService());
     q.start();
 
     q.push(1);
@@ -162,7 +167,7 @@ suite("IntervalQueue", () => {
       if (n === 1) {
         q.push(2);
       }
-    });
+    }, new MockWorkspaceService());
     q.start();
 
     q.push(1);

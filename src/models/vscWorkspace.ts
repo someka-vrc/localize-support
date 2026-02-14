@@ -10,6 +10,7 @@ import {
   MyLocation,
 } from "./vscTypes";
 import { URI } from "vscode-uri";
+import { LogOutputChannel } from "vscode";
 
 /**
  * vscode API をラップして IWorkspaceService に適合させる本番用実装
@@ -71,7 +72,8 @@ export class VSCodeWorkspaceService implements IWorkspaceService {
     try {
       const stats = await this.stat(uri);
       return stats.type === MyFileType.Directory;
-    } catch {
+    } catch (err) {
+      this.logger.warn("validateDirectoryPath failed", err);
       return false;
     }
   }
@@ -138,5 +140,10 @@ export class VSCodeWorkspaceService implements IWorkspaceService {
 
   createDiagnosticCollection(name: string): vscode.DiagnosticCollection {
     return vscode.languages.createDiagnosticCollection(name);
+  }
+  
+  private outputChannel = vscode.window.createOutputChannel("Localize Support", { log: true });
+  get logger(): LogOutputChannel {
+    return this.outputChannel;
   }
 }

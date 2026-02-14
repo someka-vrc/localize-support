@@ -151,6 +151,7 @@ export class L10nTargetManager implements Disposable {
       async () => {
         this.rebuiltEmitter.emit("rebuilt");
       },
+      this.workspace,
       OrganizeStrategies.skipDuplicatesByKey<string>((item) => item),
     );
     this.disposables.push(this.reloadIntervalQueue);
@@ -170,22 +171,21 @@ export class L10nTargetManager implements Disposable {
           (this.rebuiltEmitter as any).off?.("rebuilt", listener);
           // fallback
           this.rebuiltEmitter.removeListener("rebuilt", listener as any);
-        } catch {}
+        } catch (err) {
+          this.workspace.logger.warn("L10nTargetManager.onRebuilt.dispose failed", err);
+        }
       },
     };
   }
 
   public async init() {
-    console.log("[localize-support][L10nTargetManager] init for", this.target.settingsLocation);
     // initialize both translation and code managers
     await this.l10nTranslationManager.init();
     await this.codeManager.init();
     this.reloadIntervalQueue.start();
-    console.log("[localize-support][L10nTargetManager] init completed for", this.target.settingsLocation);
   }
 
   public dispose() {
-    console.log("[localize-support][L10nTargetManager] dispose for", this.target.settingsLocation);
     for (const disposable of this.disposables) {
       if (disposable) {
         disposable.dispose();

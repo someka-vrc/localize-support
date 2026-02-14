@@ -55,6 +55,14 @@ export interface MyConfigurationChangeEvent {
   affectsConfiguration(section: string, scope?: URI): boolean;
 }
 
+interface LogOutputChannel {
+  trace(message: string, ...args: any[]): void;
+  debug(message: string, ...args: any[]): void;
+  info(message: string, ...args: any[]): void;
+  warn(message: string, ...args: any[]): void;
+  error(error: string | Error, ...args: any[]): void;
+}
+
 export interface IWorkspaceService {
   // ファイル操作
   findFiles(pattern: string | MyRelativePattern): Promise<URI[]>;
@@ -90,6 +98,8 @@ export interface IWorkspaceService {
   ): Disposable;
 
   createDiagnosticCollection(name: string): DiagnosticCollection;
+
+  logger: LogOutputChannel;
 }
 
 export interface MyConfiguration {

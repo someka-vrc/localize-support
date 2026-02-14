@@ -8,64 +8,51 @@ import { WasmDownloader, WasmFileNames } from "../../../services/wasmDownloader"
 import { CodeLanguage } from "../../../models/l10nTypes";
 import { DiagnosticCollection, IWorkspaceService, MyFileStat, MyFileType } from "../../../models/vscTypes";
 
-// Disk-backed minimal IWorkspaceService used only for wasm storage in tests
-class DiskWorkspaceService implements IWorkspaceService {
-  async findFiles(): Promise<URI[]> {
-    return [];
-  }
-  async readFile(uri: URI): Promise<Uint8Array> {
+import sinon from "sinon";
+import { MockWorkspaceService } from "../mocks/mockWorkspaceService";
+
+function makeDiskBackedWorkspace(): MockWorkspaceService {
+  const ws = new MockWorkspaceService();
+
+  sinon.stub(ws, "readFile").callsFake(async (uri: URI) => {
     return fs.readFile(uri.fsPath);
-  }
-  async writeFile(uri: URI, content: Uint8Array): Promise<void> {
+  });
+
+  sinon.stub(ws, "writeFile").callsFake(async (uri: URI, content: Uint8Array) => {
     await fs.mkdir(path.dirname(uri.fsPath), { recursive: true });
     return fs.writeFile(uri.fsPath, Buffer.from(content));
-  }
-  async deleteFile(uri: URI): Promise<void> {
+  });
+
+  sinon.stub(ws, "deleteFile").callsFake(async (uri: URI) => {
     try {
       await fs.unlink(uri.fsPath);
     } catch {}
-  }
-  async stat(uri: URI): Promise<MyFileStat> {
+  });
+
+  sinon.stub(ws, "stat").callsFake(async (uri: URI) => {
     const s = await fs.stat(uri.fsPath);
     return {
       type: s.isDirectory() ? MyFileType.Directory : MyFileType.File,
       ctime: s.ctimeMs,
       mtime: s.mtimeMs,
       size: s.size,
-    };
-  }
-  async validateDirectoryPath(uri: URI): Promise<boolean> {
+    } as MyFileStat;
+  });
+
+  sinon.stub(ws, "validateDirectoryPath").callsFake(async (uri: URI) => {
     try {
       const s = await fs.stat(uri.fsPath);
       return s.isDirectory();
     } catch {
       return false;
     }
-  }
-  async getTextDocumentContent(): Promise<string> {
-    return "";
-  }
-  getWorkspaceFolders() {
-    return [] as any;
-  }
-  getConfiguration(): any {
-    return { get: <T>() => undefined };
-  }
-  async createDirectory(uri: URI): Promise<void> {
+  });
+
+  sinon.stub(ws, "createDirectory").callsFake(async (uri: URI) => {
     await fs.mkdir(uri.fsPath, { recursive: true });
-  }
-  onDidChangeTextDocument() {
-    return { dispose: () => {} };
-  }
-  onDidChangeConfiguration() {
-    return { dispose: () => {} };
-  }
-  createFileSystemWatcher() {
-    return { dispose: () => {} };
-  }
-  createDiagnosticCollection(name: string): DiagnosticCollection {
-    throw new Error("Method not implemented.");
-  }
+  });
+
+  return ws;
 }
 
 suite("CodeParser (unit, integration with wasm)", () => {
@@ -83,7 +70,8 @@ suite("CodeParser (unit, integration with wasm)", () => {
   });
 
   teardown(async () => {
-    // keep .tmp/wasms/ to allow caching between test runs
+    // restore sinon stubs and keep .tmp/wasms/ to allow caching between test runs
+    sinon.restore();
     if (workspaceFixture) {
       await workspaceFixture.dispose();
     }
@@ -93,9 +81,9 @@ suite("CodeParser (unit, integration with wasm)", () => {
     // allow longer time for first-time download
     this.timeout(30_000);
 
-    const diskWorkspace = new DiskWorkspaceService();
+    const diskWorkspace = makeDiskBackedWorkspace();
     const downloader = new WasmDownloader(diskWorkspace, storageUri);
-    const parser = new CodeParser(downloader, "javascript");
+    const parser = new CodeParser(downloader, "javascript", diskWorkspace);
 
     // pre-warm / retry download so transient network/404 doesn't make the test flaky
     const maxAttempts = 3;
@@ -158,9 +146,9 @@ suite("CodeParser (unit, integration with wasm)", () => {
 
   // helper used by multiple language test cases
   async function runParserLangTest(language: CodeLanguage, src: string, expectedKeys: string[]) {
-    const diskWorkspace = new DiskWorkspaceService();
+    const diskWorkspace = makeDiskBackedWorkspace();
     const downloader = new WasmDownloader(diskWorkspace, storageUri);
-    const parser = new CodeParser(downloader, language);
+    const parser = new CodeParser(downloader, language, diskWorkspace);
 
     // pre-warm / retry download so transient network/404 doesn't make the test flaky
     const maxAttempts = 3;
@@ -257,9 +245,9 @@ suite("CodeParser (unit, integration with wasm)", () => {
 
   test("rejects computed-property calls, interpolated and concatenated strings (javascript)", async function () {
     this.timeout(30_000);
-    const diskWorkspace = new DiskWorkspaceService();
+    const diskWorkspace = makeDiskBackedWorkspace();
     const downloader = new WasmDownloader(diskWorkspace, storageUri);
-    const parser = new CodeParser(downloader, "javascript");
+    const parser = new CodeParser(downloader, "javascript", diskWorkspace);
 
     // pre-warm
     await downloader.retrieveWasmFile(wasmCdnBase, "javascript");
@@ -293,9 +281,9 @@ suite("CodeParser (unit, integration with wasm)", () => {
 
   test("rejects computed-property calls and templates (typescript)", async function () {
     this.timeout(30_000);
-    const diskWorkspace = new DiskWorkspaceService();
+    const diskWorkspace = makeDiskBackedWorkspace();
     const downloader = new WasmDownloader(diskWorkspace, storageUri);
-    const parser = new CodeParser(downloader, "typescript");
+    const parser = new CodeParser(downloader, "typescript", diskWorkspace);
 
     await downloader.retrieveWasmFile(wasmCdnBase, "typescript");
 
@@ -325,9 +313,9 @@ suite("CodeParser (unit, integration with wasm)", () => {
 
   test("Python: f-strings ignored, triple-quoted captured; implicit concatenation ignored", async function () {
     this.timeout(30_000);
-    const diskWorkspace = new DiskWorkspaceService();
+    const diskWorkspace = makeDiskBackedWorkspace();
     const downloader = new WasmDownloader(diskWorkspace, storageUri);
-    const parser = new CodeParser(downloader, "python");
+    const parser = new CodeParser(downloader, "python", diskWorkspace);
 
     await downloader.retrieveWasmFile(wasmCdnBase, "python");
 
@@ -359,9 +347,9 @@ suite("CodeParser (unit, integration with wasm)", () => {
 
   test("C#: verbatim captured, interpolated ignored", async function () {
     this.timeout(30_000);
-    const diskWorkspace = new DiskWorkspaceService();
+    const diskWorkspace = makeDiskBackedWorkspace();
     const downloader = new WasmDownloader(diskWorkspace, storageUri);
-    const parser = new CodeParser(downloader, "csharp");
+    const parser = new CodeParser(downloader, "csharp", diskWorkspace);
 
     await downloader.retrieveWasmFile(wasmCdnBase, "csharp");
 
@@ -389,9 +377,9 @@ suite("CodeParser (unit, integration with wasm)", () => {
 
   test("Java: concatenation ignored, simple/member calls captured", async function () {
     this.timeout(30_000);
-    const diskWorkspace = new DiskWorkspaceService();
+    const diskWorkspace = makeDiskBackedWorkspace();
     const downloader = new WasmDownloader(diskWorkspace, storageUri);
-    const parser = new CodeParser(downloader, "java");
+    const parser = new CodeParser(downloader, "java", diskWorkspace);
 
     await downloader.retrieveWasmFile(wasmCdnBase, "java");
 
