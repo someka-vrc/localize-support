@@ -4,6 +4,6 @@ All notable changes to the "localize-support" extension will be documented in th
 
 Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
-## [Unreleased]
+## [0.0.1] - 2026-02-15
 
 - Initial release
