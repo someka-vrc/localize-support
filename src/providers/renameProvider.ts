@@ -9,7 +9,7 @@ import { MyPosition, MyLocation } from "../models/vscTypes";
  * - `prepareRename` でカーソル位置のキー範囲を特定し、`provideRenameEdits` でコード内リテラルと `.po` の両方を安全に置換する（引用符の保持・PO のエスケープを実施）。
  * - リネーム可能性は `L10nService.canRenameKey` で検査し、競合があれば例外を投げる。
  */
-export class L10nRenameProvider implements vscode.RenameProvider {
+export class RenameProvider implements vscode.RenameProvider {
   constructor(private svc: L10nService) {}
 
   private async openDoc(uri: vscode.Uri) {
