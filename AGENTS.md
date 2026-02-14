@@ -16,7 +16,7 @@
 ### フォルダ構成
 
 - `src/models/` - データモデル関連のコード
-- `src/services/` - ビジネスロジックとデータ操作
+- `src/services/` - ビジネスロジックとデータ操作。 `src\services\l10nService.ts` がコアのサービスです。
 - `src/providers/` - VSCode API のプロバイダ
 - `src/test/unit` - vscode インスタンスを必要としない、vscode モジュールを使うとしてもモックで対応可能な軽量な単体テスト
 - `src/test/vscode` - vscode インスタンスを必要とするテスト、統合テスト
