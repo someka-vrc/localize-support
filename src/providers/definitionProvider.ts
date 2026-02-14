@@ -2,8 +2,12 @@ import * as vscode from "vscode";
 import { L10nService } from "../services/l10nService";
 import { MyPosition } from "../models/vscTypes";
 
+/**
+ * ローカライズキーの定義（Go to Definition / Peek definition）を提供するプロバイダ。
+ * `L10nService` から定義位置を取得して VS Code に返す。
+ */
 export class DefinitionProvider implements vscode.DefinitionProvider {
-  constructor(private l10nService: L10nService) {}
+  constructor(private l10nService: L10nService) {} 
 
   public provideDefinition(
     document: vscode.TextDocument,

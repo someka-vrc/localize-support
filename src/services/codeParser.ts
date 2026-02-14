@@ -4,11 +4,10 @@ import { CodeLanguage, L10nCode } from "../models/l10nTypes";
 import { WasmDownloader } from "./wasmDownloader";
 import { vscTypeHelper, IWorkspaceWrapper, LogOutputChannel } from "../models/vscTypes";
 
+
 /**
- * Lightweight code parser using tree-sitter.
- * - Parser.init() is performed once per process.
- * - Loaded Languages are cached by (language).
- * - Returns only string literal keys (supports plain strings and simple template strings).
+ * ソースコードを Tree-sitter で解析し、ローカライズ関数呼び出しからキーと位置（L10nCode）を抽出する。
+ * 内部で `WasmDownloader` と `IWorkspaceWrapper`、`LogOutputChannel` を利用して言語バイナリの取得とファイル読み取りを行う。
  */
 export class CodeParser {
   // initialize Parser once for the lifetime of the process

@@ -13,6 +13,10 @@ type RebuildQueueItem = {
   text?: string;
 };
 
+/**
+ * ローカライズファイル（翻訳ファイル）を監視・解析してパース結果をキャッシュするマネージャ。
+ * 変更検知でキャッシュを再構築し、再構築イベントを発行する。
+ */
 export class TranslationManager implements Disposable {
   private readonly disposables: { [key: string]: Disposable[] } = {};
   /**

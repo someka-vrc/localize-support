@@ -2,8 +2,12 @@ import * as vscode from "vscode";
 import { L10nService } from "../services/l10nService";
 import { MyPosition } from "../models/vscTypes";
 
+/**
+ * VS Code の「参照の検索 (Find References)」機能に対応するプロバイダ。
+ * `L10nService` から参照情報を取得して VS Code の `Location[]` に変換して返す。
+ */
 export class ReferenceProvider implements vscode.ReferenceProvider {
-  constructor(private l10nService: L10nService) {}
+  constructor(private l10nService: L10nService) {} 
 
   public provideReferences(
     document: vscode.TextDocument,

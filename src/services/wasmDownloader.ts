@@ -26,6 +26,11 @@ export type WasmProgress = { downloaded: number; total: number; status: WasmDown
 /** web-tree-sitter 言語別プレビルトバイナリのバージョン */
 const WASM_LANGUAGE_VERSION = "0.1.13";
 
+/**
+ * web-tree-sitter 用の WASM 言語バイナリをローカルにダウンロード・キャッシュし、
+ * 進捗通知と取得 API (`retrieveWasmFile`) を提供する。
+ * `IWorkspaceWrapper` と `LogOutputChannel` を利用してファイル操作とログ出力を行う。
+ */
 export class WasmDownloader implements Disposable {
   private disposed = false;
   private readonly clsController = new AbortController();

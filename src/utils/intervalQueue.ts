@@ -97,6 +97,10 @@ export class IntervalQueue<T> implements Disposable {
   }
 }
 
+/**
+ * IntervalQueue の整理（オーガナイズ）戦略を提供するユーティリティクラス。
+ * `lastOnly` や `skipDuplicatesByKey` のような組み込み戦略を公開する。
+ */
 export class OrganizeStrategies {
   /** 最後のアイテムのみを処理する戦略 */
   static lastOnly<T>(items: SkippableItem<T>[]): SkippableItem<T>[] {

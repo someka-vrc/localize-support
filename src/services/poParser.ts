@@ -4,6 +4,10 @@ import { TranslationParser, TranslationParseResult } from "./translationParser";
 import { L10nLangEntries } from "../models/l10nTypes";
 import * as path from "path";
 
+/**
+ * GNU gettext の .po ファイルを解析して `TranslationParseResult`（エントリと診断）を生成するパーサ実装。
+ * `TranslationParser` インターフェースを実装する。
+ */
 export class PoParser implements TranslationParser {
   constructor() {}
 

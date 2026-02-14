@@ -7,6 +7,10 @@ import { CodeManager } from "./codeManager";
 import { TranslationParseResult } from "./translationParser";
 import { IntervalQueue, OrganizeStrategies } from "../utils/intervalQueue";
 
+/**
+ * 単一の L10n ターゲット設定を管理するファサードクラス。
+ * `TranslationManager` と `CodeManager` を組み合わせ、翻訳とコードの突合せ診断を提供する。
+ */
 export class L10nTargetManager implements Disposable {
   private readonly disposables: Disposable[] = [];
   private readonly l10nTranslationManager: TranslationManager;

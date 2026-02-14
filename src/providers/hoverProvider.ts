@@ -1,8 +1,12 @@
 import * as vscode from "vscode";
 import { L10nService } from "../services/l10nService";
 
+/**
+ * ローカライズキーの上にマウスを置いたとき翻訳プレビューを表示する HoverProvider。
+ * `L10nService` から翻訳エントリを取得し、Markdown でレンダリングする。
+ */
 export class HoverProvider implements vscode.HoverProvider {
-  constructor(private l10nService: L10nService) {}
+  constructor(private l10nService: L10nService) {} 
 
   provideHover(document: vscode.TextDocument, position: vscode.Position): vscode.ProviderResult<vscode.Hover> {
     const myPos = { line: position.line, character: position.character } as any;

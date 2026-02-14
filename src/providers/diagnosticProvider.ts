@@ -2,9 +2,13 @@ import * as vscode from "vscode";
 import { Disposable, MyDiagnostic, IVSCodeWrapper } from "../models/vscTypes";
 import { L10nService } from "../services/l10nService";
 
+/**
+ * `L10nService` の診断情報を受け取り、VS Code の `DiagnosticCollection` に同期するプロバイダ。
+ * 拡張の起動時と L10nService の再読み込み時にコレクションを更新する。
+ */
 export class DiagnosticProvider implements Disposable {
   private collection: vscode.DiagnosticCollection;
-  private disposables: Disposable[] = [];
+  private disposables: Disposable[] = []; 
 
   constructor(
     public name: string,

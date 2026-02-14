@@ -14,6 +14,11 @@ type RebuildQueueItem = {
   text?: string;
 };
 // file-extension mapping moved to `CodeLanguageFileExtMap` in `src/models/l10nTypes.ts`
+
+/**
+ * ソースコードを監視してローカライズ関数呼び出しを抽出・キャッシュするマネージャ。
+ * 各ファイルは `CodeParser` を使って解析され、結果は `codes` マップに保持される。
+ */
 export class CodeManager implements Disposable {
   private readonly disposables: Disposable[] = [];
   private readonly rebuiltEmitter = new EventEmitter();

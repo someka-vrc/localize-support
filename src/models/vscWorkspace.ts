@@ -33,6 +33,10 @@ function toVscRange(range: MyRange): vscode.Range {
   return new vscode.Range(range.start.line, range.start.character, range.end.line, range.end.character);
 }
 
+/**
+ * `vscode.workspace.fs` をラップした実装。
+ * `URI` を受け取りファイル読み書き・ディレクトリ検証などをテスト可能なインターフェースで提供する。
+ */
 export class FileSystemWrapper implements IFileSystemWrapper {
   async readFile(uri: URI): Promise<Uint8Array> {
     return vscode.workspace.fs.readFile(toVscUri(uri));
@@ -59,6 +63,10 @@ export class FileSystemWrapper implements IFileSystemWrapper {
   }
 }
 
+/**
+ * `vscode.workspace` の機能をラップするクラス。
+ * `findFiles` / `getConfiguration` / イベント購読などをテストフレンドリーな形で提供する。
+ */
 export class WorkspaceWrapper implements IWorkspaceWrapper {
   fs: IFileSystemWrapper;
   constructor() {
@@ -98,13 +106,19 @@ export class WorkspaceWrapper implements IWorkspaceWrapper {
   }
 }
 
+/**
+ * `vscode.commands` をラップしてコマンド登録を提供するシンプルラッパー。
+ */
 export class CommandWrapper implements ICommandWrapper {
   registerCommand(command: string, callback: (...args: any[]) => any): Disposable {
     return vscode.commands.registerCommand(command, callback);
   }
-}
+} 
 
 
+/**
+ * `vscode.window` をラップするクラス。`showTextDocument` と出力チャンネル（logger）を提供する。
+ */
 export class WindowWrapper implements IWindowWrapper {
   async showTextDocument(uri: URI, options?: { selection?: MyRange }): Promise<void> {
     const vscOptions: vscode.TextDocumentShowOptions = {};
@@ -122,12 +136,19 @@ export class WindowWrapper implements IWindowWrapper {
   }
 }
 
+/**
+ * `vscode.languages` の必要最小限 API (`createDiagnosticCollection`) をラップする実装。
+ */
 export class LanguagesWrapper implements ILanguagesWrapper {
   createDiagnosticCollection(name: string): DiagnosticCollection {
     return vscode.languages.createDiagnosticCollection(name);
   }
-}
+} 
 
+/**
+ * 拡張内で使用する `vscode` ラッパーの集約実装。
+ * テスト可能性のため `vscode` への直接参照を避け、必要なラッパーインスタンスを提供する。
+ */
 export class VSCoderWrapper implements IVSCodeWrapper {
   workspace: IWorkspaceWrapper;
   command: ICommandWrapper;
