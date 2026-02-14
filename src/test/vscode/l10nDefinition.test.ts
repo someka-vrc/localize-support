@@ -202,9 +202,6 @@ suite("L10n Definition/Reference (integration)", () => {
       newKey,
     );
 
-    // debug dump to help diagnose flaky returns
-    console.log("[TEST DEBUG] rename provider returned:", edit);
-
     assert.ok(edit, "rename provider must return a WorkspaceEdit-like object");
 
     // normalize returned edit into a flat array of TextEdits so tests are robust

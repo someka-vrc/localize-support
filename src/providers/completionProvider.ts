@@ -59,7 +59,7 @@ export class CompletionProvider implements vscode.CompletionItemProvider {
 
     // fuzzy subsequence scoring: returns -Infinity for no match, higher is better
     const fuzzyScore = (pat: string, str: string): number => {
-      if (!pat) return 1000; // empty pattern — highest score
+      if (!pat) {return 1000;} // empty pattern — highest score
       pat = pat.toLowerCase();
       str = str.toLowerCase();
       let pi = 0;
@@ -69,13 +69,13 @@ export class CompletionProvider implements vscode.CompletionItemProvider {
       let firstMatch = -1;
       while (pi < pat.length && si < str.length) {
         if (pat[pi] === str[si]) {
-          if (firstMatch === -1) firstMatch = si;
+          if (firstMatch === -1) {firstMatch = si;}
           // base match bonus
           score += 100;
           // consecutive bonus
-          if (consec > 0) score += 30 * consec;
+          if (consec > 0) {score += 30 * consec;}
           // prefix bonus
-          if (si === 0) score += 50;
+          if (si === 0) {score += 50;}
           consec += 1;
           pi += 1;
           si += 1;
@@ -84,7 +84,7 @@ export class CompletionProvider implements vscode.CompletionItemProvider {
           si += 1;
         }
       }
-      if (pi < pat.length) return -Infinity; // not a subsequence
+      if (pi < pat.length) {return -Infinity;} // not a subsequence
       // penalize late first match and long candidate length
       const gapPenalty = firstMatch >= 0 ? firstMatch : 0;
       const lengthPenalty = Math.max(0, str.length - pat.length);
@@ -94,10 +94,10 @@ export class CompletionProvider implements vscode.CompletionItemProvider {
     const scored: { key: string; score: number }[] = [];
     for (const k of allKeys) {
       const s = fuzzyScore(lower, k);
-      if (s !== -Infinity) scored.push({ key: k, score: s });
+      if (s !== -Infinity) {scored.push({ key: k, score: s });}
     }
 
-    if (scored.length === 0) return null;
+    if (scored.length === 0) {return null;}
 
     // sort by score desc, then label asc
     scored.sort((a, b) => (b.score - a.score) || a.key.localeCompare(b.key));
