@@ -407,6 +407,33 @@ export class L10nService implements Disposable {
     return result as MyLocation[];
   }
 
+  // New: collect rename targets for a key located at the given location
+  public collectLocationsForKeyAt(uri: URI, position: MyPosition):
+    | { key: string; codeLocations: MyLocation[]; translationLocations: MyLocation[] }
+    | null {
+    const key = this.getKeyAtPosition(uri, position);
+    if (!key) {
+      return null;
+    }
+    return {
+      key,
+      codeLocations: this.findCodeReferencesForKey(key),
+      translationLocations: this.findTranslationLocationsForKey(key),
+    };
+  }
+
+  // New: check whether renaming `oldKey` to `newKey` is allowed (no translation collisions)
+  public canRenameKey(oldKey: string, newKey: string): { ok: boolean; conflicts: MyLocation[] } {
+    if (!oldKey || !newKey) {
+      return { ok: false, conflicts: [] };
+    }
+    if (oldKey === newKey) {
+      return { ok: true, conflicts: [] };
+    }
+    const conflicts = this.findTranslationLocationsForKey(newKey) || [];
+    return { ok: conflicts.length === 0, conflicts };
+  }
+
   public findDefinition(uri: URI, position: MyPosition): MyLocation[] {
     const key = this.getKeyAtPosition(uri, position);
     if (!key) {

@@ -7,19 +7,13 @@ import { DiagnosticProvider } from "./providers/diagnosticProvider";
 import { DefinitionProvider } from "./providers/definitionProvider";
 import { ReferenceProvider } from "./providers/referenceProvider";
 import { CodeLanguages, CodeLanguageFileExtMap } from "./models/l10nTypes";
+import { registerOpenLocationCommand } from "./commands/openLocationCommand";
+import { HoverProvider } from "./providers/hoverProvider";
+import { L10nRenameProvider } from "./providers/renameProvider";
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export async function activate(context: vscode.ExtensionContext) {
-  // Use the console to output diagnostic information (console.log) and errors (console.error)
-
-
-  // --- existing example command -------------------------------------------------
-  context.subscriptions.push(
-    vscode.commands.registerCommand("localize-support.helloWorld", () => {
-      vscode.window.showInformationMessage("Hello World from localize-support!");
-    }),
-  );
 
   // --- L10nService -----------------------------------
   const vscodeWrapper = new VSCoderWrapper();
@@ -28,15 +22,11 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(l10nService);
   await l10nService.init().catch((e) => logger.error(e));
 
-  const diagnosticsProvider = new DiagnosticProvider("localize-support", l10nService, vscodeWrapper);
-  context.subscriptions.push(diagnosticsProvider);
-
-  // --- Definition & Reference providers (Go to / Peek / Find References) -----
   const filePatterns = CodeLanguages.map((l) => CodeLanguageFileExtMap.get(l))
     .filter((e): e is string => !!e)
     .map((ext) => ({ scheme: "file", pattern: `**/*.${ext}` }));
 
-  const docSelectors: vscode.DocumentSelector = [
+    const docSelectors: vscode.DocumentSelector = [
     // prefer language identifiers when available
     ...CodeLanguages.map((l): vscode.DocumentFilter => ({ language: l })),
     // also match common file extensions so features work in test environments
@@ -44,20 +34,12 @@ export async function activate(context: vscode.ExtensionContext) {
     { scheme: "file", pattern: "**/*.po" },
   ];
 
-  const defProvider = new DefinitionProvider(l10nService);
-  const refProvider = new ReferenceProvider(l10nService);
+  context.subscriptions.push(vscode.languages.registerDefinitionProvider(docSelectors, new DefinitionProvider(l10nService)));
+  context.subscriptions.push(vscode.languages.registerReferenceProvider(docSelectors, new ReferenceProvider(l10nService)));
+  context.subscriptions.push(vscode.languages.registerRenameProvider(docSelectors, new L10nRenameProvider(l10nService)));
 
-  context.subscriptions.push(vscode.languages.registerDefinitionProvider(docSelectors, defProvider));
-  context.subscriptions.push(vscode.languages.registerReferenceProvider(docSelectors, refProvider));
-
-  // openLocation コマンドを別ファイルに分離して登録
-  const { registerOpenLocationCommand } = await import("./commands/openLocationCommand.js");
   context.subscriptions.push(registerOpenLocationCommand(vscodeWrapper.command, vscodeWrapper.window.logger, vscodeWrapper.window));
-
-  // HoverProvider を別ファイルに分離して登録
-  const { HoverProvider } = await import("./providers/hoverProvider.js");
   context.subscriptions.push(vscode.languages.registerHoverProvider(docSelectors, new HoverProvider(l10nService)));
-
 
   logger.info("localize-support activated");
 }

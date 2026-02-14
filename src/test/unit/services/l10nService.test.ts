@@ -208,6 +208,55 @@ suite("L10nService (unit)", () => {
     assert.strictEqual(foundRefs[0].uri.path, codeUri.path);
   });
 
+  test("collectLocationsForKeyAt / canRenameKey behaviour (unit)", () => {
+    const target = {
+      codeLanguages: ["javascript"],
+      codeDirs: [URI.file("d:/proj/src")],
+      l10nFormat: "po",
+      l10nDirs: [URI.file("d:/proj/locales")],
+      l10nExtension: ".po",
+      l10nFuncNames: ["t"],
+      settingsLocation: URI.file("d:/proj"),
+    } as any;
+
+    const mgr = new L10nTargetManager(workspace as any, new MockLogOutputChannel(), target, 1);
+
+    const codeUri = URI.file("d:/proj/src/foo.js");
+    const codeLoc = vscTypeHelper.newLocation(codeUri, vscTypeHelper.newRange(0, 0, 0, 10));
+    mgr.codes.set(codeUri.path, [ { key: "greet", location: codeLoc } ] as any);
+
+    const en = URI.file("d:/proj/locales/en.po");
+    const entryLoc = vscTypeHelper.newLocation(en, vscTypeHelper.newRange(1, 0, 1, 5));
+    mgr.l10ns.set(en.path, {
+      success: true,
+      diagnostics: [],
+      entries: { en: { greet: { translation: "hi", location: entryLoc }, existing: { translation: "x", location: entryLoc } } },
+    } as any);
+
+    (svc as any).managers.set("/path/to/setting", [{ manager: mgr, listenerDisposable: { dispose: () => {} } }]);
+
+    // collect from code position
+    const collectedFromCode = svc.collectLocationsForKeyAt(codeUri, { line: 0, character: 1 } as any);
+    assert.ok(collectedFromCode);
+    assert.strictEqual(collectedFromCode!.key, 'greet');
+    assert.strictEqual(collectedFromCode!.codeLocations.length, 1);
+    assert.strictEqual(collectedFromCode!.translationLocations.length, 1);
+
+    // canRenameKey: renaming to a new unused key is allowed
+    const ok1 = svc.canRenameKey('greet', 'newKey');
+    assert.strictEqual(ok1.ok, true);
+    assert.strictEqual(ok1.conflicts.length, 0);
+
+    // renaming to an existing translation key should be blocked
+    const ok2 = svc.canRenameKey('greet', 'existing');
+    assert.strictEqual(ok2.ok, false);
+    assert.ok(ok2.conflicts.length > 0);
+
+    // renaming to same key is a no-op and allowed
+    const ok3 = svc.canRenameKey('greet', 'greet');
+    assert.strictEqual(ok3.ok, true);
+  });
+
   test("init() registers watchers and calls reload for found settings", async () => {
     const settingUri = URI.file("/ws/localize-support.json");
     sinon.stub(workspace, "findFiles").resolves([settingUri]);
