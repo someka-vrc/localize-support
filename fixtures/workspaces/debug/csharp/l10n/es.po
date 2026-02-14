@@ -21,7 +21,7 @@ msgid "Cancel"
 msgstr "Cancelar"
 
 # 不正エントリ
-msgid "unused key"
+msgid "Unused key"
 msgstr "clave no utilizada"
 
 msgid "Duplicate key"
