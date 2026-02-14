@@ -23,10 +23,10 @@ async function copyWorkspaceIfExists(subPath) {
 const configs = (await fs.readdir("./src/test/vscode", { recursive: true }))
   .filter((f) => f.endsWith(".test.ts"))
   .map(async (f) => {
-    const launchArgs = ["--trace-deprecation"];
     const subPath = f.substring(0, f.length - 8);
     const files = path.join(process.cwd(), "out/test/vscode", `${subPath}.test.js`);
     let destDir = await copyWorkspaceIfExists(subPath);
+    const launchArgs = [];
     if (destDir) {
       launchArgs.push(destDir);
     }
