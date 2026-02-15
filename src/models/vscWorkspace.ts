@@ -119,7 +119,7 @@ export class CommandWrapper implements ICommandWrapper {
 /**
  * `vscode.window` をラップするクラス。`showTextDocument` と出力チャンネル（logger）を提供する。
  */
-export class WindowWrapper implements IWindowWrapper {
+export class WindowWrapper implements IWindowWrapper, Disposable {
   async showTextDocument(uri: URI, options?: { selection?: MyRange }): Promise<void> {
     const vscOptions: vscode.TextDocumentShowOptions = {};
     if (options?.selection) {
@@ -133,6 +133,16 @@ export class WindowWrapper implements IWindowWrapper {
       this._outputChannel = vscode.window.createOutputChannel("localize-support", { log: true });
     }
     return this._outputChannel;
+  }
+  dispose(): void {
+    if (this._outputChannel) {
+      try {
+        this._outputChannel.dispose();
+      } catch (err) {
+        // ignore
+      }
+      this._outputChannel = null;
+    }
   }
 }
 
@@ -149,7 +159,7 @@ export class LanguagesWrapper implements ILanguagesWrapper {
  * 拡張内で使用する `vscode` ラッパーの集約実装。
  * テスト可能性のため `vscode` への直接参照を避け、必要なラッパーインスタンスを提供する。
  */
-export class VSCoderWrapper implements IVSCodeWrapper {
+export class VSCoderWrapper implements IVSCodeWrapper, Disposable {
   workspace: IWorkspaceWrapper;
   command: ICommandWrapper;
   languages: ILanguagesWrapper;
@@ -159,5 +169,12 @@ export class VSCoderWrapper implements IVSCodeWrapper {
     this.command = new CommandWrapper();
     this.window = new WindowWrapper();
     this.languages = new LanguagesWrapper();
+  }
+  dispose(): void {
+    try {
+      (this.window as WindowWrapper).dispose();
+    } catch (err) {
+      // ignore
+    }
   }
 }

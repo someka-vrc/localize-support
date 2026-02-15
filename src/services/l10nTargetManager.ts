@@ -196,5 +196,10 @@ export class L10nTargetManager implements Disposable {
         disposable.dispose();
       }
     }
+    try {
+      this.rebuiltEmitter.removeAllListeners();
+    } catch (err) {
+      this.logger.warn("L10nTargetManager.dispose: removeAllListeners failed", err);
+    }
   }
 }

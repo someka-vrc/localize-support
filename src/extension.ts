@@ -18,6 +18,8 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // --- L10nService -----------------------------------
   const vscodeWrapper = new VSCoderWrapper();
+  // ensure wrapper is disposed when extension deactivates
+  context.subscriptions.push(vscodeWrapper);
   const logger = vscodeWrapper.window.logger;
   const l10nService = new L10nService(vscodeWrapper.workspace, logger);
   context.subscriptions.push(l10nService);
@@ -47,4 +49,7 @@ export async function activate(context: vscode.ExtensionContext) {
 }
 
 // This method is called when your extension is deactivated
-export function deactivate() {}
+export function deactivate() {
+  // All disposables registered on `context.subscriptions` are disposed by VS Code.
+  // No manual cleanup required here.
+}
