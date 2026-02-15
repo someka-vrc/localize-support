@@ -11,7 +11,7 @@
 
 - テスタビリティを意識して、責任分離・関心事の分離を適切に行うこと。
 - 原則として require を使用しないこと
-- テスタビリティのため、 `vscode` モジュールを直接使用しないこと。 `VSCodeWorkspaceService` を注入して使用すること。（必要な機能が `VSCodeWorkspaceService` にない場合は追加実装してください）
+- テスタビリティのため、 `src/providers/` と `src/extension.ts` 以外で `vscode` モジュールを直接使用しないこと。 `VSCodeWorkspaceService` を注入して使用すること。（必要な機能が `VSCodeWorkspaceService` にない場合は追加実装してください）
 
 ### フォルダ構成
 
