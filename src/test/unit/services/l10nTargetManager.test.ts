@@ -22,7 +22,7 @@ suite("L10nTargetManager diagnostics (unit)", () => {
   });
 
   test("undefined key used in code -> warning on code URI", () => {
-    const mgr = new L10nTargetManager(workspace, new MockLogOutputChannel(), baseTarget, 1);
+    const mgr = new L10nTargetManager(workspace, new MockLogOutputChannel(), baseTarget, URI.file("d:/proj/.globalStorage"), 1);
     const codeUri = URI.file("d:/proj/src/foo.js");
 
     // simulate code uses key 'missing.key'
@@ -40,7 +40,7 @@ suite("L10nTargetManager diagnostics (unit)", () => {
   });
 
   test("unused translation entry -> information on l10n URI", () => {
-    const mgr = new L10nTargetManager(workspace, new MockLogOutputChannel(), baseTarget, 1);
+    const mgr = new L10nTargetManager(workspace, new MockLogOutputChannel(), baseTarget, URI.file("d:/proj/.globalStorage"), 1);
     const luri = URI.file("d:/proj/locales/ja.po");
 
     // simulate translation file with key 'unused.key'
@@ -64,7 +64,7 @@ suite("L10nTargetManager diagnostics (unit)", () => {
   });
 
   test("missing translation in other language -> warning on that language file", () => {
-    const mgr = new L10nTargetManager(workspace, new MockLogOutputChannel(), baseTarget, 1);
+    const mgr = new L10nTargetManager(workspace, new MockLogOutputChannel(), baseTarget, URI.file("d:/proj/.globalStorage"), 1);
     const en = URI.file("d:/proj/locales/en.po");
     const ja = URI.file("d:/proj/locales/ja.po");
 
@@ -101,7 +101,7 @@ suite("L10nTargetManager diagnostics (unit)", () => {
   });
 
   test("integration: code uses key present in one lang -> no undefined; missing lang diagnostic emitted", () => {
-    const mgr = new L10nTargetManager(workspace, new MockLogOutputChannel(), baseTarget, 1);
+    const mgr = new L10nTargetManager(workspace, new MockLogOutputChannel(), baseTarget, URI.file("d:/proj/.globalStorage"), 1);
     const codeUri = URI.file("d:/proj/src/app.js");
     const en = URI.file("d:/proj/locales/en.po");
     const ja = URI.file("d:/proj/locales/ja.po");

@@ -21,7 +21,7 @@ export async function activate(context: vscode.ExtensionContext) {
   // ensure wrapper is disposed when extension deactivates
   context.subscriptions.push(vscodeWrapper);
   const logger = vscodeWrapper.window.logger;
-  const l10nService = new L10nService(vscodeWrapper.workspace, logger);
+  const l10nService = new L10nService(vscodeWrapper.workspace, logger, context.globalStorageUri);
   context.subscriptions.push(l10nService);
   await l10nService.init().catch((e) => logger.error(e));
 

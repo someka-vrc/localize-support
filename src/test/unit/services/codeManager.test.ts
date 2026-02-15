@@ -63,7 +63,7 @@ suite("CodeManager (unit)", () => {
       settingsLocation: URI.file("d:/proj"),
     };
 
-    const mgr = new CodeManager(workspace, new MockLogOutputChannel(), target, 10);
+    const mgr = new CodeManager(workspace, new MockLogOutputChannel(), target, URI.file("d:/proj/.globalStorage"), 10);
 
     let rebuilt = false;
     const sub = mgr.onRebuilt(() => (rebuilt = true));
@@ -143,7 +143,7 @@ suite("CodeManager (unit)", () => {
       settingsLocation: URI.file("d:/proj"),
     };
 
-    const mgr = new CodeManager(workspace, new MockLogOutputChannel(), target, 10);
+    const mgr = new CodeManager(workspace, new MockLogOutputChannel(), target, URI.file("d:/proj/.globalStorage"), 10);
 
     let rebuildCount = 0;
     const sub = mgr.onRebuilt(() => rebuildCount++);

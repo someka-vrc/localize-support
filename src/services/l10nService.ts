@@ -37,6 +37,7 @@ export class L10nService implements Disposable {
   constructor(
     private workspace: IWorkspaceWrapper,
     private logger: LogOutputChannel,
+    private globalStorageUri: URI,
     reloadIntervalMs: number = 500,
   ) {
     this.reloadIntervalQueue = new IntervalQueue<L10nService>(
@@ -170,7 +171,7 @@ export class L10nService implements Disposable {
     // 新しいマネージャーを作成、登録
     const managers = await Promise.all(
       targets.map(async (t) => {
-        const manager = new L10nTargetManager(this.workspace, this.logger, t);
+        const manager = new L10nTargetManager(this.workspace, this.logger, t, this.globalStorageUri);
         try {
           await manager.init();
         } catch (error) {

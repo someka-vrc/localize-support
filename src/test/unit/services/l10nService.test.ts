@@ -12,7 +12,7 @@ suite("L10nService (unit)", () => {
 
   setup(() => {
     workspace = new MockWorkspaceWrapper();
-    svc = new L10nService(workspace as any, new MockLogOutputChannel(), 10);
+    svc = new L10nService(workspace as any, new MockLogOutputChannel(), URI.file("d:/globalStorage"), 10);
   });
 
   teardown(() => {
@@ -91,7 +91,7 @@ suite("L10nService (unit)", () => {
       settingsLocation: URI.file("d:/proj"),
     } as any;
 
-    const mgr = new L10nTargetManager(workspace as any, new MockLogOutputChannel(), target, 1);
+    const mgr = new L10nTargetManager(workspace as any, new MockLogOutputChannel(), target, URI.file("d:/proj/.globalStorage"), 1);
 
     const codeUri = URI.file("d:/proj/src/foo.js");
     mgr.codes.set(codeUri.path, [
@@ -117,7 +117,7 @@ suite("L10nService (unit)", () => {
       settingsLocation: URI.file("d:/proj"),
     } as any;
 
-    const mgr = new L10nTargetManager(workspace as any, new MockLogOutputChannel(), target, 1);
+    const mgr = new L10nTargetManager(workspace as any, new MockLogOutputChannel(), target, URI.file("d:/proj/.globalStorage"), 1);
 
     const codeUri = URI.file("d:/proj/src/app.js");
     const codeRange = vscTypeHelper.newRange(3, 2, 3, 20);
@@ -165,7 +165,7 @@ suite("L10nService (unit)", () => {
       settingsLocation: URI.file("d:/proj"),
     } as any;
 
-    const mgr = new L10nTargetManager(workspace as any, new MockLogOutputChannel(), target, 1);
+    const mgr = new L10nTargetManager(workspace as any, new MockLogOutputChannel(), target, URI.file("d:/proj/.globalStorage"), 1);
 
     const codeUri = URI.file("d:/proj/src/foo.js");
     const codeLoc = vscTypeHelper.newLocation(codeUri, vscTypeHelper.newRange(0, 0, 0, 10));
@@ -219,7 +219,7 @@ suite("L10nService (unit)", () => {
       settingsLocation: URI.file("d:/proj"),
     } as any;
 
-    const mgr = new L10nTargetManager(workspace as any, new MockLogOutputChannel(), target, 1);
+    const mgr = new L10nTargetManager(workspace as any, new MockLogOutputChannel(), target, URI.file("d:/proj/.globalStorage"), 1);
 
     const codeUri = URI.file("d:/proj/src/foo.js");
     mgr.codes.set(codeUri.path, [ { key: "code.one", location: vscTypeHelper.newLocation(codeUri, vscTypeHelper.newRange(0,0,0,1)) }, { key: "shared", location: vscTypeHelper.newLocation(codeUri, vscTypeHelper.newRange(1,0,1,1)) } ] as any);
@@ -263,8 +263,8 @@ suite("L10nService (unit)", () => {
       settingsLocation: URI.file("d:/q"),
     } as any;
 
-    const m1 = new L10nTargetManager(workspace as any, new MockLogOutputChannel(), t1 as any, 1);
-    const m2 = new L10nTargetManager(workspace as any, new MockLogOutputChannel(), t2 as any, 1);
+    const m1 = new L10nTargetManager(workspace as any, new MockLogOutputChannel(), t1 as any, URI.file("d:/proj/.globalStorage"), 1);
+    const m2 = new L10nTargetManager(workspace as any, new MockLogOutputChannel(), t2 as any, URI.file("d:/proj/.globalStorage"), 1);
 
     (svc as any).managers.set("/s1", [{ manager: m1 as any, listenerDisposable: { dispose: () => {} } }]);
     (svc as any).managers.set("/s2", [{ manager: m2 as any, listenerDisposable: { dispose: () => {} } }]);
@@ -286,7 +286,7 @@ suite("L10nService (unit)", () => {
       settingsLocation: URI.file("d:/proj"),
     } as any;
 
-    const mgr = new L10nTargetManager(workspace as any, new MockLogOutputChannel(), target, 1);
+    const mgr = new L10nTargetManager(workspace as any, new MockLogOutputChannel(), target, URI.file("d:/proj/.globalStorage"), 1);
 
     const codeUri = URI.file("d:/proj/src/foo.js");
     const codeLoc = vscTypeHelper.newLocation(codeUri, vscTypeHelper.newRange(0, 0, 0, 10));

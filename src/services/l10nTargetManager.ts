@@ -142,12 +142,13 @@ export class L10nTargetManager implements Disposable {
     private workspace: IWorkspaceWrapper,
     private logger: LogOutputChannel,
     public target: L10nTarget,
+    private globalStorageUri: URI,
     reloadIntervalMs: number = 500,
   ) {
     this.l10nTranslationManager = new TranslationManager(this.workspace, this.logger, this.target);
     const transDisposable = this.l10nTranslationManager.onRebuilt(() => this.reloadIntervalQueue.push("translation"));
     this.disposables.push(this.l10nTranslationManager, transDisposable);
-    this.codeManager = new CodeManager(this.workspace, this.logger, this.target);
+    this.codeManager = new CodeManager(this.workspace, this.logger, this.target, this.globalStorageUri);
     const codeDisposable = this.codeManager.onRebuilt(() => this.reloadIntervalQueue.push("code"));
     this.disposables.push(this.codeManager, codeDisposable);
 
