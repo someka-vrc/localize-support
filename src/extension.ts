@@ -42,6 +42,10 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(vscode.languages.registerRenameProvider(docSelectors, new RenameProvider(l10nService)));
   context.subscriptions.push(vscode.languages.registerCompletionItemProvider(docSelectors, new CompletionProvider(l10nService), "'", '"', "`"));
 
+  const diagnosticProvider = new DiagnosticProvider("localize-support", l10nService, vscodeWrapper);
+  context.subscriptions.push(diagnosticProvider);
+  l10nService.onReloaded(() => diagnosticProvider.updateDiagnostics(l10nService.getDiagnostics().diags).catch((e) => logger.error(e)));
+
   context.subscriptions.push(registerOpenLocationCommand(vscodeWrapper.command, vscodeWrapper.window.logger, vscodeWrapper.window));
   context.subscriptions.push(vscode.languages.registerHoverProvider(docSelectors, new HoverProvider(l10nService)));
 
