@@ -1,6 +1,6 @@
 import EventEmitter from "events";
 import { L10nTarget } from "../models/l10nTypes";
-import { IWorkspaceWrapper, LogOutputChannel, Disposable, MyDiagnostic, MyDiagnosticSeverity, vscTypeHelper } from "../models/vscTypes";
+import { IWorkspaceWrapper, LogOutputChannel, Disposable, MyDiagnostic, MyDiagnosticSeverity, vscTypeHelper } from "../models/vscodeTypes";
 import { URI } from "vscode-uri";
 import { TranslationManager } from "./translationManager";
 import { CodeManager } from "./codeManager";

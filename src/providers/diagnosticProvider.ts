@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { Disposable, MyDiagnostic, IVSCodeWrapper } from "../models/vscTypes";
+import { Disposable, MyDiagnostic, IVSCodeWrapper } from "../models/vscodeTypes";
 import { L10nService } from "../services/l10nService";
 
 /**

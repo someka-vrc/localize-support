@@ -1,7 +1,7 @@
 import * as assert from "assert";
 import sinon from "sinon";
 import { openLocationHandler } from "../../../commands/openLocationCommand";
-import { MockIWindowWrapper } from "../mocks/mockWorkspaceService";
+import { MockIWindowWrapper } from "../mocks/mockVscodeWrapper";
 
 suite("openLocationCommand (unit)", () => {
   let win: MockIWindowWrapper;

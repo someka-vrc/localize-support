@@ -15,8 +15,8 @@ import {
   IFileSystemWrapper,
   LogLevel,
   LogOutputChannel,
-} from "../../../models/vscTypes";
-import { Event as vtEvent } from "../../../models/vscTypes";
+} from "../../../models/vscodeTypes";
+import { Event as vtEvent } from "../../../models/vscodeTypes";
 import { URI } from "vscode-uri";
 
 export class MockFileSystemWrapper implements IFileSystemWrapper {

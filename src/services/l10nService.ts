@@ -7,7 +7,7 @@ import {
   MyDiagnosticSeverity,
   IWorkspaceWrapper,
   LogOutputChannel,
-} from "../models/vscTypes";
+} from "../models/vscodeTypes";
 import { URI } from "vscode-uri";
 import type { DiagOrStatus } from "../models/interfaces";
 import { CodeLanguage, CodeLanguages, L10nFormat, L10nFormats, L10nTarget } from "../models/l10nTypes";

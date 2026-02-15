@@ -1,6 +1,6 @@
 import assert from "assert";
 import { IntervalQueue, OrganizeStrategies } from "../../../utils/intervalQueue";
-import { MockIWindowWrapper } from "../mocks/mockWorkspaceService";
+import { MockIWindowWrapper } from "../mocks/mockVscodeWrapper";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 

@@ -1,6 +1,6 @@
 import * as assert from "assert";
 import { URI } from "vscode-uri";
-import { vscTypeHelper } from "../../../models/vscTypes";
+import { vscTypeHelper } from "../../../models/vscodeTypes";
 import { myLocationsToPlain } from "../../../providers/providerUtil";
 
 suite("Provider util (unit)", () => {

@@ -1,4 +1,4 @@
-import { Disposable, MyRelativePattern, IWorkspaceWrapper, LogOutputChannel } from "../models/vscTypes";
+import { Disposable, MyRelativePattern, IWorkspaceWrapper, LogOutputChannel } from "../models/vscodeTypes";
 import { URI } from "vscode-uri";
 import { EventEmitter } from "events";
 import { L10nTarget } from "../models/l10nTypes";

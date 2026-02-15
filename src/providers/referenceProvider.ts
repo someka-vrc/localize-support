@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { L10nService } from "../services/l10nService";
-import { MyPosition } from "../models/vscTypes";
+import { MyPosition } from "../models/vscodeTypes";
 
 /**
  * VS Code の「参照の検索 (Find References)」機能に対応するプロバイダ。

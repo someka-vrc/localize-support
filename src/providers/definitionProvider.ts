@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { L10nService } from "../services/l10nService";
-import { MyPosition } from "../models/vscTypes";
+import { MyPosition } from "../models/vscodeTypes";
 
 /**
  * ローカライズキーの定義（Go to Definition / Peek definition）を提供するプロバイダ。

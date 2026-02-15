@@ -1,9 +1,9 @@
 import assert from "assert";
 import { URI } from "vscode-uri";
-import { MockWorkspaceWrapper, MockLogOutputChannel } from "../mocks/mockWorkspaceService";
+import { MockWorkspaceWrapper, MockLogOutputChannel } from "../mocks/mockVscodeWrapper";
 import { L10nTargetManager } from "../../../services/l10nTargetManager";
 import { L10nTarget } from "../../../models/l10nTypes";
-import { vscTypeHelper, MyDiagnosticSeverity } from "../../../models/vscTypes";
+import { vscTypeHelper, MyDiagnosticSeverity } from "../../../models/vscodeTypes";
 
 suite("L10nTargetManager diagnostics (unit)", () => {
   let workspace: MockWorkspaceWrapper;

@@ -2,7 +2,7 @@
 //     dispose(): Promise<void>;
 // }
 
-import { MyDiagnostic } from "./vscTypes";
+import { MyDiagnostic } from "./vscodeTypes";
 import { URI } from "vscode-uri";
 
 export type DiagOrStatus =

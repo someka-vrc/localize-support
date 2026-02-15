@@ -1,4 +1,4 @@
-import { MyRange, MyLocation, MyDiagnostic } from "./vscTypes";
+import { MyRange, MyLocation, MyDiagnostic } from "./vscodeTypes";
 import { URI } from "vscode-uri";
 
 /** 対応ローカライズ形式 */

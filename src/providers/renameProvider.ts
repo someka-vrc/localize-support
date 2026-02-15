@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { L10nService } from "../services/l10nService";
-import { MyPosition, MyLocation } from "../models/vscTypes";
+import { MyPosition, MyLocation } from "../models/vscodeTypes";
 
 /**
  * ローカライズキーのリネームを提供する `RenameProvider` 実装。

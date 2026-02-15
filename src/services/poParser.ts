@@ -1,4 +1,4 @@
-import { MyDiagnostic, MyDiagnosticSeverity, vscTypeHelper } from "../models/vscTypes";
+import { MyDiagnostic, MyDiagnosticSeverity, vscTypeHelper } from "../models/vscodeTypes";
 import { URI } from "vscode-uri";
 import { TranslationParser, TranslationParseResult } from "./translationParser";
 import { L10nLangEntries } from "../models/l10nTypes";

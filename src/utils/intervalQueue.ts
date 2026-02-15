@@ -1,4 +1,4 @@
-import { Disposable, LogOutputChannel } from "../models/vscTypes";
+import { Disposable, LogOutputChannel } from "../models/vscodeTypes";
 
 type SkippableItem<T> = {
   item: T;

@@ -1,4 +1,4 @@
-import { MyDiagnostic } from "../models/vscTypes";
+import { MyDiagnostic } from "../models/vscodeTypes";
 import { URI } from "vscode-uri";
 import { L10nEntries, L10nFormats } from "../models/l10nTypes";
 import { PoParser } from "./poParser";

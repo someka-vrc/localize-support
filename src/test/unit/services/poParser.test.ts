@@ -1,6 +1,6 @@
 import assert from "assert";
 import { PoParser } from "../../../services/poParser";
-import { MyDiagnosticSeverity } from "../../../models/vscTypes";
+import { MyDiagnosticSeverity } from "../../../models/vscodeTypes";
 import { URI } from "vscode-uri";
 
 suite("PoParser", () => {

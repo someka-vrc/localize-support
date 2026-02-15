@@ -1,6 +1,6 @@
 import { EventEmitter } from "events";
 import { URI } from "vscode-uri";
-import { IWorkspaceWrapper, LogOutputChannel, MyRelativePattern, Disposable, FileType } from "../models/vscTypes";
+import { IWorkspaceWrapper, LogOutputChannel, MyRelativePattern, Disposable, FileType } from "../models/vscodeTypes";
 import { L10nTarget, L10nCode, CodeLanguage, CodeLanguageFileExtMap } from "../models/l10nTypes";
 import { IntervalQueue, OrganizeStrategies } from "../utils/intervalQueue";
 import { CodeParser } from "./codeParser";

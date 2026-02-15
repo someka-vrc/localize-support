@@ -6,10 +6,10 @@ import { copyWorkspaceIfExists, type DisposablePath } from "../unitTestHelper";
 import { CodeParser } from "../../../services/codeParser";
 import { WasmDownloader, WasmFileNames } from "../../../services/wasmDownloader";
 import { CodeLanguage } from "../../../models/l10nTypes";
-import { FileStat, FileType } from "../../../models/vscTypes";
+import { FileStat, FileType } from "../../../models/vscodeTypes";
 
 import sinon from "sinon";
-import { MockWorkspaceWrapper, MockLogOutputChannel } from "../mocks/mockWorkspaceService";
+import { MockWorkspaceWrapper, MockLogOutputChannel } from "../mocks/mockVscodeWrapper";
 
 function makeDiskBackedWorkspace(): MockWorkspaceWrapper {
   const ws = new MockWorkspaceWrapper();

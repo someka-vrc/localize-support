@@ -1,4 +1,4 @@
-import { IWindowWrapper, ICommandWrapper, MyRange, LogOutputChannel } from "../models/vscTypes";
+import { IWindowWrapper, ICommandWrapper, MyRange, LogOutputChannel } from "../models/vscodeTypes";
 import { URI } from "vscode-uri";
 
 /**

@@ -1,5 +1,5 @@
 import { CodeLanguage } from "../models/l10nTypes";
-import { IWorkspaceWrapper, LogOutputChannel, Disposable } from "../models/vscTypes";
+import { IWorkspaceWrapper, LogOutputChannel, Disposable } from "../models/vscodeTypes";
 import { URI, Utils } from "vscode-uri";
 import { EventEmitter } from "events";
 

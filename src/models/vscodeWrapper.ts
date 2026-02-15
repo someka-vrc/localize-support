@@ -15,7 +15,7 @@ import {
   LogOutputChannel,
   IVSCodeWrapper,
   ILanguagesWrapper,
-} from "./vscTypes";
+} from "./vscodeTypes";
 import { URI } from "vscode-uri";
 
 function toVscUri(uri: URI): vscode.Uri {

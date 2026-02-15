@@ -1,4 +1,4 @@
-import { MyLocation, MyRange } from "../models/vscTypes";
+import { MyLocation, MyRange } from "../models/vscodeTypes";
 
 export type PlainLocation = { uri: string; range: MyRange };
 

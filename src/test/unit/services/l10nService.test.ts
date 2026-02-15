@@ -1,10 +1,10 @@
 import * as assert from "assert";
 import sinon from "sinon";
 import { URI } from "vscode-uri";
-import { MockWorkspaceWrapper, MockLogOutputChannel } from "../mocks/mockWorkspaceService";
+import { MockWorkspaceWrapper, MockLogOutputChannel } from "../mocks/mockVscodeWrapper";
 import { L10nService } from "../../../services/l10nService";
 import { L10nTargetManager } from "../../../services/l10nTargetManager";
-import { vscTypeHelper } from "../../../models/vscTypes";
+import { vscTypeHelper } from "../../../models/vscodeTypes";
 
 suite("L10nService (unit)", () => {
   let workspace: MockWorkspaceWrapper;

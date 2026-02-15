@@ -1,11 +1,11 @@
 import assert from "assert";
 import sinon from "sinon";
 import { URI } from "vscode-uri";
-import { MockWorkspaceWrapper, MockLogOutputChannel } from "../mocks/mockWorkspaceService";
+import { MockWorkspaceWrapper, MockLogOutputChannel } from "../mocks/mockVscodeWrapper";
 import { CodeManager } from "../../../services/codeManager";
 import { L10nTarget } from "../../../models/l10nTypes";
 import { CodeParser } from "../../../services/codeParser";
-import { vscTypeHelper, MyRelativePattern, FileType } from "../../../models/vscTypes";
+import { vscTypeHelper, MyRelativePattern, FileType } from "../../../models/vscodeTypes";
 
 suite("CodeManager (unit)", () => {
   let workspace: MockWorkspaceWrapper;

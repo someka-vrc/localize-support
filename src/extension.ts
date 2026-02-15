@@ -1,7 +1,7 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from "vscode";
-import { VSCoderWrapper } from "./models/vscWorkspace";
+import { VSCoderWrapper } from "./models/vscodeWrapper";
 import { L10nService } from "./services/l10nService";
 import { DiagnosticProvider } from "./providers/diagnosticProvider";
 import { DefinitionProvider } from "./providers/definitionProvider";
