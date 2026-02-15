@@ -6,6 +6,11 @@
 
 **localize-support** is a VS Code extension that connects source code with translation files (for example, `.po`) and helps localization workflows by providing go-to-definition, find references, hover previews, rename integration, and diagnostics. It uses tree-sitter internally for fast code parsing and provides PO parsing and editing support.
 
+## Supported languages & formats
+
+- Code languages: JavaScript, TypeScript, Python, C#
+- Translation format: GNU Gettext PO files(`.po`)
+
 ## Key features
 
 - Go to definition `F12`: jump from locale keys in code to translation files
@@ -14,11 +19,6 @@
 - IntelliSense / completion `Ctrl+Space`: suggest localization keys and show translation previews while typing inside localization function arguments
 - Rename integration `F2`: propagate locale key name changes to code and translation files
 - Diagnostics: warnings for missing translations or unused keys
-
-## Supported languages & formats
-
-- Code languages: JavaScript, TypeScript, Python, C#
-- Translation format: PO files (`.po`)
 
 ## Usage
 
