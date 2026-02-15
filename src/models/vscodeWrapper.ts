@@ -10,6 +10,7 @@ import {
   MyRelativePattern,
   MyConfigurationChangeEvent,
   MyRange,
+  MyLocation,
   DiagnosticCollection,
   FileStat,
   LogOutputChannel,
@@ -17,21 +18,8 @@ import {
   ILanguagesWrapper,
 } from "./vscodeTypes";
 import { URI } from "vscode-uri";
+import { toVscPattern, toVscRange, toVscUri } from "./vscodeTypeConverter";
 
-function toVscUri(uri: URI): vscode.Uri {
-  return uri as vscode.Uri;
-}
-
-function toVscPattern(pattern: string | MyRelativePattern): string | vscode.RelativePattern {
-  if (typeof pattern === "string") {
-    return pattern;
-  }
-  return new vscode.RelativePattern(pattern.baseUri as vscode.Uri, pattern.pattern);
-}
-
-function toVscRange(range: MyRange): vscode.Range {
-  return new vscode.Range(range.start.line, range.start.character, range.end.line, range.end.character);
-}
 
 /**
  * `vscode.workspace.fs` をラップした実装。
@@ -113,8 +101,7 @@ export class CommandWrapper implements ICommandWrapper {
   registerCommand(command: string, callback: (...args: any[]) => any): Disposable {
     return vscode.commands.registerCommand(command, callback);
   }
-} 
-
+}
 
 /**
  * `vscode.window` をラップするクラス。`showTextDocument` と出力チャンネル（logger）を提供する。
@@ -156,7 +143,7 @@ export class LanguagesWrapper implements ILanguagesWrapper {
   createDiagnosticCollection(name: string): DiagnosticCollection {
     return vscode.languages.createDiagnosticCollection(name);
   }
-} 
+}
 
 /**
  * 拡張内で使用する `vscode` ラッパーの集約実装。

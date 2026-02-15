@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { Disposable, MyDiagnostic, IVSCodeWrapper } from "../models/vscodeTypes";
+import { toVscRange } from "../models/vscodeTypeConverter";
 import { L10nService } from "../services/l10nService";
 
 /**
@@ -74,12 +75,7 @@ export class DiagnosticProvider implements Disposable {
   // Convert internal MyDiagnostic to vscode.Diagnostic
   toVscodeDiagnostics(diags: MyDiagnostic[]) {
     return diags.map((d) => {
-      const range = new vscode.Range(
-        d.range.start.line,
-        d.range.start.character,
-        d.range.end.line,
-        d.range.end.character,
-      );
+      const range = toVscRange(d.range);
       const severity = d.severity as unknown as vscode.DiagnosticSeverity;
       return new vscode.Diagnostic(range, d.message, severity);
     });

@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
+import { MyPosition } from "../models/vscodeTypes";
+import { toVscRange, toVscUri } from "../models/vscodeTypeConverter";
 import { L10nService } from "../services/l10nService";
-import { MyPosition, MyLocation } from "../models/vscodeTypes";
 
 /**
  * ローカライズキーのリネームを提供する `RenameProvider` 実装。
@@ -89,14 +90,9 @@ export class RenameProvider implements vscode.RenameProvider {
     );
 
     if (match) {
-      const vscUri = vscode.Uri.parse((match.uri as any).toString());
+      const vscUri = toVscUri(match.uri);
       const doc = await this.openDoc(vscUri);
-      const fullRange = new vscode.Range(
-        match.range.start.line,
-        match.range.start.character,
-        match.range.end.line,
-        match.range.end.character,
-      );
+      const fullRange = toVscRange(match.range);
       const inner = await this.findInnerRangeForKeyInDocument(doc, fullRange, key);
       if (inner) {
         return { range: inner, placeholder: key };
@@ -138,10 +134,9 @@ export class RenameProvider implements vscode.RenameProvider {
 
     // replace in code locations (preserve quotes/prefixes when necessary)
     for (const l of codeLocs) {
-      const uriStr = (l.uri as any).toString();
-      const vscUri = vscode.Uri.parse(uriStr);
+      const vscUri = toVscUri(l.uri);
       const doc = await this.openDoc(vscUri);
-      const fullRange = new vscode.Range(l.range.start.line, l.range.start.character, l.range.end.line, l.range.end.character);
+      const fullRange = toVscRange(l.range);
       const inner = await this.findInnerRangeForKeyInDocument(doc, fullRange, oldKey);
       if (inner) {
         edit.replace(vscUri, inner, newName);
@@ -158,10 +153,9 @@ export class RenameProvider implements vscode.RenameProvider {
     // replace in translation files (.po) — replace the entire msgid region with properly escaped quoted string
     const escapePo = (s: string) => s.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n");
     for (const l of transLocs) {
-      const uriStr = (l.uri as any).toString();
-      const vscUri = vscode.Uri.parse(uriStr);
+      const vscUri = toVscUri(l.uri);
       const doc = await this.openDoc(vscUri);
-      const fullRange = new vscode.Range(l.range.start.line, l.range.start.character, l.range.end.line, l.range.end.character);
+      const fullRange = toVscRange(l.range);
       const replacement = `"${escapePo(newName)}"`;
       edit.replace(vscUri, fullRange, replacement);
     }

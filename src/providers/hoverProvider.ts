@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { L10nService } from "../services/l10nService";
+import { toURI, toVscUri } from "../models/vscodeTypeConverter";
 
 /**
  * ローカライズキーの上にマウスを置いたとき翻訳プレビューを表示する HoverProvider。
@@ -10,7 +11,7 @@ export class HoverProvider implements vscode.HoverProvider {
 
   provideHover(document: vscode.TextDocument, position: vscode.Position): vscode.ProviderResult<vscode.Hover> {
     const myPos = { line: position.line, character: position.character } as any;
-    const key = this.l10nService.getKeyAtPosition(document.uri as any, myPos);
+    const key = this.l10nService.getKeyAtPosition(toURI(document.uri), myPos);
     if (!key) {
       return null;
     }
@@ -26,7 +27,7 @@ export class HoverProvider implements vscode.HoverProvider {
     for (const it of items) {
       md.appendMarkdown("- ");
       md.appendText(it.translation || "");
-      const payload = { uri: (it.uri as any).toString(), location: it.location };
+      const payload = { uri: toVscUri(it.uri), location: it.location };
       const arg = encodeURIComponent(JSON.stringify([payload]));
       md.appendMarkdown(` [${it.fileName}](command:localize-support.openLocation?${arg})\n`);
     }
