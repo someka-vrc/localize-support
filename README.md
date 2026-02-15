@@ -76,6 +76,10 @@ You can also configure targets by placing a `localize-support.json` file in any 
 - `l10nExtension`: localization file extension
 - `l10nFuncNames`: names of localization functions (e.g. `"t"` for `t("key")`)
 
+## Commands
+
+- `Localize Support: Toggle diagnostics` — Toggle diagnostics on/off. Controls warnings for missing translations and unused keys.
+
 ## Development & testing
 
 - Build: `yarn compile`

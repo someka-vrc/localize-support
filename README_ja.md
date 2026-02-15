@@ -74,6 +74,10 @@
 - `l10nExtension`: ローカライズファイルの拡張子
 - `l10nFuncNames`: ローカライズ関数の名前（例: `t("key")` の場合は `"t"`）
 
+## コマンド
+
+- `Localize Support: Toggle diagnostics` — 診断表示のオンオフを切り替えます。翻訳不足や未使用キーなどの警告表示を制御します。
+
 ## 開発・テスト
 
 - ビルド: `yarn compile`
