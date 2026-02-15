@@ -398,4 +398,41 @@ suite("CodeParser (unit, integration with wasm)", () => {
     assert.ok(keys.includes("member"));
     assert.ok(!keys.includes("ab"));
   });
+
+  // additional unit tests for edge/error branches
+  test("parse throws when l10nFuncNames is empty", async () => {
+    const ws = new MockWorkspaceWrapper();
+    const downloader = new WasmDownloader(ws, new MockLogOutputChannel(), URI.file(process.cwd()));
+    const parser = new CodeParser(downloader, "javascript", ws, new MockLogOutputChannel());
+
+    await assert.rejects(() => parser.parse([], "https://cdn/x", "", URI.file("d:/x.js")), {
+      message: /l10nFuncNames must be a non-empty array/,
+    });
+  });
+
+  test("returns empty array and logs when language load fails", async () => {
+    const ws = makeDiskBackedWorkspace();
+    const downloader = new WasmDownloader(ws, new MockLogOutputChannel(), storageUri);
+    const loggerWarn = sinon.stub(MockLogOutputChannel.prototype, "warn");
+
+    // ensure language cache does not short-circuit the failure path
+    (CodeParser as any).languageCache.delete("javascript");
+    // force wasmDownloader to fail
+    sinon.stub((WasmDownloader as any).prototype, "retrieveWasmFile").rejects(new Error("no wasm"));
+
+    const parser = new CodeParser(downloader, "javascript", ws, new MockLogOutputChannel());
+    const res = await parser.parse(["t"], wasmCdnBase, `t("x")`, URI.file("d:/file.js"));
+    assert.deepStrictEqual(res, []);
+    sinon.assert.calledOnce(loggerWarn);
+    loggerWarn.restore();
+  });
+
+  test("getTreeSitterQuery returns empty string for unknown language", () => {
+    const ws = new MockWorkspaceWrapper();
+    const downloader = new WasmDownloader(ws, new MockLogOutputChannel(), URI.file(process.cwd()));
+    const parser = new CodeParser(downloader, "javascript", ws, new MockLogOutputChannel());
+
+    const q = parser.getTreeSitterQuery("unknown" as any, ["t"]);
+    assert.strictEqual(q, "");
+  });
 });

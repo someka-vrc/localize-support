@@ -4,6 +4,7 @@ import { MockWorkspaceWrapper, MockLogOutputChannel } from "../mocks/mockVscodeW
 import { L10nTargetManager } from "../../../services/l10nTargetManager";
 import { L10nTarget } from "../../../models/l10nTypes";
 import { vscTypeHelper, MyDiagnosticSeverity } from "../../../models/vscodeTypes";
+import sinon from "sinon";
 
 suite("L10nTargetManager diagnostics (unit)", () => {
   let workspace: MockWorkspaceWrapper;
@@ -145,5 +146,35 @@ suite("L10nTargetManager diagnostics (unit)", () => {
 
     // ja should also have unused entry diagnostic for 'onlyInJa'
     assert.ok(jaDiags.some((d) => /onlyInJa/.test(d.message) && d.severity === MyDiagnosticSeverity.Information));
+  });
+
+  test("onRebuilt.dispose logs when removeListener fails", () => {
+    const mgr = new L10nTargetManager(workspace, new MockLogOutputChannel(), baseTarget, URI.file("d:/proj/.globalStorage"), 1);
+    const warnStub = sinon.stub(MockLogOutputChannel.prototype, "warn");
+
+    // make removeListener throw to exercise the catch path inside onRebuilt().dispose
+    (mgr as any).rebuiltEmitter.removeListener = () => {
+      throw new Error("boom");
+    };
+
+    const sub = mgr.onRebuilt(() => {});
+    // should not throw
+    sub.dispose();
+    sinon.assert.calledOnce(warnStub);
+    warnStub.restore();
+  });
+
+  test("dispose logs when removeAllListeners fails", () => {
+    const mgr = new L10nTargetManager(workspace, new MockLogOutputChannel(), baseTarget, URI.file("d:/proj/.globalStorage"), 1);
+    const warnStub = sinon.stub(MockLogOutputChannel.prototype, "warn");
+
+    (mgr as any).rebuiltEmitter.removeAllListeners = () => {
+      throw new Error("boom");
+    };
+
+    // should not throw
+    mgr.dispose();
+    sinon.assert.calledOnce(warnStub);
+    warnStub.restore();
   });
 });

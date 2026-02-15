@@ -182,4 +182,242 @@ suite("WasmDownloader (unit)", () => {
 
     dlStub.restore();
   });
+
+  test("throws when used after dispose", async () => {
+    const workspace = new MockWorkspaceWrapper();
+    sinon.stub(workspace.fs, "createDirectory").resolves();
+    const storageUri = Utils.joinPath(URI.file(process.cwd()), ".tmp/wasm-dispose-test");
+    const downloader = new WasmDownloader(workspace, new MockLogOutputChannel(), storageUri);
+
+    downloader.dispose();
+    await assert.rejects(() => downloader.retrieveWasmFileInner("https://example.com/out", "javascript" as any), {
+      message: "WasmDownloader has been disposed",
+    });
+  });
+
+  test("concurrent retrieveWasmFile returns same promise and caches result", async () => {
+    const workspace = new MockWorkspaceWrapper();
+    const storageUri = Utils.joinPath(URI.file(process.cwd()), ".tmp/wasm-concurrent-test");
+
+    // ensure stat rejects so download path is taken
+    sinon.stub(workspace.fs, "stat").rejects(new Error("not found"));
+    sinon.stub(workspace.fs, "createDirectory").resolves();
+
+    const written = new Map<string, Uint8Array>();
+    sinon.stub(workspace.fs, "writeFile").callsFake(async (uri: URI, content: Uint8Array) => {
+      written.set(uri.fsPath, new Uint8Array(content));
+    });
+
+    // stub real downloadFile on prototype to delay and then write a small payload
+    const dlStub = sinon.stub(WasmDownloader.prototype as any, "downloadFile").callsFake(async function (this: any, _url: string, dest: URI) {
+      await new Promise((r) => setTimeout(r, 20));
+      await this.workspace.fs.writeFile(dest, new Uint8Array([1, 2, 3]));
+    } as any);
+
+    const downloader = new WasmDownloader(workspace, new MockLogOutputChannel(), storageUri);
+    const p1 = downloader.retrieveWasmFile("https://cdn.example/out", "javascript" as any);
+    const p2 = downloader.retrieveWasmFile("https://cdn.example/out", "javascript" as any);
+
+    // internal cache should contain a promise for this language
+    const cache = (downloader as any).promises.get("javascript");
+    assert.ok(cache, "promise should be cached");
+
+    const [r1, r2] = await Promise.all([p1, p2]);
+    assert.strictEqual(r1.fsPath, r2.fsPath);
+    dlStub.restore();
+  });
+
+  test("rejects when remote responds with non-OK status", async () => {
+    const workspace = new MockWorkspaceWrapper();
+    sinon.stub(workspace.fs, "createDirectory").resolves();
+    sinon.stub(workspace.fs, "stat").rejects(new Error("not found"));
+
+    // stub global.fetch to return an error-like response
+    // @ts-ignore
+    const fetchStub = sinon.stub(global as any, "fetch").resolves({ ok: false, status: 404, statusText: "Not Found" });
+
+    const downloader = new WasmDownloader(workspace, new MockLogOutputChannel(), Utils.joinPath(URI.file(process.cwd()), ".tmp/wasm-fetch-error"));
+    await assert.rejects(() => downloader.retrieveWasmFileInner("https://example.com/out", "javascript" as any), {
+      message: /Failed to fetch WASM: 404 Not Found/,
+    });
+
+    fetchStub.restore();
+  });
+
+  test("throws when response.body is empty", async () => {
+    const workspace = new MockWorkspaceWrapper();
+    sinon.stub(workspace.fs, "createDirectory").resolves();
+    sinon.stub(workspace.fs, "stat").rejects(new Error("not found"));
+
+    // @ts-ignore
+    const fetchStub = sinon.stub(global as any, "fetch").resolves({ ok: true, headers: new Map(), body: null });
+
+    const downloader = new WasmDownloader(workspace, new MockLogOutputChannel(), Utils.joinPath(URI.file(process.cwd()), ".tmp/wasm-body-null"));
+    await assert.rejects(() => downloader.retrieveWasmFileInner("https://example.com/out", "javascript" as any), {
+      message: /Response body is empty/,
+    });
+
+    fetchStub.restore();
+  });
+
+  test("handles readable-stream getReader() path and reports progress", async () => {
+    const workspace = new MockWorkspaceWrapper();
+    sinon.stub(workspace.fs, "createDirectory").resolves();
+    sinon.stub(workspace.fs, "stat").rejects(new Error("not found"));
+
+    const storageUri = Utils.joinPath(URI.file(process.cwd()), ".tmp/wasm-reader-test");
+    const downloader = new WasmDownloader(workspace, new MockLogOutputChannel(), storageUri);
+
+    const written: { dest?: string; data?: Uint8Array } = {};
+    sinon.stub(workspace.fs, "writeFile").callsFake(async (uri: URI, content: Uint8Array) => {
+      written.dest = uri.fsPath;
+      written.data = new Uint8Array(content);
+    });
+
+    // fake Response with body.getReader()
+    const fakeBody = {
+      getReader() {
+        let calls = 0;
+        return {
+          async read() {
+            calls++;
+            if (calls === 1) {
+              return { done: false, value: new Uint8Array([9, 8]) };
+            }
+            return { done: true, value: undefined };
+          },
+          releaseLock() {},
+        } as any;
+      },
+    };
+
+    // @ts-ignore
+    const fetchStub = sinon.stub(global as any, "fetch").resolves({ ok: true, headers: new Map([["content-length", "2"]]), body: fakeBody, arrayBuffer: async () => new ArrayBuffer(0) });
+
+    let lastProgress: { downloaded: number; total: number } | null = null;
+    const local = await downloader.retrieveWasmFileInner("https://example.com/out", "javascript" as any, {
+      onProgress: (d, t) => {
+        lastProgress = { downloaded: d, total: t };
+      },
+    });
+
+    assert.ok(written.data && written.data.length === 2);
+    assert.ok(lastProgress);
+    const p: any = lastProgress;
+    assert.strictEqual(p.downloaded, 2);
+    assert.strictEqual(p.total, 2);
+    assert.ok(local.fsPath.endsWith("tree-sitter-javascript.wasm"));
+
+    fetchStub.restore();
+  });
+
+  test("arrayBuffer fallback path uses response.arrayBuffer() and reports total=0 when no content-length header", async () => {
+    const workspace = new MockWorkspaceWrapper();
+    sinon.stub(workspace.fs, "createDirectory").resolves();
+    sinon.stub(workspace.fs, "stat").rejects(new Error("not found"));
+
+    const storageUri = Utils.joinPath(URI.file(process.cwd()), ".tmp/wasm-arraybuffer-test");
+    const downloader = new WasmDownloader(workspace, new MockLogOutputChannel(), storageUri);
+
+    const written: { dest?: string; data?: Uint8Array } = {};
+    sinon.stub(workspace.fs, "writeFile").callsFake(async (uri: URI, content: Uint8Array) => {
+      written.dest = uri.fsPath;
+      written.data = new Uint8Array(content);
+    });
+
+    // stub fetch: no getReader on body, use arrayBuffer()
+    // @ts-ignore
+    const fetchStub = sinon.stub(global as any, "fetch").resolves({ ok: true, headers: new Map(), body: {}, arrayBuffer: async () => Buffer.from([1, 2, 3]) });
+
+    let lastProgress: { downloaded: number; total: number } | null = null;
+    const local = await downloader.retrieveWasmFileInner("https://example.com/out", "javascript" as any, {
+      onProgress: (d, t) => {
+        lastProgress = { downloaded: d, total: t };
+      },
+    });
+
+    assert.ok(written.data && written.data.length === 3);
+    assert.ok(lastProgress);
+    const p: any = lastProgress;
+    assert.strictEqual(p.downloaded, 3);
+    assert.strictEqual(p.total, 0);
+    assert.ok(local.fsPath.endsWith("tree-sitter-javascript.wasm"));
+
+    fetchStub.restore();
+  });
+
+  test("abort during readable-stream download rejects, releaseLock called and writeFile not called", async () => {
+    const workspace = new MockWorkspaceWrapper();
+    sinon.stub(workspace.fs, "createDirectory").resolves();
+    sinon.stub(workspace.fs, "stat").rejects(new Error("not found"));
+
+    const storageUri = Utils.joinPath(URI.file(process.cwd()), ".tmp/wasm-abort-test");
+    const downloader = new WasmDownloader(workspace, new MockLogOutputChannel(), storageUri);
+
+    let writeCalled = false;
+    sinon.stub(workspace.fs, "writeFile").callsFake(async () => {
+      writeCalled = true;
+    });
+
+    let releaseCalled = false;
+    const fakeBody = {
+      getReader() {
+        return {
+          async read() {
+            // resolve after a short delay so test can call dispose()
+            await new Promise((r) => setTimeout(r, 40));
+            return { done: true, value: undefined };
+          },
+          releaseLock() {
+            releaseCalled = true;
+          },
+        } as any;
+      },
+    };
+
+    // @ts-ignore
+    const fetchStub = sinon.stub(global as any, "fetch").resolves({ ok: true, headers: new Map([["content-length", "0"]]), body: fakeBody, arrayBuffer: async () => new ArrayBuffer(0) });
+
+    const p = downloader.retrieveWasmFileInner("https://example.com/out", "javascript" as any);
+    // abort while reader.read() is pending
+    setTimeout(() => downloader.dispose(), 10);
+
+    await assert.rejects(() => p, {
+      message: /WasmDownloader disposed/,
+    });
+
+    assert.ok(releaseCalled, "reader.releaseLock should be called in finally");
+    assert.ok(!writeCalled, "writeFile must not be called when aborted");
+
+    fetchStub.restore();
+  });
+
+  test("progress emitter listener throwing is caught and logged", async () => {
+    const workspace = new MockWorkspaceWrapper();
+    const storage = new Map<string, Uint8Array>();
+
+    sinon.stub(workspace, "getWorkspaceFolders").returns([{ uri: URI.file(process.cwd()), name: "p", index: 0 }]);
+    sinon.stub(workspace.fs, "createDirectory").resolves();
+    sinon.stub(workspace.fs, "readFile").callsFake(async (u: URI) => storage.get(u.fsPath) || new Uint8Array([1]));
+    sinon.stub(workspace.fs, "writeFile").callsFake(async (u: URI, c: Uint8Array) => {
+      storage.set(u.fsPath, new Uint8Array(c));
+    });
+    sinon.stub(workspace.fs, "stat").callsFake(async (u: URI) => ({ type: 1 as any, ctime: Date.now(), mtime: Date.now(), size: 1 } as any));
+
+    const loggerWarn = sinon.stub(MockLogOutputChannel.prototype, "warn");
+    const downloader = new WasmDownloader(workspace, new MockLogOutputChannel(), Utils.joinPath(URI.file(process.cwd()), ".tmp/wasm-progress-listener"));
+
+    // add a listener that throws to force the emit() catch path
+    const sub = downloader.onDidProgress(() => {
+      throw new Error("listener boom");
+    });
+
+    // should not throw even if listener throws
+    const local = await downloader.retrieveWasmFileInner("https://example.com/out", "javascript" as any);
+    assert.ok(local);
+    sinon.assert.calledOnce(loggerWarn);
+
+    sub.dispose();
+    loggerWarn.restore();
+  });
 });

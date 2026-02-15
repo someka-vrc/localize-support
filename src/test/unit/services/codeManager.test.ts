@@ -212,4 +212,75 @@ suite("CodeManager (unit)", () => {
 
     sub.dispose();
   });
+
+  test("rebuildCache ignores files with unsupported extensions", async () => {
+    const target: any = {
+      codeLanguages: ["javascript"],
+      codeDirs: [URI.file("d:/proj/src")],
+      l10nFormat: "po",
+      l10nDirs: [URI.file("d:/proj/locales")],
+      l10nExtension: ".po",
+      l10nFuncNames: ["t"],
+      settingsLocation: URI.file("d:/proj"),
+    } as any;
+
+    const mgr = new CodeManager(workspace, new MockLogOutputChannel(), target, URI.file("d:/proj/.globalStorage"), 10);
+
+    const txtUri = URI.file("d:/proj/src/readme.txt");
+    // call private method directly to exercise branch where inferLanguageFromUri returns undefined
+    await (mgr as any).rebuildCache(txtUri, "created");
+    assert.ok(!mgr.codes.has(txtUri.path));
+  });
+
+  test("rebuildCache handles parser.parse errors and logs warning", async () => {
+    const uri = URI.file("d:/proj/src/foo.js");
+    sinon.stub(workspace, "getTextDocumentContent").resolves("t(\"X\")");
+    sinon.stub(workspace as any, "getConfiguration").callsFake(() => ({ get: <T>(_k?: string) => "" as unknown as T } as any));
+
+    // make CodeParser.parse reject (the rejection is swallowed by rebuildCache)
+    const parseStub = sinon.stub((CodeParser as any).prototype, "parse").rejects(new Error("parse boom"));
+
+    const target: any = {
+      codeLanguages: ["javascript"],
+      codeDirs: [URI.file("d:/proj/src")],
+      l10nFormat: "po",
+      l10nDirs: [URI.file("d:/proj/locales")],
+      l10nExtension: ".po",
+      l10nFuncNames: ["t"],
+      settingsLocation: URI.file("d:/proj"),
+    } as any;
+
+    const mgr = new CodeManager(workspace, new MockLogOutputChannel(), target, URI.file("d:/proj/.globalStorage"), 10);
+
+    await (mgr as any).rebuildCache(uri, "created");
+    // parser.parse was invoked and its rejection is swallowed — an empty entry is stored
+    sinon.assert.calledOnce(parseStub);
+    assert.ok(mgr.codes.has(uri.path));
+    assert.strictEqual((mgr.codes.get(uri.path) || []).length, 0);
+
+    parseStub.restore();
+  });
+
+  test("dispose logs when a disposable throws during dispose", async () => {
+    const target: any = {
+      codeLanguages: ["javascript"],
+      codeDirs: [URI.file("d:/proj/src")],
+      l10nFormat: "po",
+      l10nDirs: [URI.file("d:/proj/locales")],
+      l10nExtension: ".po",
+      l10nFuncNames: ["t"],
+      settingsLocation: URI.file("d:/proj"),
+    } as any;
+
+    const mgr = new CodeManager(workspace, new MockLogOutputChannel(), target, URI.file("d:/proj/.globalStorage"), 10);
+    // make the first disposable (wasmDownloader) throw on dispose
+    (mgr as any).disposables[0].dispose = async () => {
+      throw new Error("boom dispose");
+    };
+
+    const warnStub = sinon.stub(MockLogOutputChannel.prototype, "warn");
+    await mgr.dispose();
+    sinon.assert.calledOnce(warnStub);
+    warnStub.restore();
+  });
 });
