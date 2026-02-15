@@ -45,28 +45,13 @@ export class RenameProvider implements vscode.RenameProvider {
     key: string,
   ): Promise<vscode.Range | null> {
     const text = doc.getText(fullRange);
-    // try to locate the raw key text inside the literal/po range
-    const idx = text.indexOf(key);
-    if (idx >= 0) {
+    const inner = this.svc.findInnerRangeInText(text, key);
+    if (inner) {
       const baseOffset = doc.offsetAt(fullRange.start);
-      const startOffset = baseOffset + idx;
-      const endOffset = startOffset + key.length;
+      const startOffset = baseOffset + inner.start;
+      const endOffset = baseOffset + inner.end;
       return new vscode.Range(doc.positionAt(startOffset), doc.positionAt(endOffset));
     }
-
-    // fallback: find first/last quote and return inner area
-    const firstQuote = text.search(/['"`]/);
-    if (firstQuote >= 0) {
-      const quoteChar = text[firstQuote];
-      const lastQuote = text.lastIndexOf(quoteChar);
-      if (lastQuote > firstQuote) {
-        const baseOffset = doc.offsetAt(fullRange.start);
-        const startOffset = baseOffset + firstQuote + 1;
-        const endOffset = baseOffset + lastQuote;
-        return new vscode.Range(doc.positionAt(startOffset), doc.positionAt(endOffset));
-      }
-    }
-
     return null;
   }
 
@@ -151,12 +136,11 @@ export class RenameProvider implements vscode.RenameProvider {
     }
 
     // replace in translation files (.po) — replace the entire msgid region with properly escaped quoted string
-    const escapePo = (s: string) => s.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n");
     for (const l of transLocs) {
       const vscUri = toVscUri(l.uri);
       const doc = await this.openDoc(vscUri);
       const fullRange = toVscRange(l.range);
-      const replacement = `"${escapePo(newName)}"`;
+      const replacement = `"${this.svc.escapePoString(newName)}"`;
       edit.replace(vscUri, fullRange, replacement);
     }
 

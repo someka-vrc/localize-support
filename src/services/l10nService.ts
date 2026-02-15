@@ -445,6 +445,93 @@ export class L10nService implements Disposable {
     return Array.from(set);
   }
 
+  /**
+   * Return completion candidates (fuzzy-scored + translations) for a given prefix.
+   * This is pure/service logic and does not depend on vscode types.
+   */
+  public getCompletionCandidates(
+    prefix: string,
+    maxResults: number = 200,
+  ): { key: string; score: number; translations: { translation: string; uri: URI; fileName: string; path: string; lang: string; location?: MyLocation }[] }[] {
+    const allKeys = this.getAllKeys() || [];
+    const pat = (prefix || "").toLowerCase();
+
+    const fuzzyScore = (pat: string, str: string): number => {
+      if (!pat) {return 1000;} // empty pattern — highest score
+      pat = pat.toLowerCase();
+      str = str.toLowerCase();
+      let pi = 0;
+      let si = 0;
+      let score = 0;
+      let consec = 0;
+      let firstMatch = -1;
+      while (pi < pat.length && si < str.length) {
+        if (pat[pi] === str[si]) {
+          if (firstMatch === -1) {firstMatch = si;}
+          score += 100;
+          if (consec > 0) {score += 30 * consec;}
+          if (si === 0) {score += 50;}
+          consec += 1;
+          pi += 1;
+          si += 1;
+        } else {
+          consec = 0;
+          si += 1;
+        }
+      }
+      if (pi < pat.length) {return -Infinity;} // not a subsequence
+      const gapPenalty = firstMatch >= 0 ? firstMatch : 0;
+      const lengthPenalty = Math.max(0, str.length - pat.length);
+      return score - gapPenalty - Math.floor(lengthPenalty / 2);
+    };
+
+    const scored: { key: string; score: number }[] = [];
+    for (const k of allKeys) {
+      const s = fuzzyScore(pat, k);
+      if (s !== -Infinity) { scored.push({ key: k, score: s }); }
+    }
+
+    if (scored.length === 0) { return []; }
+
+    scored.sort((a, b) => (b.score - a.score) || a.key.localeCompare(b.key));
+    const top = scored.slice(0, maxResults);
+
+    return top.map((s) => ({ key: s.key, score: s.score, translations: this.getTranslationsForKey(s.key) }));
+  }
+
+  /**
+   * Find an inner range inside a literal/PO fragment.
+   * Returns offsets relative to the provided `fullText` (or null).
+   */
+  public findInnerRangeInText(fullText: string, key: string): { start: number; end: number } | null {
+    if (!fullText) { return null; }
+    // try to locate the raw key text inside the literal/po range
+    const idx = fullText.indexOf(key);
+    if (idx >= 0) {
+      return { start: idx, end: idx + key.length };
+    }
+
+    // fallback: find first/last quote and return inner area
+    const firstQuote = fullText.search(/['"`]/);
+    if (firstQuote >= 0) {
+      const quoteChar = fullText[firstQuote];
+      const lastQuote = fullText.lastIndexOf(quoteChar);
+      if (lastQuote > firstQuote) {
+        return { start: firstQuote + 1, end: lastQuote };
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Escape a string for safe insertion into a .po msgid quoted string.
+   */
+  public escapePoString(s: string): string {
+    if (s === null || s === undefined) { return ""; }
+    return s.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n");
+  }
+
   public findCodeReferencesForKey(key: string) {
     const result: any[] = [];
     for (const tgtUnits of this.managers.values()) {

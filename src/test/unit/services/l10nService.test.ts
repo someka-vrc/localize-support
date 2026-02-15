@@ -275,6 +275,71 @@ suite("L10nService (unit)", () => {
     assert.ok(fns.includes("G"));
   });
 
+  test("getCompletionCandidates() fuzzy matches and sorts (unit)", () => {
+    const target = {
+      codeLanguages: ["javascript"],
+      codeDirs: [URI.file("d:/proj/src")],
+      l10nFormat: "po",
+      l10nDirs: [URI.file("d:/proj/locales")],
+      l10nExtension: ".po",
+      l10nFuncNames: ["t"],
+      settingsLocation: URI.file("d:/proj"),
+    } as any;
+
+    const mgr = new L10nTargetManager(workspace as any, new MockLogOutputChannel(), target, URI.file("d:/proj/.globalStorage"), 1);
+    const en = URI.file("d:/proj/locales/en.po");
+    mgr.l10ns.set(en.path, {
+      success: true,
+      diagnostics: [],
+      entries: {
+        en: {
+          apple: { translation: "Apple", location: vscTypeHelper.newLocation(en, vscTypeHelper.newRange(1, 0, 1, 5)) },
+          application: { translation: "Application", location: vscTypeHelper.newLocation(en, vscTypeHelper.newRange(2, 0, 2, 11)) },
+          banana: { translation: "Banana", location: vscTypeHelper.newLocation(en, vscTypeHelper.newRange(3, 0, 3, 6)) },
+        },
+      },
+    } as any);
+
+    (svc as any).managers.set("/p", [{ manager: mgr, listenerDisposable: { dispose: () => {} } }]);
+
+    const res = svc.getCompletionCandidates("app", 10);
+    assert.ok(Array.isArray(res));
+    assert.ok(res.length >= 2);
+    assert.strictEqual(res[0].key, "apple");
+    assert.strictEqual(res[1].key, "application");
+
+    const allKeys = svc.getCompletionCandidates("", 10).map((r) => r.key);
+    assert.deepStrictEqual(allKeys, ["apple", "application", "banana"]);
+
+    // non-contiguous subsequence match: 'aca' should match 'application' (a..c..a)
+    const acaRes = svc.getCompletionCandidates("aca", 10);
+    assert.ok(Array.isArray(acaRes));
+    assert.strictEqual(acaRes.length, 1);
+    assert.strictEqual(acaRes[0].key, "application");
+  });
+
+  test("findInnerRangeInText() finds key or inner-quote fallback (unit)", () => {
+    const txt1 = "t('hello.world')";
+    const r1 = svc.findInnerRangeInText(txt1, 'hello.world');
+    assert.ok(r1);
+    assert.strictEqual(txt1.slice(r1!.start, r1!.end), 'hello.world');
+
+    const txt2 = '"quoted content"';
+    const r2 = svc.findInnerRangeInText(txt2, 'missing');
+    assert.ok(r2);
+    assert.strictEqual(txt2.slice(r2!.start, r2!.end), 'quoted content');
+
+    const txt3 = 'noquotes';
+    const r3 = svc.findInnerRangeInText(txt3, 'missing');
+    assert.strictEqual(r3, null);
+  });
+
+  test("escapePoString() escapes special characters (unit)", () => {
+    const src = 'line "quote" back\\slash\nnew';
+    const escaped = svc.escapePoString(src);
+    assert.strictEqual(escaped, 'line \\\"quote\\\" back\\\\slash\\nnew');
+  });
+
   test("collectLocationsForKeyAt / canRenameKey behaviour (unit)", () => {
     const target = {
       codeLanguages: ["javascript"],
