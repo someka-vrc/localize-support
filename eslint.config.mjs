@@ -23,11 +23,19 @@ export default [
           format: ["camelCase", "PascalCase"],
         },
       ],
-      "@typescript-eslint/no-require-imports": "error",
       curly: "warn",
       eqeqeq: "warn",
       "no-throw-literal": "warn",
       semi: "warn",
+      "@typescript-eslint/no-require-imports": "error",
+      // 禁止ルール: 動的インポート (await import) を禁止
+      "no-await-import": [
+            "error",
+            {
+                "selector": "ImportExpression",
+                "message": "Project rule: Avoid dynamic imports. Use static imports instead for better performance and maintainability.",
+            }
+      ],
       // 禁止ルール: `vscode` の直接 import をプロジェクト全体で禁止（特定ファイルは除外）
       "no-restricted-imports": [
         "error",
@@ -36,7 +44,7 @@ export default [
             {
               name: "vscode",
               message:
-                "User defined rule: Avoid direct imports of 'vscode' module outside of designated files. Use the vscodeWrapper instead for better testability.",
+                "Project rule: Avoid direct imports of 'vscode' module outside of designated files. Use the vscodeWrapper instead for better testability.",
             },
           ],
         },
