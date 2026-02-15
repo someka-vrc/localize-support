@@ -118,7 +118,10 @@
     "spec": "out/test/unit/**/*.test.js"
   },
   "c8": {
-    "reporter": "istanbul-reporter-html-dark",
+    "reporter": [
+      "istanbul-reporter-html-dark",
+      "json-summary"
+    ],
     "report-dir": "coverage",
     "exclude": "src/test/**",
     "excludeAfterRemap": true
