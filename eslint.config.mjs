@@ -8,13 +8,11 @@ export default [
     plugins: {
       "@typescript-eslint": typescriptEslint.plugin,
     },
-
     languageOptions: {
       parser: typescriptEslint.parser,
       ecmaVersion: 2022,
       sourceType: "module",
     },
-
     rules: {
       "@typescript-eslint/naming-convention": [
         "warn",
@@ -28,15 +26,17 @@ export default [
       "no-throw-literal": "warn",
       semi: "warn",
       "@typescript-eslint/no-require-imports": "error",
-      // 禁止ルール: 動的インポート (await import) を禁止
-      "no-await-import": [
-            "error",
-            {
-                "selector": "ImportExpression",
-                "message": "Project rule: Avoid dynamic imports. Use static imports instead for better performance and maintainability.",
-            }
+
+      // await import を禁止
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "ImportExpression",
+          message: "Project rule: Avoid dynamic imports (await import). Use static imports instead.",
+        },
       ],
-      // 禁止ルール: `vscode` の直接 import をプロジェクト全体で禁止（特定ファイルは除外）
+
+      // vscode の直接 import を禁止
       "no-restricted-imports": [
         "error",
         {
@@ -44,7 +44,7 @@ export default [
             {
               name: "vscode",
               message:
-                "Project rule: Avoid direct imports of 'vscode' module outside of designated files. Use the vscodeWrapper instead for better testability.",
+                "Project rule: Avoid direct imports of 'vscode' module outside of designated files. Use the vscodeWrapper instead.",
             },
           ],
         },
@@ -52,7 +52,7 @@ export default [
     },
   },
   {
-    // 例外: provider・extension・wrapper・統合テストでは `vscode` の import を許可
+    // 例外設定
     files: [
       "src/providers/**",
       "src/extension.ts",
@@ -61,6 +61,7 @@ export default [
       "src/test/vscode/**",
     ],
     rules: {
+      // vscode のパス制限だけを解除し、dynamic import 禁止(syntax)は維持する
       "no-restricted-imports": "off",
     },
   },
