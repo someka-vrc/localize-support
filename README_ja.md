@@ -50,7 +50,7 @@
 - `l10nFuncNames`: ローカライズ関数の名前（例: `t("key")` の場合は `"t"`）
 - `localize-support.wasmCdnBaseUrl` — tree-sitter wasm の CDN ベース URL（`{version}` プレースホルダを使用してください）
 
-ワークスペース内で異なるターゲット設定を行いたい場合は、任意のフォルダに `localize-support.json` を配置してください。
+ターゲット設定は、任意のフォルダの `localize-support.json` でも行うことが出来ます。
 
 ```json
 {
@@ -68,9 +68,9 @@
 ```
 
 - `codeLanguages`: 対象のコード言語 (`javascript`, `typescript`, `python`, `csharp`, `java`)
-- `codeDirs`: コードのルートディレクトリ（json ファイルからの相対パス）
+- `codeDirs`: コードのルートディレクトリ（`localize-support.json` のあるフォルダを基準とした相対パス。隣接する `src` は `./src` または `src` と指定します）
 - `l10nFormat`: ローカライズファイルの形式（現状は `po` のみ）
-- `l10nDirs`: ローカライズファイルのルートディレクトリ（json ファイルからの相対パス）
+- `l10nDirs`: ローカライズファイルのルートディレクトリ（`localize-support.json` のあるフォルダを基準とした相対パス。隣接する `locales` は `./locales` または `locales` と指定します）
 - `l10nExtension`: ローカライズファイルの拡張子
 - `l10nFuncNames`: ローカライズ関数の名前（例: `t("key")` の場合は `"t"`）
 

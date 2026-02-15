@@ -52,7 +52,7 @@ Install `localize-support` and configure it.
 - `l10nFuncNames`: names of localization functions (e.g. for `t("key")`, use `"t"`)
 - `localize-support.wasmCdnBaseUrl`: base URL for tree-sitter wasm CDN (use `{version}` placeholder)
 
-To configure different targets within the workspace, place a `localize-support.json` file in the desired folder:
+You can also configure targets by placing a `localize-support.json` file in any folder:
 
 ```json
 {
@@ -70,9 +70,9 @@ To configure different targets within the workspace, place a `localize-support.j
 ```
 
 - `codeLanguages`: target code languages (`javascript`, `typescript`, `python`, `csharp`, `java`)
-- `codeDirs`: root directories for source code (relative to the JSON file)
+- `codeDirs`: root directories for source code (relative to the folder containing the `localize-support.json` — e.g. use `./src` or `src` for a sibling `src` directory)
 - `l10nFormat`: localization file format (currently `po` only)
-- `l10nDirs`: root directories for localization files (relative to the JSON file)
+- `l10nDirs`: root directories for localization files (relative to the folder containing the `localize-support.json` — e.g. use `./locales` or `locales` for a sibling `locales` directory)
 - `l10nExtension`: localization file extension
 - `l10nFuncNames`: names of localization functions (e.g. `"t"` for `t("key")`)
 
