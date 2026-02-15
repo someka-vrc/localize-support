@@ -4,6 +4,9 @@
   "description": "VS Code extension supports localizing",
   "version": "0.0.1",
   "license": "MIT",
+  "repository": {
+    "url": "https://github.com/someka-vrc/localize-support.git"
+  },
   "engines": {
     "vscode": "^1.109.0"
   },
@@ -122,6 +125,7 @@
   },
   "scripts": {
     "vscode:prepublish": "yarn compile",
+    "package": "npx vsce package",
     "compile": "yarn lint && tsc -p ./",
     "watch": "tsc -watch -p ./",
     "lint": "eslint src",
