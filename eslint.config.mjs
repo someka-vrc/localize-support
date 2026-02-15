@@ -61,7 +61,6 @@ export default [
       "src/test/vscode/**",
     ],
     rules: {
-      // vscode のパス制限だけを解除し、dynamic import 禁止(syntax)は維持する
       "no-restricted-imports": "off",
     },
   },
