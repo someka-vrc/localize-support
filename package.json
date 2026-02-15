@@ -118,12 +118,18 @@
     "spec": "out/test/unit/**/*.test.js"
   },
   "c8": {
+    "all": true,
     "reporter": [
       "istanbul-reporter-html-dark",
       "json-summary"
     ],
-    "report-dir": "coverage",
-    "exclude": "src/test/**",
+    "report-dir": "coverage/unit",
+    "exclude": [
+      "coverage/**",
+      "src/test/**",
+      ".vscode-test/**",
+      "**/*.mjs"
+    ],
     "excludeAfterRemap": true
   },
   "scripts": {
@@ -135,7 +141,7 @@
     "pretest:unit": "yarn compile",
     "test:unit": "cross-env NODE_OPTIONS=--enable-source-maps c8 mocha",
     "pretest:integration": "yarn compile && yarn lint",
-    "test:integration": "vscode-test",
+    "test:integration": "vscode-test --coverage --coverage-output=coverage/integration --coverage-reporter=istanbul-reporter-html-dark --coverage-reporter=json-summary",
     "test": "yarn test:unit && yarn test:integration",
     "clean:tmp": "node -e \"const fs = require('fs'); fs.rmSync('.tmp', { recursive: true, force: true })\"",
     "clean:out": "node -e \"const fs = require('fs'); fs.rmSync('out', { recursive: true, force: true })\"",

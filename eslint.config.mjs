@@ -58,6 +58,7 @@ export default [
       "src/extension.ts",
       "src/models/vscodeWrapper.ts",
       "src/models/vscodeTypes.ts",
+      "src/models/vscodeTypeConverter.ts",
       "src/test/vscode/**",
     ],
     rules: {
