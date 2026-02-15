@@ -124,7 +124,8 @@ export class CompletionProvider implements vscode.CompletionItemProvider {
       }
 
       // ensure only inner-string content is replaced
-      item.textEdit = vscode.TextEdit.replace(replaceRange, k);
+      item.insertText = k;
+      item.range = replaceRange;
       items.push(item);
     }
 
