@@ -1,4 +1,3 @@
-// import { Disposable, FileType, RelativePattern, Uri, workspace } from "vscode";
 import { IWorkspaceWrapper, FileType } from "../models/vscTypes";
 import { URI, Utils } from "vscode-uri";
 /**
