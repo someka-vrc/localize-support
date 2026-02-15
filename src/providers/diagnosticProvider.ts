@@ -8,7 +8,8 @@ import { L10nService } from "../services/l10nService";
  */
 export class DiagnosticProvider implements Disposable {
   private collection: vscode.DiagnosticCollection;
-  private disposables: Disposable[] = []; 
+  private disposables: Disposable[] = [];
+  private enabled = true;
 
   constructor(
     public name: string,
@@ -30,8 +31,34 @@ export class DiagnosticProvider implements Disposable {
     this.disposables.forEach((d) => d.dispose());
   }
 
+  // Enable/disable diagnostics. When disabled, clear collection and stop updates.
+  public async setEnabled(enabled: boolean) {
+    this.enabled = enabled;
+    if (!this.enabled) {
+      this.collection.clear();
+      return;
+    }
+    // when enabling, immediately refresh from service
+    try {
+      await this.updateDiagnostics(this.l10nService.getDiagnostics().diags);
+    } catch (err) {
+      this.vscode.window.logger.error(err as Error);
+    }
+  }
+
+  public toggleEnabled() {
+    this.setEnabled(!this.enabled).catch((e) => this.vscode.window.logger.error(e));
+  }
+
+  public isEnabled() {
+    return this.enabled;
+  }
+
   // Update vscode diagnostics from L10nService
   async updateDiagnostics(diags: Map<string, MyDiagnostic[]>) {
+    if (!this.enabled) {
+      return;
+    }
     // clear previous
     this.collection.clear();
     for (const [uri, arr] of diags.entries()) {

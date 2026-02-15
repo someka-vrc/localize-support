@@ -22,6 +22,10 @@
       {
         "command": "localize-support.helloWorld",
         "title": "Hello World"
+      },
+      {
+        "command": "localize-support.toggleDiagnostics",
+        "title": "Localize Support: Toggle diagnostics"
       }
     ],
     "configuration": {

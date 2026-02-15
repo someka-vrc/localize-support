@@ -8,6 +8,7 @@ import { DefinitionProvider } from "./providers/definitionProvider";
 import { ReferenceProvider } from "./providers/referenceProvider";
 import { CodeLanguages, CodeLanguageFileExtMap } from "./models/l10nTypes";
 import { registerOpenLocationCommand } from "./commands/openLocationCommand";
+import { registerToggleDiagnosticsCommand } from "./commands/toggleDiagnosticsCommand";
 import { HoverProvider } from "./providers/hoverProvider";
 import { RenameProvider } from "./providers/renameProvider";
 import { CompletionProvider } from "./providers/completionProvider";
@@ -45,7 +46,16 @@ export async function activate(context: vscode.ExtensionContext) {
   const diagnosticProvider = new DiagnosticProvider("localize-support", l10nService, vscodeWrapper);
   context.subscriptions.push(diagnosticProvider);
 
+  // Load persisted diagnostics-enabled state (default: true)
+  const diagStateKey = "localize-support.diagnosticsEnabled";
+  const diagnosticsEnabled = context.workspaceState.get<boolean>(diagStateKey, true);
+  if (!diagnosticsEnabled) {
+    // ensure provider is disabled at startup
+    diagnosticProvider.setEnabled(false);
+  }
+
   context.subscriptions.push(registerOpenLocationCommand(vscodeWrapper.command, vscodeWrapper.window.logger, vscodeWrapper.window));
+  context.subscriptions.push(registerToggleDiagnosticsCommand(vscodeWrapper.command, vscodeWrapper.window.logger, vscodeWrapper.window, diagnosticProvider, context.workspaceState));
   context.subscriptions.push(vscode.languages.registerHoverProvider(docSelectors, new HoverProvider(l10nService)));
 
   logger.info("localize-support activated");

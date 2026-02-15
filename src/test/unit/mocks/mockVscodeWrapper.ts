@@ -122,6 +122,9 @@ export class MockIWindowWrapper implements IWindowWrapper {
   showTextDocument(uri: URI, options?: { selection?: MyRange }): Promise<void> {
     return Promise.reject(new Error("MockIWindowWrapper.showTextDocument not stubbed"));
   }
+  showInformationMessage(message: string, ...items: string[]): Promise<string | undefined> {
+    return Promise.reject(new Error("MockIWindowWrapper.showInformationMessage not stubbed"));
+  }
   get logger(): LogOutputChannel {
     return new MockLogOutputChannel();
   }

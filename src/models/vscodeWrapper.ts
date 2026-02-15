@@ -127,6 +127,9 @@ export class WindowWrapper implements IWindowWrapper, Disposable {
     }
     return vscode.window.showTextDocument(toVscUri(uri), vscOptions).then(() => {});
   }
+  async showInformationMessage(message: string, ...items: string[]): Promise<string | undefined> {
+    return vscode.window.showInformationMessage(message, ...items);
+  }
   private _outputChannel: LogOutputChannel | null = null;
   get logger(): LogOutputChannel {
     if (!this._outputChannel) {

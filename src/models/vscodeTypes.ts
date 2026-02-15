@@ -103,6 +103,7 @@ export type Event<T> = vscode.Event<T>;
 export type LogOutputChannel = vscode.LogOutputChannel;
 export interface IWindowWrapper {
   showTextDocument(uri: URI, options?: { selection?: MyRange }): Promise<void>;
+  showInformationMessage(message: string, ...items: string[]): Promise<string | undefined>;
   get logger(): LogOutputChannel;
 }
 
