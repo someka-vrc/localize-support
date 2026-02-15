@@ -101,10 +101,8 @@ export interface ICommandWrapper {
 export type LogLevel = vscode.LogLevel;
 export type Event<T> = vscode.Event<T>;
 export type LogOutputChannel = vscode.LogOutputChannel;
-export interface IWindowWrapper {
-  showTextDocument(uri: URI, options?: { selection?: MyRange }): Promise<void>;
-  showInformationMessage(message: string, ...items: string[]): Promise<string | undefined>;
-  get logger(): LogOutputChannel;
+export interface Logger {
+  getLogger(): LogOutputChannel;
 }
 
 export interface ILanguagesWrapper {
@@ -114,6 +112,6 @@ export interface ILanguagesWrapper {
 export interface IVSCodeWrapper {
   readonly workspace: IWorkspaceWrapper;
   readonly command: ICommandWrapper;
-  readonly window: IWindowWrapper;
   readonly languages: ILanguagesWrapper;
+  readonly logger: LogOutputChannel;
 }

@@ -20,11 +20,11 @@ export class DiagnosticProvider implements Disposable {
     this.collection = this.vscode.languages.createDiagnosticCollection(name);
     this.disposables.push(
       l10nService.onReloaded(() => {
-        this.updateDiagnostics(l10nService.getDiagnostics().diags).catch((e) => this.vscode.window.logger.error(e));
+        this.updateDiagnostics(l10nService.getDiagnostics().diags).catch((e) => this.vscode.logger.error(e));
       }),
     );
 
-    this.updateDiagnostics(l10nService.getDiagnostics().diags).catch((e) => this.vscode.window.logger.error(e));
+    this.updateDiagnostics(l10nService.getDiagnostics().diags).catch((e) => this.vscode.logger.error(e));
   }
 
   dispose() {
@@ -43,12 +43,12 @@ export class DiagnosticProvider implements Disposable {
     try {
       await this.updateDiagnostics(this.l10nService.getDiagnostics().diags);
     } catch (err) {
-      this.vscode.window.logger.error(err as Error);
+      this.vscode.logger.error(err as Error);
     }
   }
 
   public toggleEnabled() {
-    this.setEnabled(!this.enabled).catch((e) => this.vscode.window.logger.error(e));
+    this.setEnabled(!this.enabled).catch((e) => this.vscode.logger.error(e));
   }
 
   public isEnabled() {
@@ -67,7 +67,7 @@ export class DiagnosticProvider implements Disposable {
         const vscUri = vscode.Uri.parse(uri);
         this.collection.set(vscUri, this.toVscodeDiagnostics(arr));
       } catch (err) {
-        this.vscode.window.logger.error("Failed to set diagnostics for", uri, err);
+        this.vscode.logger.error("Failed to set diagnostics for", uri, err);
       }
     }
   }

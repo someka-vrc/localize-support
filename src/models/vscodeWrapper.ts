@@ -3,7 +3,6 @@ import {
   IFileSystemWrapper,
   IWorkspaceWrapper,
   ICommandWrapper,
-  IWindowWrapper,
   FileSystemWatcher,
   WorkspaceConfiguration,
   Disposable,
@@ -16,6 +15,7 @@ import {
   LogOutputChannel,
   IVSCodeWrapper,
   ILanguagesWrapper,
+  Logger,
 } from "./vscodeTypes";
 import { URI } from "vscode-uri";
 import { toVscPattern, toVscRange, toVscUri } from "./vscodeTypeConverter";
@@ -103,22 +103,9 @@ export class CommandWrapper implements ICommandWrapper {
   }
 }
 
-/**
- * `vscode.window` をラップするクラス。`showTextDocument` と出力チャンネル（logger）を提供する。
- */
-export class WindowWrapper implements IWindowWrapper, Disposable {
-  async showTextDocument(uri: URI, options?: { selection?: MyRange }): Promise<void> {
-    const vscOptions: vscode.TextDocumentShowOptions = {};
-    if (options?.selection) {
-      vscOptions.selection = toVscRange(options.selection);
-    }
-    return vscode.window.showTextDocument(toVscUri(uri), vscOptions).then(() => {});
-  }
-  async showInformationMessage(message: string, ...items: string[]): Promise<string | undefined> {
-    return vscode.window.showInformationMessage(message, ...items);
-  }
+export class LoggerWrapper implements Logger, Disposable {
   private _outputChannel: LogOutputChannel | null = null;
-  get logger(): LogOutputChannel {
+  getLogger(): LogOutputChannel {
     if (!this._outputChannel) {
       this._outputChannel = vscode.window.createOutputChannel("localize-support", { log: true });
     }
@@ -153,16 +140,18 @@ export class VSCoderWrapper implements IVSCodeWrapper, Disposable {
   workspace: IWorkspaceWrapper;
   command: ICommandWrapper;
   languages: ILanguagesWrapper;
-  window: IWindowWrapper;
+  logger: LogOutputChannel;
+  private _loggerWrapper: LoggerWrapper;
   constructor() {
     this.workspace = new WorkspaceWrapper();
     this.command = new CommandWrapper();
-    this.window = new WindowWrapper();
+    this._loggerWrapper = new LoggerWrapper();
+    this.logger = this._loggerWrapper.getLogger();
     this.languages = new LanguagesWrapper();
   }
   dispose(): void {
     try {
-      (this.window as WindowWrapper).dispose();
+      this._loggerWrapper.dispose();
     } catch (err) {
       // ignore
     }

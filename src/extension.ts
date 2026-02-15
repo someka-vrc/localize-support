@@ -21,7 +21,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const vscodeWrapper = new VSCoderWrapper();
   // ensure wrapper is disposed when extension deactivates
   context.subscriptions.push(vscodeWrapper);
-  const logger = vscodeWrapper.window.logger;
+  const logger = vscodeWrapper.logger;
   const l10nService = new L10nService(vscodeWrapper.workspace, logger, context.globalStorageUri);
   context.subscriptions.push(l10nService);
   await l10nService.init().catch((e) => logger.error(e));
@@ -54,8 +54,8 @@ export async function activate(context: vscode.ExtensionContext) {
     diagnosticProvider.setEnabled(false);
   }
 
-  context.subscriptions.push(registerOpenLocationCommand(vscodeWrapper.command, vscodeWrapper.window.logger, vscodeWrapper.window));
-  context.subscriptions.push(registerToggleDiagnosticsCommand(vscodeWrapper.command, vscodeWrapper.window.logger, vscodeWrapper.window, diagnosticProvider, context.workspaceState));
+  context.subscriptions.push(registerOpenLocationCommand(vscodeWrapper.command, vscodeWrapper.logger));
+  context.subscriptions.push(registerToggleDiagnosticsCommand(vscodeWrapper.command, vscodeWrapper.logger, diagnosticProvider, context.workspaceState));
   context.subscriptions.push(vscode.languages.registerHoverProvider(docSelectors, new HoverProvider(l10nService)));
 
   logger.info("localize-support activated");
