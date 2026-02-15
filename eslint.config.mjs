@@ -55,6 +55,7 @@ export default [
     // 例外設定
     files: [
       "src/providers/**",
+      "src/commands/**",
       "src/extension.ts",
       "src/models/vscodeWrapper.ts",
       "src/models/vscodeTypes.ts",
