@@ -15,11 +15,16 @@
 
 ### フォルダ構成
 
+- `fixtures/` - テスト用フィクスチャ(後述)
+- `src/commands/` - コマンドの実装
+- `src/extension.ts` - エクステンションのエントリーポイント
 - `src/models/` - データモデル関連のコード
-- `src/services/` - ビジネスロジックとデータ操作。 `src\services\l10nService.ts` がコアのサービスです。
 - `src/providers/` - VSCode API のプロバイダ
-- `src/test/unit` - vscode インスタンスを必要としない、vscode モジュールを使うとしてもモックで対応可能な軽量な単体テスト
-- `src/test/vscode` - vscode インスタンスを必要とするテスト、統合テスト
+- `src/services/` - ビジネスロジックとデータ操作。 `src/services/l10nService.ts` がコアのサービスです。
+- `src/test/unit` - 単体テスト(後述)
+- `src/test/vscode` - 統合テスト(後述)
+- `src/utils/` - ユーティリティ関数
+- `schemas/` - JSON スキーマファイル
 
 ## コマンド実行
 
@@ -29,14 +34,23 @@
 
 ファイル参照や書き込みを伴うテストでは、テストレビューのしやすさの観点から、OSの一時フォルダやインメモリは使用禁止です。代替方法を下記で説明していますのでよく読んでください。
 
+### フォルダ構成
+
+- `fixtures/` - テスト用フィクスチャ
+  - `workspaces/` - ワークスペース関連のフィクスチャ
+    - `unit/{任意の名前}` - 単体テスト用のフィクスチャ
+    - `vscode/{任意の名前}` - 統合テスト用のフィクスチャ
+- `src/test/unit` - vscode インスタンスを必要としない、vscode モジュールを使うとしてもモックで対応可能な軽量な単体テスト
+- `src/test/vscode` - vscode インスタンスを必要とするテスト、統合テスト
+
 ### 単体テスト
 
 `yarn test:unit` コマンドで実行します。テストフレームワークには mocha (ui: tdd) を使用します。
 
 単体テストでは vscode インスタンスは使用不可です(mocha で実行するため)。 vscode モジュールのコアな機能をテストしたければ統合テストで行ってください。
-しかし軽量な処理であればモックを用いて高速な単体テストが実装できます。 `src/test/unit/mocks/mockWorkspaceService.ts` に基本形が用意されていますので、プロパティを sinon で上書きして使うか個別に実装してください。
+しかし軽量な処理であればモックを用いて高速な単体テストが実装できます。 `src/test/unit/mocks/mockWorkspaceWrapper.ts` に基本形が用意されていますので、プロパティを sinon でスタブして使ってください。スタブし忘れた場合は例外が発生します。
 
-ファイル参照や書き込みを伴うテストでは、テストレビューのしやすさの観点から、OSの一時フォルダやインメモリは使用禁止です。その代わりに `fixtures/workspaces/unit/{subPath}/{testName}` フォルダを作成して以下のように `unitTestHelper` を使用してください。これを使うとテスト時にフィクスチャフォルダを一時コピーしオリジナルに触れないので、汚れることがありません。
+ファイル参照や書き込みを伴うテストでは、テストレビューのしやすさの観点から、OSの一時フォルダやインメモリは使用禁止です。その代わりに `fixtures/workspaces/unit/{subPath}/{testName}` フォルダを作成して以下のように `unitTestHelper` を使用してください。これを使うとテスト時にフィクスチャフォルダを一時コピーしオリジナルを汚さずにテストできます。
 
 ```ts
 import { copyWorkspaceIfExists, type DisposablePath } from './unitTestHelper';
@@ -68,7 +82,7 @@ suite('foo test', () => {
 
 `yarn test:integration` コマンドで実行します。テストフレームワークには mocha (ui: tdd) を使用します。
 
-ファイル参照や書き込みを伴うテストでは、テストレビューのしやすさの観点から、OSの一時フォルダやインメモリは使用禁止です。その代わりに `fixtures/workspaces/vscode/{テストファイル名(test.ts抜き)}` フォルダを作成してください。テスト実行時にそのフォルダのコピーがワークスペースとして開かれます。ただテストランナーの都合でカレントディレクトリは開発ワークスペースと異なるため注意してください。 `src/test/vscode/extension.test.ts` の `Fixture Test` スイートを参考にしてください。
+ファイル参照や書き込みを伴うテストでは、テストレビューのしやすさの観点から、OSの一時フォルダやインメモリは使用禁止です。その代わりに `fixtures/workspaces/vscode/{テストファイル名(test.ts抜き)}` フォルダを作成してください。テスト実行時にそのフォルダのコピーがワークスペースとして開かれますので、オリジナルを汚さずにテストを繰り返すことが出来ます。なお、テストランナーの都合でカレントディレクトリは開発ワークスペースと異なるため注意してください。 `src/test/vscode/extension.test.ts` の `Fixture Test` スイートを参考にしてください。
 
 統合テストのチェック事項:
 
