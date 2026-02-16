@@ -1,7 +1,7 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from "vscode";
-import { VSCoderWrapper } from "./models/vscodeWrapper";
+import { VSCodeWrapper } from "./models/vscodeWrapper";
 import { L10nService } from "./services/l10nService";
 import { DiagnosticProvider } from "./providers/diagnosticProvider";
 import { DefinitionProvider } from "./providers/definitionProvider";
@@ -18,7 +18,7 @@ import { CompletionProvider } from "./providers/completionProvider";
 export async function activate(context: vscode.ExtensionContext) {
 
   // --- L10nService -----------------------------------
-  const vscodeWrapper = new VSCoderWrapper();
+  const vscodeWrapper = new VSCodeWrapper();
   // ensure wrapper is disposed when extension deactivates
   context.subscriptions.push(vscodeWrapper);
   const logger = vscodeWrapper.logger;

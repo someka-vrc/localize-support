@@ -136,7 +136,7 @@ export class LanguagesWrapper implements ILanguagesWrapper {
  * 拡張内で使用する `vscode` ラッパーの集約実装。
  * テスト可能性のため `vscode` への直接参照を避け、必要なラッパーインスタンスを提供する。
  */
-export class VSCoderWrapper implements IVSCodeWrapper, Disposable {
+export class VSCodeWrapper implements IVSCodeWrapper, Disposable {
   workspace: IWorkspaceWrapper;
   command: ICommandWrapper;
   languages: ILanguagesWrapper;
