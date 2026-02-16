@@ -3,7 +3,7 @@ import { URI } from "vscode-uri";
 import { MockWorkspaceWrapper, MockLogOutputChannel } from "../mocks/mockVscodeWrapper";
 import { L10nTargetManager } from "../../../services/l10nTargetManager";
 import { L10nTarget } from "../../../models/l10nTypes";
-import { vscTypeHelper, MyDiagnosticSeverity } from "../../../models/vscodeTypes";
+import { vscTypeHelper, MyDiagnosticSeverity, DiagnosticsCode } from "../../../models/vscodeTypes";
 import sinon from "sinon";
 
 suite("L10nTargetManager diagnostics (unit)", () => {
@@ -37,7 +37,7 @@ suite("L10nTargetManager diagnostics (unit)", () => {
     // no translations present
     const items = mgr.getMatchDiagnostics();
     const forCode = items.find((it) => it.uri.path === codeUri.path)?.diagnostics || [];
-    assert.ok(forCode.some((d) => /missing.key/.test(d.message) && d.severity === MyDiagnosticSeverity.Warning));
+    assert.ok(forCode.some((d) => /missing.key/.test(d.message) && d.severity === MyDiagnosticSeverity.Warning && d.code === DiagnosticsCode.undefinedKey));
   });
 
   test("unused translation entry -> information on l10n URI", () => {
@@ -61,7 +61,7 @@ suite("L10nTargetManager diagnostics (unit)", () => {
     // no code references
     const items = mgr.getMatchDiagnostics();
     const forL10n = items.find((it) => it.uri.path === luri.path)?.diagnostics || [];
-    assert.ok(forL10n.some((d) => /unused.key/.test(d.message) && d.severity === MyDiagnosticSeverity.Information));
+    assert.ok(forL10n.some((d) => /unused.key/.test(d.message) && d.severity === MyDiagnosticSeverity.Information && d.code === DiagnosticsCode.unusedKey));
   });
 
   test("missing translation in other language -> warning on that language file", () => {
@@ -96,7 +96,7 @@ suite("L10nTargetManager diagnostics (unit)", () => {
     const forJa = items.find((it) => it.uri.path === ja.path)?.diagnostics || [];
     assert.ok(
       forJa.some(
-        (d) => /Missing translation for key 'hello'/.test(d.message) && d.severity === MyDiagnosticSeverity.Warning,
+        (d) => /Missing translation for key 'hello'/.test(d.message) && d.severity === MyDiagnosticSeverity.Warning && d.code === DiagnosticsCode.missingTranslation,
       ),
     );
   });
@@ -142,10 +142,10 @@ suite("L10nTargetManager diagnostics (unit)", () => {
 
     // ja should have missing translation for 'greet'
     const jaDiags = items.find((it) => it.uri.path === ja.path)?.diagnostics || [];
-    assert.ok(jaDiags.some((d) => /Missing translation for key 'greet'/.test(d.message)));
+    assert.ok(jaDiags.some((d) => /Missing translation for key 'greet'/.test(d.message) && d.code === DiagnosticsCode.missingTranslation));
 
     // ja should also have unused entry diagnostic for 'onlyInJa'
-    assert.ok(jaDiags.some((d) => /onlyInJa/.test(d.message) && d.severity === MyDiagnosticSeverity.Information));
+    assert.ok(jaDiags.some((d) => /onlyInJa/.test(d.message) && d.severity === MyDiagnosticSeverity.Information && d.code === DiagnosticsCode.unusedKey));
   });
 
   test("onRebuilt.dispose logs when removeListener fails", () => {

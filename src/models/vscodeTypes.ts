@@ -31,6 +31,28 @@ export interface MyDiagnostic {
   code?: string;
 }
 
+export const DiagnosticsCode = {
+  // settings
+  settingsInvalid: 'settings.invalid',
+
+  // .po parser
+  poMissingMsgstr: 'po.missingMsgstr',
+  poEmptyMsgstr: 'po.emptyMsgstr',
+  poDuplicateMsgid: 'po.duplicateMsgid',
+  poInvalidMsgidFormat: 'po.invalidMsgidFormat',
+  poInvalidMsgstrFormat: 'po.invalidMsgstrFormat',
+  poUnexpectedContinuation: 'po.unexpectedContinuation',
+  poUnrecognizedLine: 'po.unrecognizedLine',
+  poParseError: 'po.parseError',
+
+  // l10n matching
+  undefinedKey: 'l10n.undefinedKey',
+  unusedKey: 'l10n.unusedKey',
+  missingTranslation: 'l10n.missingTranslation',
+} as const;
+
+export type DiagnosticsCodeType = typeof DiagnosticsCode[keyof typeof DiagnosticsCode];
+
 export type DiagnosticCollection = vscode.DiagnosticCollection;
 
 export type FileType = vscode.FileType;

@@ -1,6 +1,6 @@
 import assert from "assert";
 import { PoParser } from "../../../services/poParser";
-import { MyDiagnosticSeverity } from "../../../models/vscodeTypes";
+import { MyDiagnosticSeverity, DiagnosticsCode } from "../../../models/vscodeTypes";
 import { URI } from "vscode-uri";
 
 suite("PoParser", () => {
@@ -47,6 +47,7 @@ suite("PoParser", () => {
     // diagnostic range should have non-zero length
     if (diag) {
       assert.ok(diag.range.start.character < diag.range.end.character);
+      assert.strictEqual(diag.code, DiagnosticsCode.poUnexpectedContinuation);
     }
   });
 
@@ -56,7 +57,7 @@ suite("PoParser", () => {
     const content = `msgid "DUP"\nmsgstr "One"\n\nmsgid "DUP"\nmsgstr "Two"\n`;
 
     const res = await parser.parse(uri, content);
-    assert.ok(res.diagnostics.some((d) => /duplicate msgid/.test(d.message)));
+    assert.ok(res.diagnostics.some((d) => /duplicate msgid/.test(d.message) && d.code === DiagnosticsCode.poDuplicateMsgid));
     // last value should overwrite previous in current implementation
     const entries = res.entries["dup"]; // basename dup
     assert.strictEqual(entries["DUP"].translation, "Two");
@@ -69,7 +70,7 @@ suite("PoParser", () => {
 
     const res = await parser.parse(uri, content);
     assert.strictEqual(res.success, false);
-    assert.ok(res.diagnostics.some((d) => /empty msgstr/.test(d.message) && d.severity === MyDiagnosticSeverity.Warning));
+    assert.ok(res.diagnostics.some((d) => /empty msgstr/.test(d.message) && d.severity === MyDiagnosticSeverity.Warning && d.code === DiagnosticsCode.poEmptyMsgstr));
   });
 
   test("reports invalid msgstr format (missing quote) as error", async () => {
@@ -80,7 +81,7 @@ suite("PoParser", () => {
     const res = await parser.parse(uri, content);
     assert.strictEqual(res.success, false);
     assert.ok(
-      res.diagnostics.some((d) => /invalid msgstr format/.test(d.message) && d.severity === MyDiagnosticSeverity.Error),
+      res.diagnostics.some((d) => /invalid msgstr format/.test(d.message) && d.severity === MyDiagnosticSeverity.Error && d.code === DiagnosticsCode.poInvalidMsgstrFormat),
     );
   });
 
@@ -92,7 +93,7 @@ suite("PoParser", () => {
     const res = await parser.parse(uri, content);
     assert.strictEqual(res.success, false);
     assert.ok(
-      res.diagnostics.some((d) => /missing msgstr/.test(d.message) && d.severity === MyDiagnosticSeverity.Error),
+      res.diagnostics.some((d) => /missing msgstr/.test(d.message) && d.severity === MyDiagnosticSeverity.Error && d.code === DiagnosticsCode.poMissingMsgstr),
     );
   });
 
@@ -115,7 +116,7 @@ suite("PoParser", () => {
     const res = await parser.parse(uri, content);
     assert.strictEqual(res.success, false);
     assert.ok(
-      res.diagnostics.some((d) => /invalid msgid format/.test(d.message) && d.severity === MyDiagnosticSeverity.Error),
+      res.diagnostics.some((d) => /invalid msgid format/.test(d.message) && d.severity === MyDiagnosticSeverity.Error && d.code === DiagnosticsCode.poInvalidMsgidFormat),
     );
   });
 
@@ -140,7 +141,7 @@ suite("PoParser", () => {
     assert.strictEqual(res.success, false);
     assert.ok(
       res.diagnostics.some(
-        (d) => /unrecognized line in \.po/.test(d.message) && d.severity === MyDiagnosticSeverity.Warning,
+        (d) => /unrecognized line in \.po/.test(d.message) && d.severity === MyDiagnosticSeverity.Warning && d.code === DiagnosticsCode.poUnrecognizedLine,
       ),
     );
   });

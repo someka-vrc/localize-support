@@ -7,6 +7,7 @@ import {
   MyDiagnosticSeverity,
   IWorkspaceWrapper,
   LogOutputChannel,
+  DiagnosticsCode,
 } from "../models/vscodeTypes";
 import { URI } from "vscode-uri";
 import type { DiagOrStatus } from "../models/interfaces";
@@ -638,6 +639,7 @@ export class L10nService implements Disposable {
               } as MyRange,
               message: m,
               severity: MyDiagnosticSeverity.Warning,
+              code: DiagnosticsCode.settingsInvalid,
             } as MyDiagnostic;
           }),
         },

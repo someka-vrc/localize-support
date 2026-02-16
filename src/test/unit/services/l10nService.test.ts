@@ -4,7 +4,7 @@ import { URI } from "vscode-uri";
 import { MockWorkspaceWrapper, MockLogOutputChannel } from "../mocks/mockVscodeWrapper";
 import { L10nService } from "../../../services/l10nService";
 import { L10nTargetManager } from "../../../services/l10nTargetManager";
-import { vscTypeHelper } from "../../../models/vscodeTypes";
+import { vscTypeHelper, DiagnosticsCode } from "../../../models/vscodeTypes";
 
 suite("L10nService (unit)", () => {
   let workspace: MockWorkspaceWrapper;
@@ -32,6 +32,7 @@ suite("L10nService (unit)", () => {
     assert.ok(d && d.length > 0, "diagnostic must be present for failed read");
     const msg = d![0].message;
     assert.ok(msg.includes("Failed to read settings file"));
+    assert.strictEqual(d![0].code, DiagnosticsCode.settingsInvalid);
   });
 
   test("normalizeSettingsObject normalizes dirs and reports missing ones (unit)", async () => {
@@ -103,7 +104,7 @@ suite("L10nService (unit)", () => {
 
     const { diags } = svc.getDiagnostics();
     const codeDiags = diags.get(codeUri.path) || [];
-    assert.ok(codeDiags.some((d) => /missing.key/.test(d.message)));
+    assert.ok(codeDiags.some((d) => /missing.key/.test(d.message) && d.code === DiagnosticsCode.undefinedKey));
   });
 
   test("getKeyAtPosition() returns key from code and .po; position outside returns null", () => {

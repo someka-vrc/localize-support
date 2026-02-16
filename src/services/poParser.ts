@@ -1,4 +1,4 @@
-import { MyDiagnostic, MyDiagnosticSeverity, vscTypeHelper } from "../models/vscodeTypes";
+import { MyDiagnostic, MyDiagnosticSeverity, vscTypeHelper, DiagnosticsCode } from "../models/vscodeTypes";
 import { URI } from "vscode-uri";
 import { TranslationParser, TranslationParseResult } from "./translationParser";
 import { L10nLangEntries } from "../models/l10nTypes";
@@ -73,6 +73,7 @@ export class PoParser implements TranslationParser {
               ),
               `missing msgstr for msgid '${msgid}'`,
               MyDiagnosticSeverity.Error,
+              DiagnosticsCode.poMissingMsgstr,
             ),
           );
           success = false;
@@ -96,6 +97,7 @@ export class PoParser implements TranslationParser {
               ),
               `empty msgstr for msgid '${msgid}'`,
               MyDiagnosticSeverity.Warning,
+              DiagnosticsCode.poEmptyMsgstr,
             ),
           );
           success = false;
@@ -119,6 +121,7 @@ export class PoParser implements TranslationParser {
               ),
               `duplicate msgid '${msgid}'`,
               MyDiagnosticSeverity.Warning,
+              DiagnosticsCode.poDuplicateMsgid,
             ),
           );
         }
@@ -191,6 +194,7 @@ export class PoParser implements TranslationParser {
               vscTypeHelper.newRange(i, col >= 0 ? col : 0, i, endCol),
               `invalid msgid format, expected quoted string`,
               MyDiagnosticSeverity.Error,
+              DiagnosticsCode.poInvalidMsgidFormat,
             ),
           );
           success = false;
@@ -223,6 +227,7 @@ export class PoParser implements TranslationParser {
               vscTypeHelper.newRange(i, col >= 0 ? col : 0, i, endCol),
               `invalid msgstr format, expected quoted string`,
               MyDiagnosticSeverity.Error,
+              DiagnosticsCode.poInvalidMsgstrFormat,
             ),
           );
           success = false;
@@ -253,6 +258,7 @@ export class PoParser implements TranslationParser {
                 vscTypeHelper.newRange(i, col, i, endCol),
                 `unexpected continuation string outside of msgid/msgstr: ${m[1]}`,
                 MyDiagnosticSeverity.Warning,
+                DiagnosticsCode.poUnexpectedContinuation,
               ),
             );
             success = false;
@@ -266,6 +272,7 @@ export class PoParser implements TranslationParser {
             vscTypeHelper.newRange(i, 0, i, 0),
             `unrecognized line in .po: ${line}`,
             MyDiagnosticSeverity.Warning,
+            DiagnosticsCode.poUnrecognizedLine,
           ),
         );
         success = false;
@@ -281,6 +288,7 @@ export class PoParser implements TranslationParser {
           vscTypeHelper.newRange(0, 0, 0, 0),
           `unknown parse error`,
           MyDiagnosticSeverity.Warning,
+          DiagnosticsCode.poParseError,
         ),
       );
     }

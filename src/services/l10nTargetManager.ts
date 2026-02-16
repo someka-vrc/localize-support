@@ -1,6 +1,6 @@
 import EventEmitter from "events";
 import { L10nTarget } from "../models/l10nTypes";
-import { IWorkspaceWrapper, LogOutputChannel, Disposable, MyDiagnostic, MyDiagnosticSeverity, vscTypeHelper } from "../models/vscodeTypes";
+import { IWorkspaceWrapper, LogOutputChannel, Disposable, MyDiagnostic, MyDiagnosticSeverity, vscTypeHelper, DiagnosticsCode } from "../models/vscodeTypes";
 import { URI } from "vscode-uri";
 import { TranslationManager } from "./translationManager";
 import { CodeManager } from "./codeManager";
@@ -80,6 +80,7 @@ export class L10nTargetManager implements Disposable {
               c.location.range,
               `Undefined localization key '${c.key}' used in code.`,
               MyDiagnosticSeverity.Warning,
+              DiagnosticsCode.undefinedKey,
             ),
           );
         }
@@ -99,6 +100,7 @@ export class L10nTargetManager implements Disposable {
                 (entry as any).location.range,
                 `Localization key '${k}' is not used in code.`,
                 MyDiagnosticSeverity.Information,
+                DiagnosticsCode.unusedKey,
               ),
             );
           }
@@ -120,6 +122,7 @@ export class L10nTargetManager implements Disposable {
                   vscTypeHelper.newRange(0, 0, 0, 0),
                   `Missing translation for key '${k}' in language '${lang}'.`,
                   MyDiagnosticSeverity.Warning,
+                  DiagnosticsCode.missingTranslation,
                 ),
               );
             }
