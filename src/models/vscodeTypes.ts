@@ -28,6 +28,7 @@ export interface MyDiagnostic {
   range: MyRange;
   message: string;
   severity: MyDiagnosticSeverity;
+  code?: string;
 }
 
 export type DiagnosticCollection = vscode.DiagnosticCollection;
@@ -59,8 +60,8 @@ function newRange(startLine: number, startChar: number, endLine: number, endChar
 function newLocation(uri: URI, range: MyRange): MyLocation {
   return { uri, range };
 }
-function newDiagnostic(range: MyRange, message: string, severity: MyDiagnosticSeverity): MyDiagnostic {
-  return { range, message, severity };
+function newDiagnostic(range: MyRange, message: string, severity: MyDiagnosticSeverity, code?: string): MyDiagnostic {
+  return { range, message, severity, code };
 }
 
 export const vscTypeHelper = {
