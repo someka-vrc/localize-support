@@ -12,6 +12,7 @@ import { registerToggleDiagnosticsCommand } from "./commands/toggleDiagnosticsCo
 import { HoverProvider } from "./providers/hoverProvider";
 import { RenameProvider } from "./providers/renameProvider";
 import { CompletionProvider } from "./providers/completionProvider";
+import { CodeActionProvider } from "./providers/codeActionProvider";
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -57,6 +58,8 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(registerOpenLocationCommand(vscodeWrapper.command, vscodeWrapper.logger));
   context.subscriptions.push(registerToggleDiagnosticsCommand(vscodeWrapper.command, vscodeWrapper.logger, diagnosticProvider, context.workspaceState));
   context.subscriptions.push(vscode.languages.registerHoverProvider(docSelectors, new HoverProvider(l10nService)));
+  // register code action provider (returns placeholder actions for diagnostics that have `code`)
+  context.subscriptions.push(vscode.languages.registerCodeActionsProvider(docSelectors, new CodeActionProvider(l10nService)));
 
   logger.info("localize-support activated");
 }

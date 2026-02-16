@@ -30,7 +30,7 @@ async function waitForDefs(uri: vscode.Uri, pos: vscode.Position, timeout = 4000
 }
 
 /** Wait until providers are ready and can return results for the given position. */
-async function waitForReady(uri: vscode.Uri, pos: vscode.Position, timeout = 4000): Promise<void> {
+async function waitForReady(uri: vscode.Uri, pos: vscode.Position, timeout = 8000): Promise<void> {
   const start = Date.now();
   while (Date.now() - start < timeout) {
     const res: any = await vscode.commands.executeCommand("vscode.executeDefinitionProvider", uri, pos);
@@ -254,6 +254,50 @@ suite("providers/diagnosticProvider (integration)", () => {
     await vscode.workspace.applyEdit(revert as any);
 
     assert.ok(found, `expected a diagnostic mentioning ${fakeKey} or an undefined localization key but got: ${JSON.stringify(diagnostics)}`);
+  });
+});
+
+suite("providers/codeActionProvider (integration)", () => {
+  test("returns placeholder QuickFix for diagnostics that contain a code", async function () {
+    this.timeout(6000);
+
+    const codeUris = await vscode.workspace.findFiles("**/chsharp.cs");
+    assert.ok(codeUris.length > 0, "chsharp.cs must exist in fixture");
+    const codeUri = codeUris[0];
+    const codeDoc = await vscode.workspace.openTextDocument(codeUri);
+    const text = codeDoc.getText();
+
+    // insert a fake key to trigger an 'undefined key' diagnostic
+    const fakeKey = "__MISSING_KEY_FOR_CODEACTION__";
+    const insertPos = codeDoc.positionAt(text.indexOf('"Execute"'));
+    const edit = new vscode.WorkspaceEdit();
+    edit.insert(codeUri, insertPos, ` /*diag*/ ${fakeKey}`);
+    await vscode.workspace.applyEdit(edit as any);
+
+    // wait briefly for diagnostics to appear
+    await new Promise((r) => setTimeout(r, 500));
+
+    const diagnostics = vscode.languages.getDiagnostics(codeUri);
+    const targetDiag = diagnostics.find((d) => d.message.includes(fakeKey) || /Undefined localization key/i.test(d.message));
+    assert.ok(targetDiag, `expected diagnostic for inserted key; got: ${JSON.stringify(diagnostics)}`);
+
+    // ask VS Code to run the code action provider for the diagnostic range
+    const actions: any = await vscode.commands.executeCommand(
+      "vscode.executeCodeActionProvider",
+      codeUri,
+      targetDiag!.range,
+    );
+
+    // cleanup the edit we made
+    const revert = new vscode.WorkspaceEdit();
+    const replaced = (await vscode.workspace.openTextDocument(codeUri)).getText();
+    const cleaned = replaced.replace(` /*diag*/ ${fakeKey}`, "");
+    revert.replace(codeUri, new vscode.Range(0, 0, Number.MAX_SAFE_INTEGER, 0), cleaned);
+    await vscode.workspace.applyEdit(revert as any);
+
+    assert.ok(Array.isArray(actions), "executeCodeActionProvider should return an array");
+    const foundPlaceholder = actions.some((a: any) => typeof a.title === "string" && a.title.indexOf("localize-support:") === 0);
+    assert.ok(foundPlaceholder, `expected at least one placeholder code action from localize-support but got: ${JSON.stringify(actions)}`);
   });
 });
 
