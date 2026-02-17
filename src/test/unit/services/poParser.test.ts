@@ -18,7 +18,9 @@ suite("PoParser", () => {
     assert.strictEqual(res.diagnostics.length, 0);
     // location should have non-zero range
     const loc = langEntries["Hello"].location.range;
-    assert.ok(loc.start.character < loc.end.character, "msgid location should span characters");
+    // start/end columns are computed from the surrounding quotes: "msgid \"Hello\"" -> start=6, end=13
+    assert.strictEqual(loc.start.character, 6, "msgid location start column");
+    assert.strictEqual(loc.end.character, 13, "msgid location end column");
 
     // deletionRange should cover msgid..msgstr when no trailing blank line
     const del = langEntries["Hello"].deletionRange as any;
@@ -28,7 +30,8 @@ suite("PoParser", () => {
     assert.strictEqual(del.end.line, 1);
     // start character should be at or before the 'msgid' token (we expect 0)
     assert.strictEqual(del.start.character, 0);
-    assert.ok(del.end.character > 0);
+    // end column comes from the closing quote of msgstr "こんにちは" -> lastQuote+1 === 14
+    assert.strictEqual(del.end.character, 14);
   });
 
   test("sets deletionRange including trailing empty line", async () => {
@@ -97,7 +100,9 @@ suite("PoParser", () => {
     assert.ok(diag);
     // diagnostic range should have non-zero length
     if (diag) {
-      assert.ok(diag.range.start.character < diag.range.end.character);
+      // quoted continuation line: "alone" -> range columns 0..7
+      assert.strictEqual(diag.range.start.character, 0);
+      assert.strictEqual(diag.range.end.character, 7);
       assert.strictEqual(diag.code, DiagnosticsCode.poUnexpectedContinuation);
     }
   });

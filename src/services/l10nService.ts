@@ -476,21 +476,6 @@ export class L10nService implements Disposable {
     // choose the closest candidate by position (largest startLine/startChar)
     candidates.sort((a, b) => b.startLine - a.startLine || b.startChar - a.startChar);
     const nearestKey = candidates.length > 0 ? candidates[0].key : null;
-    // DEBUG: log nearestKey and candidate list when running tests (removed after verification)
-    try {
-      (this.logger as any)?.info?.(
-        `computeInsertionTargetsForKeyAt: nearestKey=${nearestKey}, candidates=[${candidates.map((c) => c.key).join(",")}]`,
-      );
-    } catch (err) {
-      // ignore logging errors in environments without logger
-    }
-    // also emit to stdout during tests for easier inspection
-    try {
-      console.log(
-        `computeInsertionTargetsForKeyAt: nearestKey=${nearestKey}, candidates=[${candidates.map((c) => c.key).join(",")}]`,
-      );
-    } catch (err) {}
-
     const l10nUris = this.getAllL10nUris();
     const results: { uri: URI; position: MyPosition; entryText: string }[] = [];
 

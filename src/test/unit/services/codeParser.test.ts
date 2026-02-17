@@ -129,9 +129,27 @@ suite("CodeParser (unit, integration with wasm)", () => {
 
     // locations should have valid line numbers (0-based) and the URI we passed
     const expectedUri = URI.file(path.join(process.cwd(), "src", "services", "codeParser.test.js"));
+
+    // strict checks: expect each captured key on the specific source line within the test input
+    const map = new Map(fragments.map((f) => [f.key, f]));
+    const fHello = map.get("hello.world")!;
+    const fSingle = map.get("single-quoted")!;
+    const fMember = map.get("member.call")!;
+    const fTemplate = map.get("static-template")!;
+
+    assert.strictEqual(fHello.location.range.start.line, 1);
+    assert.strictEqual(fHello.location.range.end.line, 1);
+
+    assert.strictEqual(fSingle.location.range.start.line, 2);
+    assert.strictEqual(fSingle.location.range.end.line, 2);
+
+    assert.strictEqual(fMember.location.range.start.line, 3);
+    assert.strictEqual(fMember.location.range.end.line, 3);
+
+    assert.strictEqual(fTemplate.location.range.start.line, 4);
+    assert.strictEqual(fTemplate.location.range.end.line, 4);
+
     for (const f of fragments) {
-      assert.ok(typeof f.location.range.start.line === "number");
-      assert.ok(typeof f.location.range.end.line === "number");
       assert.strictEqual(f.location.uri.fsPath, expectedUri.fsPath);
     }
 
