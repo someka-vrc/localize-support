@@ -280,13 +280,10 @@ export class L10nService implements Disposable {
   }
 
   /**
-   * ----- 追加: 検索 / 定義参照ヘルパー -----
-   *
-   * サービス層（vscode 依存なし）で以下の機能を提供する：
-   * - コード/翻訳ファイル上の位置からキーを取得する
-   * - キーから翻訳エントリの位置を列挙する
-   * - キーからコード参照位置を列挙する
-   * - 高レベル API: findDefinition / findReferences
+   * コード/翻訳ファイル上の位置からキーを取得する
+   * @param uri
+   * @param position
+   * @returns
    */
   public getKeyAtPosition(uri: URI, position: MyPosition): string | null {
     const path = uri.path;
@@ -323,6 +320,11 @@ export class L10nService implements Disposable {
     return null;
   }
 
+  /**
+   * 指定されたキーに対する翻訳エントリの位置をすべて検索する
+   * @param key 
+   * @returns 
+   */
   public findTranslationLocationsForKey(key: string) {
     const result: any[] = [];
     for (const tgtUnits of this.managers.values()) {
@@ -448,17 +450,29 @@ export class L10nService implements Disposable {
 
   /**
    * Return completion candidates (fuzzy-scored + translations) for a given prefix.
-   * This is pure/service logic and does not depend on vscode types.
    */
   public getCompletionCandidates(
     prefix: string,
     maxResults: number = 200,
-  ): { key: string; score: number; translations: { translation: string; uri: URI; fileName: string; path: string; lang: string; location?: MyLocation }[] }[] {
+  ): {
+    key: string;
+    score: number;
+    translations: {
+      translation: string;
+      uri: URI;
+      fileName: string;
+      path: string;
+      lang: string;
+      location?: MyLocation;
+    }[];
+  }[] {
     const allKeys = this.getAllKeys() || [];
     const pat = (prefix || "").toLowerCase();
 
     const fuzzyScore = (pat: string, str: string): number => {
-      if (!pat) {return 1000;} // empty pattern — highest score
+      if (!pat) {
+        return 1000;
+      } // empty pattern — highest score
       pat = pat.toLowerCase();
       str = str.toLowerCase();
       let pi = 0;
@@ -468,10 +482,16 @@ export class L10nService implements Disposable {
       let firstMatch = -1;
       while (pi < pat.length && si < str.length) {
         if (pat[pi] === str[si]) {
-          if (firstMatch === -1) {firstMatch = si;}
+          if (firstMatch === -1) {
+            firstMatch = si;
+          }
           score += 100;
-          if (consec > 0) {score += 30 * consec;}
-          if (si === 0) {score += 50;}
+          if (consec > 0) {
+            score += 30 * consec;
+          }
+          if (si === 0) {
+            score += 50;
+          }
           consec += 1;
           pi += 1;
           si += 1;
@@ -480,7 +500,9 @@ export class L10nService implements Disposable {
           si += 1;
         }
       }
-      if (pi < pat.length) {return -Infinity;} // not a subsequence
+      if (pi < pat.length) {
+        return -Infinity;
+      } // not a subsequence
       const gapPenalty = firstMatch >= 0 ? firstMatch : 0;
       const lengthPenalty = Math.max(0, str.length - pat.length);
       return score - gapPenalty - Math.floor(lengthPenalty / 2);
@@ -489,12 +511,16 @@ export class L10nService implements Disposable {
     const scored: { key: string; score: number }[] = [];
     for (const k of allKeys) {
       const s = fuzzyScore(pat, k);
-      if (s !== -Infinity) { scored.push({ key: k, score: s }); }
+      if (s !== -Infinity) {
+        scored.push({ key: k, score: s });
+      }
     }
 
-    if (scored.length === 0) { return []; }
+    if (scored.length === 0) {
+      return [];
+    }
 
-    scored.sort((a, b) => (b.score - a.score) || a.key.localeCompare(b.key));
+    scored.sort((a, b) => b.score - a.score || a.key.localeCompare(b.key));
     const top = scored.slice(0, maxResults);
 
     return top.map((s) => ({ key: s.key, score: s.score, translations: this.getTranslationsForKey(s.key) }));
@@ -505,7 +531,9 @@ export class L10nService implements Disposable {
    * Returns offsets relative to the provided `fullText` (or null).
    */
   public findInnerRangeInText(fullText: string, key: string): { start: number; end: number } | null {
-    if (!fullText) { return null; }
+    if (!fullText) {
+      return null;
+    }
     // try to locate the raw key text inside the literal/po range
     const idx = fullText.indexOf(key);
     if (idx >= 0) {
@@ -529,7 +557,9 @@ export class L10nService implements Disposable {
    * Escape a string for safe insertion into a .po msgid quoted string.
    */
   public escapePoString(s: string): string {
-    if (s === null || s === undefined) { return ""; }
+    if (s === null || s === undefined) {
+      return "";
+    }
     return s.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n");
   }
 
@@ -554,9 +584,10 @@ export class L10nService implements Disposable {
   }
 
   // New: collect rename targets for a key located at the given location
-  public collectLocationsForKeyAt(uri: URI, position: MyPosition):
-    | { key: string; codeLocations: MyLocation[]; translationLocations: MyLocation[] }
-    | null {
+  public collectLocationsForKeyAt(
+    uri: URI,
+    position: MyPosition,
+  ): { key: string; codeLocations: MyLocation[]; translationLocations: MyLocation[] } | null {
     const key = this.getKeyAtPosition(uri, position);
     if (!key) {
       return null;
