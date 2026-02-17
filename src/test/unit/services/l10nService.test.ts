@@ -276,6 +276,47 @@ suite("L10nService (unit)", () => {
     assert.ok(fns.includes("G"));
   });
 
+  test("computeInsertionTargetsForKeyAt: picks nearest preceding localization call (unit)", () => {
+    const target = {
+      codeLanguages: ["csharp"],
+      codeDirs: [URI.file("d:/proj/src")],
+      l10nFormat: "po",
+      l10nDirs: [URI.file("d:/proj/locales")],
+      l10nExtension: ".po",
+      l10nFuncNames: ["G"],
+      settingsLocation: URI.file("d:/proj"),
+    } as any;
+
+    const mgr = new L10nTargetManager(workspace as any, new MockLogOutputChannel(), target as any, URI.file("d:/proj/.globalStorage"), 1);
+    const codeUri = URI.file("d:/proj/src/chsharp.cs");
+
+    // simulate two localization calls: 'Cancel' (later in file) and 'Save changes' (earlier)
+    mgr.codes.set(codeUri.path, [
+      { key: "Cancel", location: vscTypeHelper.newLocation(codeUri, vscTypeHelper.newRange(29, 16, 29, 40)) },
+      { key: "Save changes", location: vscTypeHelper.newLocation(codeUri, vscTypeHelper.newRange(13, 12, 13, 32)) },
+    ] as any);
+
+    const poUri = URI.file("d:/proj/locales/ja.po");
+    mgr.l10ns.set(poUri.path, {
+      success: true,
+      diagnostics: [],
+      entries: {
+        ja: {
+          "Cancel": { translation: "キャンセル", location: vscTypeHelper.newLocation(poUri, vscTypeHelper.newRange(20, 0, 21, 0)) },
+          "Save changes": { translation: "変更を保存", location: vscTypeHelper.newLocation(poUri, vscTypeHelper.newRange(11, 0, 12, 0)) },
+        },
+      },
+    } as any);
+
+    (svc as any).managers.set("/p", [{ manager: mgr, listenerDisposable: { dispose: () => {} } }]);
+
+    const results = svc.computeInsertionTargetsForKeyAt(codeUri, { line: 32, character: 12 } as any, "NEW_KEY", "NEW_KEY");
+    assert.ok(Array.isArray(results) && results.length > 0);
+    // should insert after the nearest preceding entry (Cancel is later in file than Save changes)
+    const posLine = results[0].position.line;
+    assert.strictEqual(posLine, 21);
+  });
+
   test("getCompletionCandidates() fuzzy matches and sorts (unit)", () => {
     const target = {
       codeLanguages: ["javascript"],

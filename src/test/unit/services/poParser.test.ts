@@ -23,8 +23,11 @@ suite("PoParser", () => {
     // deletionRange should cover msgid..msgstr when no trailing blank line
     const del = langEntries["Hello"].deletionRange as any;
     assert.ok(del, "deletionRange should exist");
+    // deletion should cover both lines (msgid + msgstr)
     assert.strictEqual(del.start.line, 0);
     assert.strictEqual(del.end.line, 1);
+    // start character should be at or before the 'msgid' token (we expect 0)
+    assert.strictEqual(del.start.character, 0);
     assert.ok(del.end.character > 0);
   });
 
@@ -40,6 +43,22 @@ suite("PoParser", () => {
     assert.strictEqual(e.deletionRange.start.line, 0);
     assert.strictEqual(e.deletionRange.end.line, 2);
     // trailing empty line -> end.character should be 0
+    assert.strictEqual(e.deletionRange.end.character, 0);
+  });
+
+  test("deletionRange includes separator blank line between consecutive entries", async () => {
+    const parser = new PoParser();
+    const uri = { scheme: "file", path: "d:/dummy/multi.po", fsPath: "d:/dummy/multi.po" } as URI;
+    const content = `# comment\nmsgid "Unused key"\nmsgstr "clave no utilizada"\n\nmsgid "Duplicate key"\nmsgstr "clave duplicada"\n`;
+
+    const res = await parser.parse(uri, content);
+    const entries = res.entries[Object.keys(res.entries)[0]]; // language key derived from filename
+    const e = entries["Unused key"];
+    assert.ok(e.deletionRange, "deletionRange should be present for 'Unused key'");
+    // msgid is at line 1, msgstr at line 2, blank separator at line 3 -> end should point to line 4 start
+    assert.strictEqual(e.deletionRange.start.line, 1);
+    assert.strictEqual(e.deletionRange.start.character, 0);
+    assert.strictEqual(e.deletionRange.end.line, 4);
     assert.strictEqual(e.deletionRange.end.character, 0);
   });
 

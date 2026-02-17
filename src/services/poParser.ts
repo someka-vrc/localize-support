@@ -131,13 +131,38 @@ export class PoParser implements TranslationParser {
         let deletionEndLine = currentMsgStrEndLine || currentMsgIdEndLine;
         let deletionEndCol = currentMsgStrEndCol || currentMsgIdEndCol;
         if (typeof deletionEndLine === "number" && text[deletionEndLine + 1] !== undefined && text[deletionEndLine + 1].trim() === "") {
-          // include following empty separator line only when it is not just the EOF-trailing newline
-          // (i.e. there must be at least one more array element after that empty line)
-          if (text[deletionEndLine + 2] !== undefined) {
-            deletionEndLine = deletionEndLine + 1;
-            deletionEndCol = 0;
+          // If there's only a single trailing newline (no array element after the
+          // blank), do not treat it as a removable separator — keep current end.
+          if (text[deletionEndLine + 2] === undefined) {
+            // single trailing newline only -> leave deletionEndLine as-is
+          } else {
+            // There are further array elements after the blank line.  Find the next
+            // non-empty line; if found, end the deletion at its start so the
+            // separator blank line(s) are removed.  If not found, include the
+            // single blank line (handles multiple trailing empty array elements).
+            let nextNonEmpty = -1;
+            for (let li = deletionEndLine + 2; li < text.length; li++) {
+              if (text[li].trim() !== "") {
+                nextNonEmpty = li;
+                break;
+              }
+            }
+            if (nextNonEmpty !== -1) {
+              deletionEndLine = nextNonEmpty;
+              deletionEndCol = 0;
+            } else {
+              deletionEndLine = deletionEndLine + 1;
+              deletionEndCol = 0;
+            }
           }
         }
+
+        // determine deletionRange start column so that deleting an entry removes
+        // the entire msgid/msgstr block (include the 'msgid' token and leading
+        // indentation), not only the quoted string inside it.
+        const rawLine = text[currentMsgIdStartLine] || "";
+        const msgidIndex = rawLine.indexOf("msgid");
+        const deletionStartCol = msgidIndex >= 0 ? msgidIndex : 0;
 
         entries[msgid] = {
           translation: msgstr,
@@ -150,9 +175,11 @@ export class PoParser implements TranslationParser {
               currentMsgIdEndCol,
             ),
           ),
+          // deletionRange should start at the beginning of the msgid line so that
+          // WorkspaceEdit.delete removes the whole entry including the msgid/msgstr
           deletionRange: vscTypeHelper.newRange(
             currentMsgIdStartLine,
-            currentMsgIdStartCol,
+            deletionStartCol,
             deletionEndLine,
             deletionEndCol,
           ),

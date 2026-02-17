@@ -322,7 +322,7 @@ export class L10nService implements Disposable {
 
   /**
    * 指定されたキーに対する翻訳エントリをすべて取得する
-   * @param key 
+   * @param key
    * @returns L10nEntry の配列
    */
   public findTranslationEntriesForKey(key: string): L10nEntry[] {
@@ -336,7 +336,7 @@ export class L10nService implements Disposable {
         for (const [, parsed] of l10ns.entries()) {
           const langs = Object.keys(parsed?.entries || {});
           for (const lang of langs) {
-            const entries = (parsed!.entries)[lang] || {};
+            const entries = parsed!.entries[lang] || {};
             if (entries[key]) {
               result.push(entries[key]);
             }
@@ -389,6 +389,190 @@ export class L10nService implements Disposable {
       }
     }
     return result;
+  }
+
+  /**
+   * Return a deduplicated list of all known localization file URIs (parsed by TranslationManager).
+   * Used by providers that need to add/remove entries across all translation files.
+   */
+  public getAllL10nUris(): URI[] {
+    const seen = new Set<string>();
+    const result: URI[] = [];
+    for (const tgtUnits of this.managers.values()) {
+      for (const tu of tgtUnits) {
+        const l10ns = tu.manager?.l10ns;
+        if (!l10ns) {
+          continue;
+        }
+        for (const [luri] of l10ns.entries()) {
+          if (!seen.has(luri)) {
+            seen.add(luri);
+            result.push(URI.parse(luri));
+          }
+        }
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Compute insertion targets for adding a new translation `key` corresponding to a
+   * code location (uri + position).  For each known localization file return the
+   * MyPosition where the new entry text should be inserted and the formatted
+   * entry text (using the file's parser.formatEntry).
+   *
+   * Behavior:
+   * - Find the nearest localization call in the same code file that occurs before
+   *   `position` and has an existing translation entry; insert the new entry
+   *   directly under that existing entry in each translation file where it
+   *   appears.
+   * - If no such preceding code-localization key is found, use the last
+   *   occurring entry in the translation file as the insertion anchor.
+   * - If the file has no entries, insertion position will be at EOF (document
+   *   end).
+   */
+  public computeInsertionTargetsForKeyAt(
+    codeUri: URI,
+    position: MyPosition,
+    key: string,
+    translation: string | null = null,
+  ): { uri: URI; position: MyPosition; entryText: string }[] {
+    if (!key) {
+      return [];
+    }
+
+    // 1) find nearest preceding code localization call (in same file) that has translations
+    const path = codeUri.path;
+    type CodeCandidate = { key: string; startLine: number; startChar: number };
+    const candidates: CodeCandidate[] = [];
+
+    for (const tgtUnits of this.managers.values()) {
+      for (const tu of tgtUnits) {
+        const codes = tu.manager?.codes;
+        if (!codes) {
+          continue;
+        }
+        if (!codes.has(path)) {
+          continue;
+        }
+        const list = codes.get(path) || [];
+        for (const c of list) {
+          const r = c.location.range;
+          // only consider calls that occur at-or-before the position
+          // and which themselves have at least one translation entry
+          if (
+            r.start.line < position.line ||
+            (r.start.line === position.line && r.start.character <= position.character)
+          ) {
+            const transEntries = this.findTranslationEntriesForKey(c.key) || [];
+            if (transEntries.length > 0) {
+              candidates.push({ key: c.key, startLine: r.start.line, startChar: r.start.character });
+            }
+          }
+        }
+      }
+    }
+
+    // choose the closest candidate by position (largest startLine/startChar)
+    candidates.sort((a, b) => b.startLine - a.startLine || b.startChar - a.startChar);
+    const nearestKey = candidates.length > 0 ? candidates[0].key : null;
+    // DEBUG: log nearestKey and candidate list when running tests (removed after verification)
+    try {
+      (this.logger as any)?.info?.(
+        `computeInsertionTargetsForKeyAt: nearestKey=${nearestKey}, candidates=[${candidates.map((c) => c.key).join(",")}]`,
+      );
+    } catch (err) {
+      // ignore logging errors in environments without logger
+    }
+    // also emit to stdout during tests for easier inspection
+    try {
+      console.log(
+        `computeInsertionTargetsForKeyAt: nearestKey=${nearestKey}, candidates=[${candidates.map((c) => c.key).join(",")}]`,
+      );
+    } catch (err) {}
+
+    const l10nUris = this.getAllL10nUris();
+    const results: { uri: URI; position: MyPosition; entryText: string }[] = [];
+
+    for (const uri of l10nUris) {
+      // obtain the parsed TranslationParseResult for this uri
+      let parsed: any = null;
+      for (const tgtUnits of this.managers.values()) {
+        for (const tu of tgtUnits) {
+          const l10ns = tu.manager?.l10ns;
+          if (l10ns && l10ns.has((uri as any).path)) {
+            parsed = l10ns.get((uri as any).path);
+            break;
+          }
+        }
+        if (parsed) {
+          break;
+        }
+      }
+
+      // fallback: insert at EOF when parser not available
+      if (!parsed) {
+        results.push({
+          uri: uri as URI,
+          position: { line: Number.MAX_SAFE_INTEGER, character: 0 },
+          entryText: `${key}\n`,
+        });
+        continue;
+      }
+
+      // determine language block inside parsed.entries (po parser uses filename->lang)
+      const langs = Object.keys(parsed.entries || {});
+      const lang = langs.length > 0 ? langs[0] : "";
+      const entries = (parsed.entries || {})[lang] || {};
+
+      // helper to format entry text for this file
+      const entryText = parsed.formatEntry
+        ? parsed.formatEntry(key, translation ?? key)
+        : `msgid "${key}"\nmsgstr "${translation ?? key}"\n\n`;
+
+      // if nearestKey exists and this file contains that key, insert after that entry
+      if (nearestKey && entries[nearestKey]) {
+        const e = entries[nearestKey] as any;
+        const insPos = e.deletionRange ? e.deletionRange.end : e.location.range.end;
+        results.push({
+          uri: URI.parse((uri as any).toString()),
+          position: { line: insPos.line, character: insPos.character || 0 },
+          entryText,
+        });
+        continue;
+      }
+
+      // otherwise insert after the last existing entry in this file (if any)
+      let lastEntry: any = null;
+      let lastLine = -1;
+      for (const k of Object.keys(entries)) {
+        const ent = entries[k];
+        const endLine = ent.deletionRange ? ent.deletionRange.end.line : ent.location.range.end.line;
+        if (endLine > lastLine) {
+          lastLine = endLine;
+          lastEntry = ent;
+        }
+      }
+
+      if (lastEntry) {
+        const pos = lastEntry.deletionRange ? lastEntry.deletionRange.end : lastEntry.location.range.end;
+        results.push({
+          uri: URI.parse((uri as any).toString()),
+          position: { line: pos.line, character: pos.character || 0 },
+          entryText,
+        });
+        continue;
+      }
+
+      // no existing entries -> append at EOF
+      results.push({
+        uri: URI.parse((uri as any).toString()),
+        position: { line: Number.MAX_SAFE_INTEGER, character: 0 },
+        entryText,
+      });
+    }
+
+    return results;
   }
 
   /**
