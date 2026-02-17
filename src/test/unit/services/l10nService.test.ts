@@ -155,7 +155,7 @@ suite("L10nService (unit)", () => {
     assert.strictEqual(keyFromPo, "po.key");
   });
 
-  test("findTranslationLocationsForKey / findCodeReferencesForKey / findDefinition / findReferences", () => {
+  test("findTranslationEntriesForKey / findCodeReferencesForKey / findDefinition / findReferences", () => {
     const target = {
       codeLanguages: ["javascript"],
       codeDirs: [URI.file("d:/proj/src")],
@@ -182,9 +182,9 @@ suite("L10nService (unit)", () => {
 
     (svc as any).managers.set("/path/to/setting", [{ manager: mgr, listenerDisposable: { dispose: () => {} } }]);
 
-    const trans = svc.findTranslationLocationsForKey("greet");
-    assert.strictEqual(trans.length, 1);
-    assert.strictEqual(trans[0].uri.path, en.path);
+    const transEntries = svc.findTranslationEntriesForKey("greet");
+    assert.strictEqual(transEntries.length, 1);
+    assert.strictEqual(transEntries[0].location.uri.path, en.path);
 
     const translations = svc.getTranslationsForKey("greet");
     assert.strictEqual(translations.length, 1);
@@ -341,7 +341,7 @@ suite("L10nService (unit)", () => {
     assert.strictEqual(escaped, 'line \\\"quote\\\" back\\\\slash\\nnew');
   });
 
-  test("collectLocationsForKeyAt / canRenameKey behaviour (unit)", () => {
+  test("collectEntriesForKeyAt / canRenameKey behaviour (unit)", () => {
     const target = {
       codeLanguages: ["javascript"],
       codeDirs: [URI.file("d:/proj/src")],
@@ -369,11 +369,11 @@ suite("L10nService (unit)", () => {
     (svc as any).managers.set("/path/to/setting", [{ manager: mgr, listenerDisposable: { dispose: () => {} } }]);
 
     // collect from code position
-    const collectedFromCode = svc.collectLocationsForKeyAt(codeUri, { line: 0, character: 1 } as any);
+    const collectedFromCode = svc.collectEntriesForKeyAt(codeUri, { line: 0, character: 1 } as any);
     assert.ok(collectedFromCode);
     assert.strictEqual(collectedFromCode!.key, 'greet');
     assert.strictEqual(collectedFromCode!.codeLocations.length, 1);
-    assert.strictEqual(collectedFromCode!.translationLocations.length, 1);
+    assert.strictEqual(collectedFromCode!.translationEntries.length, 1);
 
     // canRenameKey: renaming to a new unused key is allowed
     const ok1 = svc.canRenameKey('greet', 'newKey');

@@ -11,7 +11,7 @@ import {
 } from "../models/vscodeTypes";
 import { URI } from "vscode-uri";
 import type { DiagOrStatus } from "../models/interfaces";
-import { CodeLanguage, CodeLanguages, L10nFormat, L10nFormats, L10nTarget } from "../models/l10nTypes";
+import { CodeLanguage, CodeLanguages, L10nFormat, L10nFormats, L10nTarget, L10nEntry } from "../models/l10nTypes";
 import { L10nTargetManager } from "./l10nTargetManager";
 import { IntervalQueue, OrganizeStrategies } from "../utils/intervalQueue";
 import { EventEmitter } from "events";
@@ -321,12 +321,12 @@ export class L10nService implements Disposable {
   }
 
   /**
-   * 指定されたキーに対する翻訳エントリの位置をすべて検索する
+   * 指定されたキーに対する翻訳エントリをすべて取得する
    * @param key 
-   * @returns 
+   * @returns L10nEntry の配列
    */
-  public findTranslationLocationsForKey(key: string) {
-    const result: any[] = [];
+  public findTranslationEntriesForKey(key: string): L10nEntry[] {
+    const result: L10nEntry[] = [];
     for (const tgtUnits of this.managers.values()) {
       for (const tu of tgtUnits) {
         const l10ns = tu.manager?.l10ns;
@@ -336,15 +336,15 @@ export class L10nService implements Disposable {
         for (const [, parsed] of l10ns.entries()) {
           const langs = Object.keys(parsed?.entries || {});
           for (const lang of langs) {
-            const entries = (parsed!.entries as any)[lang] || {};
-            if (entries[key] && entries[key].location) {
-              result.push(entries[key].location);
+            const entries = (parsed!.entries)[lang] || {};
+            if (entries[key]) {
+              result.push(entries[key]);
             }
           }
         }
       }
     }
-    return result as MyLocation[];
+    return result;
   }
 
   /**
@@ -584,10 +584,10 @@ export class L10nService implements Disposable {
   }
 
   // New: collect rename targets for a key located at the given location
-  public collectLocationsForKeyAt(
+  public collectEntriesForKeyAt(
     uri: URI,
     position: MyPosition,
-  ): { key: string; codeLocations: MyLocation[]; translationLocations: MyLocation[] } | null {
+  ): { key: string; codeLocations: MyLocation[]; translationEntries: L10nEntry[] } | null {
     const key = this.getKeyAtPosition(uri, position);
     if (!key) {
       return null;
@@ -595,19 +595,19 @@ export class L10nService implements Disposable {
     return {
       key,
       codeLocations: this.findCodeReferencesForKey(key),
-      translationLocations: this.findTranslationLocationsForKey(key),
+      translationEntries: this.findTranslationEntriesForKey(key),
     };
   }
 
   // New: check whether renaming `oldKey` to `newKey` is allowed (no translation collisions)
-  public canRenameKey(oldKey: string, newKey: string): { ok: boolean; conflicts: MyLocation[] } {
+  public canRenameKey(oldKey: string, newKey: string): { ok: boolean; conflicts: L10nEntry[] } {
     if (!oldKey || !newKey) {
       return { ok: false, conflicts: [] };
     }
     if (oldKey === newKey) {
       return { ok: true, conflicts: [] };
     }
-    const conflicts = this.findTranslationLocationsForKey(newKey) || [];
+    const conflicts = this.findTranslationEntriesForKey(newKey) || [];
     return { ok: conflicts.length === 0, conflicts };
   }
 
@@ -616,7 +616,7 @@ export class L10nService implements Disposable {
     if (!key) {
       return [];
     }
-    return this.findTranslationLocationsForKey(key);
+    return this.findTranslationEntriesForKey(key).map((e) => e.location);
   }
 
   public findReferences(uri: URI, position: MyPosition): MyLocation[] {

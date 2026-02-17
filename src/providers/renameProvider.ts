@@ -24,13 +24,13 @@ export class RenameProvider implements vscode.RenameProvider {
   private async waitForTargets(uri: vscode.Uri | any, position: MyPosition, timeoutMs: number = 2000) {
     const start = Date.now();
     while (Date.now() - start < timeoutMs) {
-      const t = this.svc.collectLocationsForKeyAt(uri as any, position);
+      const t = this.svc.collectEntriesForKeyAt(uri as any, position);
       // require not only a key but also at least one known location to make
       // provideRenameEdits produce concrete WorkspaceEdit entries
       if (
         t &&
         t.key &&
-        ((t.codeLocations && t.codeLocations.length > 0) || (t.translationLocations && t.translationLocations.length > 0))
+        ((t.codeLocations && t.codeLocations.length > 0) || (t.translationEntries && t.translationEntries.length > 0))
       ) {
         return t;
       }
@@ -66,10 +66,10 @@ export class RenameProvider implements vscode.RenameProvider {
       throw new Error("Place the cursor on a localization key to rename.");
     }
 
-    const { key, codeLocations, translationLocations } = targets;
+    const { key, codeLocations, translationEntries } = targets;
 
-    // locate the matching location within this document
-    const all = [...(codeLocations || []), ...(translationLocations || [])];
+    // locate the matching location within this document (normalize entries -> locations)
+    const all = [...(codeLocations || []), ...((translationEntries || []).map((e) => e.location))];
     const match = all.find((l) => (l.uri as any).path === (document.uri as any).path &&
       !(position.line < l.range.start.line || position.line > l.range.end.line || (position.line === l.range.start.line && position.character < l.range.start.character) || (position.line === l.range.end.line && position.character > l.range.end.character))
     );
@@ -113,7 +113,7 @@ export class RenameProvider implements vscode.RenameProvider {
     }
 
     const codeLocs = targets.codeLocations || [];
-    const transLocs = targets.translationLocations || [];
+    const transEntries = targets.translationEntries || [];
 
     const edit = new vscode.WorkspaceEdit();
 
@@ -136,7 +136,8 @@ export class RenameProvider implements vscode.RenameProvider {
     }
 
     // replace in translation files (.po) — replace the entire msgid region with properly escaped quoted string
-    for (const l of transLocs) {
+    for (const e of transEntries) {
+      const l = e.location;
       const vscUri = toVscUri(l.uri);
       const doc = await this.openDoc(vscUri);
       const fullRange = toVscRange(l.range);
