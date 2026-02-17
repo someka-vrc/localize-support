@@ -14,6 +14,7 @@ namespace LocalizeDebug
             Console.WriteLine(G("Execute"));                // 1
             Console.WriteLine($"Action: {G("Save changes")}"); // 2
 
+            Console.WriteLine(G("Undefined Key"));  
             var result = PerformRemoteOperation();
             if (!result)
             {
@@ -32,7 +33,6 @@ namespace LocalizeDebug
             }
             
             Console.WriteLine(G("Duplicate key"));  
-            Console.WriteLine(G("Undefined Key"));  
             Console.WriteLine(G("Japanese only"));  
 
             // keep program alive briefly so test harness can inspect output if needed
