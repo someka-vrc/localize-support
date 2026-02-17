@@ -127,6 +127,18 @@ export class PoParser implements TranslationParser {
         }
 
         // 登録
+        // deletionRange: msgid 開始行 〜 msgstr 終了行（続く空行があればそこまで）
+        let deletionEndLine = currentMsgStrEndLine || currentMsgIdEndLine;
+        let deletionEndCol = currentMsgStrEndCol || currentMsgIdEndCol;
+        if (typeof deletionEndLine === "number" && text[deletionEndLine + 1] !== undefined && text[deletionEndLine + 1].trim() === "") {
+          // include following empty separator line only when it is not just the EOF-trailing newline
+          // (i.e. there must be at least one more array element after that empty line)
+          if (text[deletionEndLine + 2] !== undefined) {
+            deletionEndLine = deletionEndLine + 1;
+            deletionEndCol = 0;
+          }
+        }
+
         entries[msgid] = {
           translation: msgstr,
           location: vscTypeHelper.newLocation(
@@ -137,6 +149,12 @@ export class PoParser implements TranslationParser {
               currentMsgIdEndLine,
               currentMsgIdEndCol,
             ),
+          ),
+          deletionRange: vscTypeHelper.newRange(
+            currentMsgIdStartLine,
+            currentMsgIdStartCol,
+            deletionEndLine,
+            deletionEndCol,
           ),
         };
 
@@ -297,6 +315,17 @@ export class PoParser implements TranslationParser {
       entries: { [lang]: entries },
       diagnostics,
       success,
+      // .po 用のエントリ整形関数
+      formatEntry: (key: string, translation: string) => {
+        const esc = (s: string) =>
+          s
+            .replace(/\\/g, "\\\\")
+            .replace(/"/g, '\\"')
+            .replace(/\n/g, "\\n")
+            .replace(/\r/g, "\\r")
+            .replace(/\t/g, "\\t");
+        return `msgid "${esc(key)}"\nmsgstr "${esc(translation)}"\n\n`;
+      },
     };
   }
 }

@@ -19,6 +19,38 @@ suite("PoParser", () => {
     // location should have non-zero range
     const loc = langEntries["Hello"].location.range;
     assert.ok(loc.start.character < loc.end.character, "msgid location should span characters");
+
+    // deletionRange should cover msgid..msgstr when no trailing blank line
+    const del = langEntries["Hello"].deletionRange as any;
+    assert.ok(del, "deletionRange should exist");
+    assert.strictEqual(del.start.line, 0);
+    assert.strictEqual(del.end.line, 1);
+    assert.ok(del.end.character > 0);
+  });
+
+  test("sets deletionRange including trailing empty line", async () => {
+    const parser = new PoParser();
+    const uri = { scheme: "file", path: "d:/dummy/en.po", fsPath: "d:/dummy/en.po" } as URI;
+    const content = `msgid "A"\nmsgstr "B"\n\n`;
+
+    const res = await parser.parse(uri, content);
+    const entries = res.entries["en"];
+    const e = entries["A"];
+    assert.ok(e.deletionRange, "deletionRange should be present");
+    assert.strictEqual(e.deletionRange.start.line, 0);
+    assert.strictEqual(e.deletionRange.end.line, 2);
+    // trailing empty line -> end.character should be 0
+    assert.strictEqual(e.deletionRange.end.character, 0);
+  });
+
+  test("formatEntry escapes and encodes newlines correctly", async () => {
+    const parser = new PoParser();
+    const uri = { scheme: "file", path: "d:/dummy/en.po", fsPath: "d:/dummy/en.po" } as URI;
+    const content = `msgid "X"\nmsgstr "Y"\n`;
+
+    const res = await parser.parse(uri, content);
+    const out = res.formatEntry("KEY", "Line1\nLine2");
+    assert.strictEqual(out, 'msgid "KEY"\nmsgstr "Line1\\nLine2"\n\n');
   });
 
   test("parses header language override and multiline msgstr", async () => {

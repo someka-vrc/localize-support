@@ -7,6 +7,8 @@ export type TranslationParseResult = {
   entries: L10nEntries;
   success: boolean;
   diagnostics: MyDiagnostic[];
+  /** 翻訳エントリを生成する際のフォーマット関数 */
+  formatEntry: (key: string, translation: string) => string;
 };
 
 export interface TranslationParser {
