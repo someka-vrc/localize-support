@@ -44,7 +44,7 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(vscode.languages.registerRenameProvider(docSelectors, new RenameProvider(l10nService)));
   context.subscriptions.push(vscode.languages.registerCompletionItemProvider(docSelectors, new CompletionProvider(l10nService), "'", '"', "`"));
 
-  const diagnosticProvider = new DiagnosticProvider("localize-support", l10nService, vscodeWrapper);
+  const diagnosticProvider = new DiagnosticProvider("localize-support", l10nService, logger);
   context.subscriptions.push(diagnosticProvider);
 
   // Load persisted diagnostics-enabled state (default: true)

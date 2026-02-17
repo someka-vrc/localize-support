@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { Disposable, MyDiagnostic, IVSCodeWrapper } from "../models/vscodeTypes";
+import { Disposable, MyDiagnostic, LogOutputChannel } from "../models/vscodeTypes";
 import { toVscDiagnostics } from "../models/vscodeTypeConverter";
 import { L10nService } from "../services/l10nService";
 
@@ -15,16 +15,16 @@ export class DiagnosticProvider implements Disposable {
   constructor(
     public name: string,
     private l10nService: L10nService,
-    private vscode: IVSCodeWrapper,
+    private logger: LogOutputChannel,
   ) {
-    this.collection = this.vscode.languages.createDiagnosticCollection(name);
+    this.collection = vscode.languages.createDiagnosticCollection(name);
     this.disposables.push(
       l10nService.onReloaded(() => {
-        this.updateDiagnostics(l10nService.getDiagnostics().diags).catch((e) => this.vscode.logger.error(e));
+        this.updateDiagnostics(l10nService.getDiagnostics().diags).catch((e) => this.logger.error(e));
       }),
     );
 
-    this.updateDiagnostics(l10nService.getDiagnostics().diags).catch((e) => this.vscode.logger.error(e));
+    this.updateDiagnostics(l10nService.getDiagnostics().diags).catch((e) => this.logger.error(e));
   }
 
   dispose() {
@@ -43,12 +43,12 @@ export class DiagnosticProvider implements Disposable {
     try {
       await this.updateDiagnostics(this.l10nService.getDiagnostics().diags);
     } catch (err) {
-      this.vscode.logger.error(err as Error);
+      this.logger.error(err as Error);
     }
   }
 
   public toggleEnabled() {
-    this.setEnabled(!this.enabled).catch((e) => this.vscode.logger.error(e));
+    this.setEnabled(!this.enabled).catch((e) => this.logger.error(e));
   }
 
   public isEnabled() {
@@ -67,7 +67,7 @@ export class DiagnosticProvider implements Disposable {
         const vscUri = vscode.Uri.parse(uri);
         this.collection.set(vscUri, toVscDiagnostics(arr));
       } catch (err) {
-        this.vscode.logger.error("Failed to set diagnostics for", uri, err);
+        this.logger.error("Failed to set diagnostics for", uri, err);
       }
     }
   }
