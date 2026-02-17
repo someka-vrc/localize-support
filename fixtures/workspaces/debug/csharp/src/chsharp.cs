@@ -11,25 +11,25 @@ namespace LocalizeDebug
 
         static void Main(string[] args)
         {
-            Console.WriteLine(G("Execute"));                // 1
-            Console.WriteLine($"Action: {G("Save changes")}"); // 2
+            Console.WriteLine(G("Execute"));
+            Console.WriteLine($"Action: {G("Save changes")}");
 
             Console.WriteLine(G("Undefined Key"));  
             var result = PerformRemoteOperation();
             if (!result)
             {
-                Console.WriteLine(G("Connection failed"));   // 3
-                Console.WriteLine(G("Retry"));               // 4
+                Console.WriteLine(G("Connection failed"));
+                Console.WriteLine(G("Retry"));
             }
             else
             {
-                Console.WriteLine(G("Execute"));            // 5 (repeat to ensure multiple occurrences)
+                Console.WriteLine(G("Execute")); // multiple occurrences
             }
 
             // simulate a cancel path
             if (ShouldCancel())
             {
-                Console.WriteLine(G("Cancel"));              // 6
+                Console.WriteLine(G("Cancel"));
             }
             
             Console.WriteLine(G("Duplicate key"));  
