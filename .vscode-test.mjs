@@ -25,14 +25,21 @@ async function copyWorkspaceIfExists(subPath) {
  * @returns {Promise<import('@vscode/test-cli').TestConfiguration>}
  */
 async function createConfig(f) {
-  const launchArgs = [
-    "--disable-extensions", // 余計な拡張機能を読み込まない
-    "--disable-gpu", // Windows環境でのノイズ削減に効果的
-  ];
   const subPath = f.substring(0, f.length - 8);
-  const files = path.join(process.cwd(), "out/test/vscode", `${subPath}.test.js`);
-  let workspaceFolder = await copyWorkspaceIfExists(subPath);
-  return { launchArgs, files, workspaceFolder };
+  return {
+    launchArgs: [
+      "--disable-extensions", // 余計な拡張機能を読み込まない
+      "--disable-gpu", // Windows環境でのノイズ削減に効果的
+    ],
+    files: path.join(process.cwd(), "out/test/vscode", `${subPath}.test.js`),
+    workspaceFolder: await copyWorkspaceIfExists(subPath),
+    mocha: {
+      ui: "tdd",
+      timeout: 10000,
+      require: "source-map-support/register",
+      reporter: "min",
+    },
+  };
 }
 
 /**
