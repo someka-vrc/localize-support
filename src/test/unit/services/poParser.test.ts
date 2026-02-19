@@ -1,6 +1,6 @@
 import assert from "assert";
 import { PoParser } from "../../../services/poParser";
-import { MyDiagnosticSeverity } from "../../../models/vscTypes";
+import { MyDiagnosticSeverity, DiagnosticsCode } from "../../../models/vscodeTypes";
 import { URI } from "vscode-uri";
 
 suite("PoParser", () => {
@@ -18,7 +18,61 @@ suite("PoParser", () => {
     assert.strictEqual(res.diagnostics.length, 0);
     // location should have non-zero range
     const loc = langEntries["Hello"].location.range;
-    assert.ok(loc.start.character < loc.end.character, "msgid location should span characters");
+    // start/end columns are computed from the surrounding quotes: "msgid \"Hello\"" -> start=6, end=13
+    assert.strictEqual(loc.start.character, 6, "msgid location start column");
+    assert.strictEqual(loc.end.character, 13, "msgid location end column");
+
+    // deletionRange should cover msgid..msgstr when no trailing blank line
+    const del = langEntries["Hello"].deletionRange as any;
+    assert.ok(del, "deletionRange should exist");
+    // deletion should cover both lines (msgid + msgstr)
+    assert.strictEqual(del.start.line, 0);
+    assert.strictEqual(del.end.line, 1);
+    // start character should be at or before the 'msgid' token (we expect 0)
+    assert.strictEqual(del.start.character, 0);
+    // end column comes from the closing quote of msgstr "こんにちは" -> lastQuote+1 === 14
+    assert.strictEqual(del.end.character, 14);
+  });
+
+  test("sets deletionRange including trailing empty line", async () => {
+    const parser = new PoParser();
+    const uri = { scheme: "file", path: "d:/dummy/en.po", fsPath: "d:/dummy/en.po" } as URI;
+    const content = `msgid "A"\nmsgstr "B"\n\n`;
+
+    const res = await parser.parse(uri, content);
+    const entries = res.entries["en"];
+    const e = entries["A"];
+    assert.ok(e.deletionRange, "deletionRange should be present");
+    assert.strictEqual(e.deletionRange.start.line, 0);
+    assert.strictEqual(e.deletionRange.end.line, 2);
+    // trailing empty line -> end.character should be 0
+    assert.strictEqual(e.deletionRange.end.character, 0);
+  });
+
+  test("deletionRange includes separator blank line between consecutive entries", async () => {
+    const parser = new PoParser();
+    const uri = { scheme: "file", path: "d:/dummy/multi.po", fsPath: "d:/dummy/multi.po" } as URI;
+    const content = `# comment\nmsgid "Unused key"\nmsgstr "clave no utilizada"\n\nmsgid "Duplicate key"\nmsgstr "clave duplicada"\n`;
+
+    const res = await parser.parse(uri, content);
+    const entries = res.entries[Object.keys(res.entries)[0]]; // language key derived from filename
+    const e = entries["Unused key"];
+    assert.ok(e.deletionRange, "deletionRange should be present for 'Unused key'");
+    // msgid is at line 1, msgstr at line 2, blank separator at line 3 -> end should point to line 4 start
+    assert.strictEqual(e.deletionRange.start.line, 1);
+    assert.strictEqual(e.deletionRange.start.character, 0);
+    assert.strictEqual(e.deletionRange.end.line, 4);
+    assert.strictEqual(e.deletionRange.end.character, 0);
+  });
+
+  test("formatEntry escapes and encodes newlines correctly", async () => {
+    const parser = new PoParser();
+    const uri = { scheme: "file", path: "d:/dummy/en.po", fsPath: "d:/dummy/en.po" } as URI;
+    const content = `msgid "X"\nmsgstr "Y"\n`;
+
+    const res = await parser.parse(uri, content);
+    const out = res.formatEntry("KEY", "Line1\nLine2");
+    assert.strictEqual(out, 'msgid "KEY"\nmsgstr "Line1\\nLine2"\n\n');
   });
 
   test("parses header language override and multiline msgstr", async () => {
@@ -46,7 +100,10 @@ suite("PoParser", () => {
     assert.ok(diag);
     // diagnostic range should have non-zero length
     if (diag) {
-      assert.ok(diag.range.start.character < diag.range.end.character);
+      // quoted continuation line: "alone" -> range columns 0..7
+      assert.strictEqual(diag.range.start.character, 0);
+      assert.strictEqual(diag.range.end.character, 7);
+      assert.strictEqual(diag.code, DiagnosticsCode.poUnexpectedContinuation);
     }
   });
 
@@ -56,7 +113,7 @@ suite("PoParser", () => {
     const content = `msgid "DUP"\nmsgstr "One"\n\nmsgid "DUP"\nmsgstr "Two"\n`;
 
     const res = await parser.parse(uri, content);
-    assert.ok(res.diagnostics.some((d) => /duplicate msgid/.test(d.message)));
+    assert.ok(res.diagnostics.some((d) => /duplicate msgid/.test(d.message) && d.code === DiagnosticsCode.poDuplicateMsgid));
     // last value should overwrite previous in current implementation
     const entries = res.entries["dup"]; // basename dup
     assert.strictEqual(entries["DUP"].translation, "Two");
@@ -69,7 +126,7 @@ suite("PoParser", () => {
 
     const res = await parser.parse(uri, content);
     assert.strictEqual(res.success, false);
-    assert.ok(res.diagnostics.some((d) => /empty msgstr/.test(d.message) && d.severity === MyDiagnosticSeverity.Warning));
+    assert.ok(res.diagnostics.some((d) => /empty msgstr/.test(d.message) && d.severity === MyDiagnosticSeverity.Warning && d.code === DiagnosticsCode.poEmptyMsgstr));
   });
 
   test("reports invalid msgstr format (missing quote) as error", async () => {
@@ -80,7 +137,7 @@ suite("PoParser", () => {
     const res = await parser.parse(uri, content);
     assert.strictEqual(res.success, false);
     assert.ok(
-      res.diagnostics.some((d) => /invalid msgstr format/.test(d.message) && d.severity === MyDiagnosticSeverity.Error),
+      res.diagnostics.some((d) => /invalid msgstr format/.test(d.message) && d.severity === MyDiagnosticSeverity.Error && d.code === DiagnosticsCode.poInvalidMsgstrFormat),
     );
   });
 
@@ -92,7 +149,7 @@ suite("PoParser", () => {
     const res = await parser.parse(uri, content);
     assert.strictEqual(res.success, false);
     assert.ok(
-      res.diagnostics.some((d) => /missing msgstr/.test(d.message) && d.severity === MyDiagnosticSeverity.Error),
+      res.diagnostics.some((d) => /missing msgstr/.test(d.message) && d.severity === MyDiagnosticSeverity.Error && d.code === DiagnosticsCode.poMissingMsgstr),
     );
   });
 
@@ -115,7 +172,7 @@ suite("PoParser", () => {
     const res = await parser.parse(uri, content);
     assert.strictEqual(res.success, false);
     assert.ok(
-      res.diagnostics.some((d) => /invalid msgid format/.test(d.message) && d.severity === MyDiagnosticSeverity.Error),
+      res.diagnostics.some((d) => /invalid msgid format/.test(d.message) && d.severity === MyDiagnosticSeverity.Error && d.code === DiagnosticsCode.poInvalidMsgidFormat),
     );
   });
 
@@ -140,7 +197,7 @@ suite("PoParser", () => {
     assert.strictEqual(res.success, false);
     assert.ok(
       res.diagnostics.some(
-        (d) => /unrecognized line in \.po/.test(d.message) && d.severity === MyDiagnosticSeverity.Warning,
+        (d) => /unrecognized line in \.po/.test(d.message) && d.severity === MyDiagnosticSeverity.Warning && d.code === DiagnosticsCode.poUnrecognizedLine,
       ),
     );
   });

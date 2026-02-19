@@ -1,5 +1,4 @@
-// import { Disposable, FileType, RelativePattern, Uri, workspace } from "vscode";
-import { IWorkspaceWrapper, FileType } from "../models/vscTypes";
+import { IWorkspaceWrapper, FileType } from "../models/vscodeTypes";
 import { URI, Utils } from "vscode-uri";
 /**
  * ディレクトリパスを正規化する

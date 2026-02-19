@@ -1,4 +1,4 @@
-import { MyRange, MyLocation, MyDiagnostic } from "./vscTypes";
+import { MyRange, MyLocation, MyDiagnostic } from "./vscodeTypes";
 import { URI } from "vscode-uri";
 
 /** 対応ローカライズ形式 */
@@ -24,8 +24,14 @@ export const CodeLanguageFileExtMap: Map<CodeLanguage, string> = new Map([
 
 /** ローカライズエントリ */
 export type L10nEntry = {
+  /** 翻訳文字列 */
   translation: string;
+  /** キー文字列の範囲 */
   location: MyLocation;
+  /** エントリを削除する際の範囲 */
+  deletionRange?: MyRange;
+  /** エントリを挿入する際の位置 */
+  insertionPosition?: MyLocation;
 };
 
 export type L10nLangEntries = {

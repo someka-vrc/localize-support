@@ -20,16 +20,35 @@ async function copyWorkspaceIfExists(subPath) {
   return destDir;
 }
 
-const configs = (await fs.readdir("./src/test/vscode", { recursive: true }))
-  .filter((f) => f.endsWith(".test.ts"))
-  .map(async (f) => {
-    const subPath = f.substring(0, f.length - 8);
-    const files = path.join(process.cwd(), "out/test/vscode", `${subPath}.test.js`);
-    let destDir = await copyWorkspaceIfExists(subPath);
-    const launchArgs = [];
-    if (destDir) {
-      launchArgs.push(destDir);
-    }
-    return { files, launchArgs };
-  });
-export default defineConfig(Promise.all(configs));
+/**
+ *
+ * @returns {Promise<import('@vscode/test-cli').TestConfiguration>}
+ */
+async function createConfig(f) {
+  const subPath = f.substring(0, f.length - 8);
+  return {
+    launchArgs: [
+      "--disable-extensions", // 余計な拡張機能を読み込まない
+      "--disable-gpu", // Windows環境でのノイズ削減に効果的
+    ],
+    files: path.join(process.cwd(), "out/test/vscode", `${subPath}.test.js`),
+    workspaceFolder: await copyWorkspaceIfExists(subPath),
+    mocha: {
+      ui: "tdd",
+      timeout: 10000,
+      require: "source-map-support/register",
+      reporter: "min",
+    },
+  };
+}
+
+/**
+ *
+ * @returns {Promise<import('@vscode/test-cli').TestConfiguration[]>}
+ */
+async function buildConfigs() {
+  const fes = await fs.readdir("./src/test/vscode", { recursive: true });
+  return await Promise.all(fes.filter((f) => f.endsWith(".test.ts")).map(createConfig));
+}
+
+export default defineConfig(buildConfigs());

@@ -6,10 +6,10 @@ import { copyWorkspaceIfExists, type DisposablePath } from "../unitTestHelper";
 import { CodeParser } from "../../../services/codeParser";
 import { WasmDownloader, WasmFileNames } from "../../../services/wasmDownloader";
 import { CodeLanguage } from "../../../models/l10nTypes";
-import { FileStat, FileType } from "../../../models/vscTypes";
+import { FileStat, FileType } from "../../../models/vscodeTypes";
 
 import sinon from "sinon";
-import { MockWorkspaceWrapper, MockLogOutputChannel } from "../mocks/mockWorkspaceService";
+import { MockWorkspaceWrapper, MockLogOutputChannel } from "../mocks/mockVscodeWrapper";
 
 function makeDiskBackedWorkspace(): MockWorkspaceWrapper {
   const ws = new MockWorkspaceWrapper();
@@ -129,9 +129,27 @@ suite("CodeParser (unit, integration with wasm)", () => {
 
     // locations should have valid line numbers (0-based) and the URI we passed
     const expectedUri = URI.file(path.join(process.cwd(), "src", "services", "codeParser.test.js"));
+
+    // strict checks: expect each captured key on the specific source line within the test input
+    const map = new Map(fragments.map((f) => [f.key, f]));
+    const fHello = map.get("hello.world")!;
+    const fSingle = map.get("single-quoted")!;
+    const fMember = map.get("member.call")!;
+    const fTemplate = map.get("static-template")!;
+
+    assert.strictEqual(fHello.location.range.start.line, 1);
+    assert.strictEqual(fHello.location.range.end.line, 1);
+
+    assert.strictEqual(fSingle.location.range.start.line, 2);
+    assert.strictEqual(fSingle.location.range.end.line, 2);
+
+    assert.strictEqual(fMember.location.range.start.line, 3);
+    assert.strictEqual(fMember.location.range.end.line, 3);
+
+    assert.strictEqual(fTemplate.location.range.start.line, 4);
+    assert.strictEqual(fTemplate.location.range.end.line, 4);
+
     for (const f of fragments) {
-      assert.ok(typeof f.location.range.start.line === "number");
-      assert.ok(typeof f.location.range.end.line === "number");
       assert.strictEqual(f.location.uri.fsPath, expectedUri.fsPath);
     }
 
@@ -397,5 +415,42 @@ suite("CodeParser (unit, integration with wasm)", () => {
     assert.ok(keys.includes("ok"));
     assert.ok(keys.includes("member"));
     assert.ok(!keys.includes("ab"));
+  });
+
+  // additional unit tests for edge/error branches
+  test("parse throws when l10nFuncNames is empty", async () => {
+    const ws = new MockWorkspaceWrapper();
+    const downloader = new WasmDownloader(ws, new MockLogOutputChannel(), URI.file(process.cwd()));
+    const parser = new CodeParser(downloader, "javascript", ws, new MockLogOutputChannel());
+
+    await assert.rejects(() => parser.parse([], "https://cdn/x", "", URI.file("d:/x.js")), {
+      message: /l10nFuncNames must be a non-empty array/,
+    });
+  });
+
+  test("returns empty array and logs when language load fails", async () => {
+    const ws = makeDiskBackedWorkspace();
+    const downloader = new WasmDownloader(ws, new MockLogOutputChannel(), storageUri);
+    const loggerWarn = sinon.stub(MockLogOutputChannel.prototype, "warn");
+
+    // ensure language cache does not short-circuit the failure path
+    (CodeParser as any).languageCache.delete("javascript");
+    // force wasmDownloader to fail
+    sinon.stub((WasmDownloader as any).prototype, "retrieveWasmFile").rejects(new Error("no wasm"));
+
+    const parser = new CodeParser(downloader, "javascript", ws, new MockLogOutputChannel());
+    const res = await parser.parse(["t"], wasmCdnBase, `t("x")`, URI.file("d:/file.js"));
+    assert.deepStrictEqual(res, []);
+    sinon.assert.calledOnce(loggerWarn);
+    loggerWarn.restore();
+  });
+
+  test("getTreeSitterQuery returns empty string for unknown language", () => {
+    const ws = new MockWorkspaceWrapper();
+    const downloader = new WasmDownloader(ws, new MockLogOutputChannel(), URI.file(process.cwd()));
+    const parser = new CodeParser(downloader, "javascript", ws, new MockLogOutputChannel());
+
+    const q = parser.getTreeSitterQuery("unknown" as any, ["t"]);
+    assert.strictEqual(q, "");
   });
 });

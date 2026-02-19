@@ -1,10 +1,10 @@
 import assert from "assert";
 import { TranslationManager } from "../../../services/translationManager";
-import { Disposable, MyRelativePattern, FileType } from "../../../models/vscTypes";
+import { Disposable, MyRelativePattern, FileType } from "../../../models/vscodeTypes";
 import { URI } from "vscode-uri";
 import { L10nTarget } from "../../../models/l10nTypes";
 import sinon from "sinon";
-import { MockWorkspaceWrapper, MockLogOutputChannel } from "../mocks/mockWorkspaceService";
+import { MockWorkspaceWrapper, MockLogOutputChannel } from "../mocks/mockVscodeWrapper";
 
 suite("TranslationManager (unit)", () => {
   let workspace: MockWorkspaceWrapper;

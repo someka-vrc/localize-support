@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
-import { Disposable, MyDiagnostic, IVSCodeWrapper } from "../models/vscTypes";
+import { Disposable, MyDiagnostic, LogOutputChannel } from "../models/vscodeTypes";
+import { toVscDiagnostics } from "../models/vscodeTypeConverter";
 import { L10nService } from "../services/l10nService";
 
 /**
@@ -8,21 +9,22 @@ import { L10nService } from "../services/l10nService";
  */
 export class DiagnosticProvider implements Disposable {
   private collection: vscode.DiagnosticCollection;
-  private disposables: Disposable[] = []; 
+  private disposables: Disposable[] = [];
+  private enabled = true;
 
   constructor(
     public name: string,
     private l10nService: L10nService,
-    private vscode: IVSCodeWrapper,
+    private logger: LogOutputChannel,
   ) {
-    this.collection = this.vscode.languages.createDiagnosticCollection(name);
+    this.collection = vscode.languages.createDiagnosticCollection(name);
     this.disposables.push(
       l10nService.onReloaded(() => {
-        this.updateDiagnostics(l10nService.getDiagnostics().diags).catch((e) => this.vscode.window.logger.error(e));
+        this.updateDiagnostics(l10nService.getDiagnostics().diags).catch((e) => this.logger.error(e));
       }),
     );
 
-    this.updateDiagnostics(l10nService.getDiagnostics().diags).catch((e) => this.vscode.window.logger.error(e));
+    this.updateDiagnostics(l10nService.getDiagnostics().diags).catch((e) => this.logger.error(e));
   }
 
   dispose() {
@@ -30,31 +32,44 @@ export class DiagnosticProvider implements Disposable {
     this.disposables.forEach((d) => d.dispose());
   }
 
+  // Enable/disable diagnostics. When disabled, clear collection and stop updates.
+  public async setEnabled(enabled: boolean) {
+    this.enabled = enabled;
+    if (!this.enabled) {
+      this.collection.clear();
+      return;
+    }
+    // when enabling, immediately refresh from service
+    try {
+      await this.updateDiagnostics(this.l10nService.getDiagnostics().diags);
+    } catch (err) {
+      this.logger.error(err as Error);
+    }
+  }
+
+  public toggleEnabled() {
+    this.setEnabled(!this.enabled).catch((e) => this.logger.error(e));
+  }
+
+  public isEnabled() {
+    return this.enabled;
+  }
+
   // Update vscode diagnostics from L10nService
   async updateDiagnostics(diags: Map<string, MyDiagnostic[]>) {
+    if (!this.enabled) {
+      return;
+    }
     // clear previous
     this.collection.clear();
     for (const [uri, arr] of diags.entries()) {
       try {
         const vscUri = vscode.Uri.parse(uri);
-        this.collection.set(vscUri, this.toVscodeDiagnostics(arr));
+        this.collection.set(vscUri, toVscDiagnostics(arr));
       } catch (err) {
-        this.vscode.window.logger.error("Failed to set diagnostics for", uri, err);
+        this.logger.error("Failed to set diagnostics for", uri, err);
       }
     }
   }
 
-  // Convert internal MyDiagnostic to vscode.Diagnostic
-  toVscodeDiagnostics(diags: MyDiagnostic[]) {
-    return diags.map((d) => {
-      const range = new vscode.Range(
-        d.range.start.line,
-        d.range.start.character,
-        d.range.end.line,
-        d.range.end.character,
-      );
-      const severity = d.severity as unknown as vscode.DiagnosticSeverity;
-      return new vscode.Diagnostic(range, d.message, severity);
-    });
-  }
 }

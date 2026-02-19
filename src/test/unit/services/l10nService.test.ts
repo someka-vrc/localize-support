@@ -1,10 +1,10 @@
 import * as assert from "assert";
 import sinon from "sinon";
 import { URI } from "vscode-uri";
-import { MockWorkspaceWrapper, MockLogOutputChannel } from "../mocks/mockWorkspaceService";
+import { MockWorkspaceWrapper, MockLogOutputChannel } from "../mocks/mockVscodeWrapper";
 import { L10nService } from "../../../services/l10nService";
 import { L10nTargetManager } from "../../../services/l10nTargetManager";
-import { vscTypeHelper } from "../../../models/vscTypes";
+import { vscTypeHelper, DiagnosticsCode } from "../../../models/vscodeTypes";
 
 suite("L10nService (unit)", () => {
   let workspace: MockWorkspaceWrapper;
@@ -12,7 +12,7 @@ suite("L10nService (unit)", () => {
 
   setup(() => {
     workspace = new MockWorkspaceWrapper();
-    svc = new L10nService(workspace as any, new MockLogOutputChannel(), 10);
+    svc = new L10nService(workspace as any, new MockLogOutputChannel(), URI.file("d:/globalStorage"), 10);
   });
 
   teardown(() => {
@@ -32,6 +32,7 @@ suite("L10nService (unit)", () => {
     assert.ok(d && d.length > 0, "diagnostic must be present for failed read");
     const msg = d![0].message;
     assert.ok(msg.includes("Failed to read settings file"));
+    assert.strictEqual(d![0].code, DiagnosticsCode.settingsInvalid);
   });
 
   test("normalizeSettingsObject normalizes dirs and reports missing ones (unit)", async () => {
@@ -91,7 +92,7 @@ suite("L10nService (unit)", () => {
       settingsLocation: URI.file("d:/proj"),
     } as any;
 
-    const mgr = new L10nTargetManager(workspace as any, new MockLogOutputChannel(), target, 1);
+    const mgr = new L10nTargetManager(workspace as any, new MockLogOutputChannel(), target, URI.file("d:/proj/.globalStorage"), 1);
 
     const codeUri = URI.file("d:/proj/src/foo.js");
     mgr.codes.set(codeUri.path, [
@@ -103,7 +104,7 @@ suite("L10nService (unit)", () => {
 
     const { diags } = svc.getDiagnostics();
     const codeDiags = diags.get(codeUri.path) || [];
-    assert.ok(codeDiags.some((d) => /missing.key/.test(d.message)));
+    assert.ok(codeDiags.some((d) => /missing.key/.test(d.message) && d.code === DiagnosticsCode.undefinedKey));
   });
 
   test("getKeyAtPosition() returns key from code and .po; position outside returns null", () => {
@@ -117,7 +118,7 @@ suite("L10nService (unit)", () => {
       settingsLocation: URI.file("d:/proj"),
     } as any;
 
-    const mgr = new L10nTargetManager(workspace as any, new MockLogOutputChannel(), target, 1);
+    const mgr = new L10nTargetManager(workspace as any, new MockLogOutputChannel(), target, URI.file("d:/proj/.globalStorage"), 1);
 
     const codeUri = URI.file("d:/proj/src/app.js");
     const codeRange = vscTypeHelper.newRange(3, 2, 3, 20);
@@ -154,7 +155,7 @@ suite("L10nService (unit)", () => {
     assert.strictEqual(keyFromPo, "po.key");
   });
 
-  test("findTranslationLocationsForKey / findCodeReferencesForKey / findDefinition / findReferences", () => {
+  test("findTranslationEntriesForKey / findCodeReferencesForKey / findDefinition / findReferences", () => {
     const target = {
       codeLanguages: ["javascript"],
       codeDirs: [URI.file("d:/proj/src")],
@@ -165,7 +166,7 @@ suite("L10nService (unit)", () => {
       settingsLocation: URI.file("d:/proj"),
     } as any;
 
-    const mgr = new L10nTargetManager(workspace as any, new MockLogOutputChannel(), target, 1);
+    const mgr = new L10nTargetManager(workspace as any, new MockLogOutputChannel(), target, URI.file("d:/proj/.globalStorage"), 1);
 
     const codeUri = URI.file("d:/proj/src/foo.js");
     const codeLoc = vscTypeHelper.newLocation(codeUri, vscTypeHelper.newRange(0, 0, 0, 10));
@@ -181,9 +182,9 @@ suite("L10nService (unit)", () => {
 
     (svc as any).managers.set("/path/to/setting", [{ manager: mgr, listenerDisposable: { dispose: () => {} } }]);
 
-    const trans = svc.findTranslationLocationsForKey("greet");
-    assert.strictEqual(trans.length, 1);
-    assert.strictEqual(trans[0].uri.path, en.path);
+    const transEntries = svc.findTranslationEntriesForKey("greet");
+    assert.strictEqual(transEntries.length, 1);
+    assert.strictEqual(transEntries[0].location.uri.path, en.path);
 
     const translations = svc.getTranslationsForKey("greet");
     assert.strictEqual(translations.length, 1);
@@ -219,7 +220,7 @@ suite("L10nService (unit)", () => {
       settingsLocation: URI.file("d:/proj"),
     } as any;
 
-    const mgr = new L10nTargetManager(workspace as any, new MockLogOutputChannel(), target, 1);
+    const mgr = new L10nTargetManager(workspace as any, new MockLogOutputChannel(), target, URI.file("d:/proj/.globalStorage"), 1);
 
     const codeUri = URI.file("d:/proj/src/foo.js");
     mgr.codes.set(codeUri.path, [ { key: "code.one", location: vscTypeHelper.newLocation(codeUri, vscTypeHelper.newRange(0,0,0,1)) }, { key: "shared", location: vscTypeHelper.newLocation(codeUri, vscTypeHelper.newRange(1,0,1,1)) } ] as any);
@@ -263,8 +264,8 @@ suite("L10nService (unit)", () => {
       settingsLocation: URI.file("d:/q"),
     } as any;
 
-    const m1 = new L10nTargetManager(workspace as any, new MockLogOutputChannel(), t1 as any, 1);
-    const m2 = new L10nTargetManager(workspace as any, new MockLogOutputChannel(), t2 as any, 1);
+    const m1 = new L10nTargetManager(workspace as any, new MockLogOutputChannel(), t1 as any, URI.file("d:/proj/.globalStorage"), 1);
+    const m2 = new L10nTargetManager(workspace as any, new MockLogOutputChannel(), t2 as any, URI.file("d:/proj/.globalStorage"), 1);
 
     (svc as any).managers.set("/s1", [{ manager: m1 as any, listenerDisposable: { dispose: () => {} } }]);
     (svc as any).managers.set("/s2", [{ manager: m2 as any, listenerDisposable: { dispose: () => {} } }]);
@@ -275,7 +276,48 @@ suite("L10nService (unit)", () => {
     assert.ok(fns.includes("G"));
   });
 
-  test("collectLocationsForKeyAt / canRenameKey behaviour (unit)", () => {
+  test("computeInsertionTargetsForKeyAt: picks nearest preceding localization call (unit)", () => {
+    const target = {
+      codeLanguages: ["csharp"],
+      codeDirs: [URI.file("d:/proj/src")],
+      l10nFormat: "po",
+      l10nDirs: [URI.file("d:/proj/locales")],
+      l10nExtension: ".po",
+      l10nFuncNames: ["G"],
+      settingsLocation: URI.file("d:/proj"),
+    } as any;
+
+    const mgr = new L10nTargetManager(workspace as any, new MockLogOutputChannel(), target as any, URI.file("d:/proj/.globalStorage"), 1);
+    const codeUri = URI.file("d:/proj/src/chsharp.cs");
+
+    // simulate two localization calls: 'Cancel' (later in file) and 'Save changes' (earlier)
+    mgr.codes.set(codeUri.path, [
+      { key: "Cancel", location: vscTypeHelper.newLocation(codeUri, vscTypeHelper.newRange(29, 16, 29, 40)) },
+      { key: "Save changes", location: vscTypeHelper.newLocation(codeUri, vscTypeHelper.newRange(13, 12, 13, 32)) },
+    ] as any);
+
+    const poUri = URI.file("d:/proj/locales/ja.po");
+    mgr.l10ns.set(poUri.path, {
+      success: true,
+      diagnostics: [],
+      entries: {
+        ja: {
+          "Cancel": { translation: "キャンセル", location: vscTypeHelper.newLocation(poUri, vscTypeHelper.newRange(20, 0, 21, 0)) },
+          "Save changes": { translation: "変更を保存", location: vscTypeHelper.newLocation(poUri, vscTypeHelper.newRange(11, 0, 12, 0)) },
+        },
+      },
+    } as any);
+
+    (svc as any).managers.set("/p", [{ manager: mgr, listenerDisposable: { dispose: () => {} } }]);
+
+    const results = svc.computeInsertionTargetsForKeyAt(codeUri, { line: 32, character: 12 } as any, "NEW_KEY", "NEW_KEY");
+    assert.ok(Array.isArray(results) && results.length > 0);
+    // should insert after the nearest preceding entry (Cancel is later in file than Save changes)
+    const posLine = results[0].position.line;
+    assert.strictEqual(posLine, 21);
+  });
+
+  test("getCompletionCandidates() fuzzy matches and sorts (unit)", () => {
     const target = {
       codeLanguages: ["javascript"],
       codeDirs: [URI.file("d:/proj/src")],
@@ -286,7 +328,72 @@ suite("L10nService (unit)", () => {
       settingsLocation: URI.file("d:/proj"),
     } as any;
 
-    const mgr = new L10nTargetManager(workspace as any, new MockLogOutputChannel(), target, 1);
+    const mgr = new L10nTargetManager(workspace as any, new MockLogOutputChannel(), target, URI.file("d:/proj/.globalStorage"), 1);
+    const en = URI.file("d:/proj/locales/en.po");
+    mgr.l10ns.set(en.path, {
+      success: true,
+      diagnostics: [],
+      entries: {
+        en: {
+          apple: { translation: "Apple", location: vscTypeHelper.newLocation(en, vscTypeHelper.newRange(1, 0, 1, 5)) },
+          application: { translation: "Application", location: vscTypeHelper.newLocation(en, vscTypeHelper.newRange(2, 0, 2, 11)) },
+          banana: { translation: "Banana", location: vscTypeHelper.newLocation(en, vscTypeHelper.newRange(3, 0, 3, 6)) },
+        },
+      },
+    } as any);
+
+    (svc as any).managers.set("/p", [{ manager: mgr, listenerDisposable: { dispose: () => {} } }]);
+
+    const res = svc.getCompletionCandidates("app", 10);
+    assert.ok(Array.isArray(res));
+    assert.ok(res.length >= 2);
+    assert.strictEqual(res[0].key, "apple");
+    assert.strictEqual(res[1].key, "application");
+
+    const allKeys = svc.getCompletionCandidates("", 10).map((r) => r.key);
+    assert.deepStrictEqual(allKeys, ["apple", "application", "banana"]);
+
+    // non-contiguous subsequence match: 'aca' should match 'application' (a..c..a)
+    const acaRes = svc.getCompletionCandidates("aca", 10);
+    assert.ok(Array.isArray(acaRes));
+    assert.strictEqual(acaRes.length, 1);
+    assert.strictEqual(acaRes[0].key, "application");
+  });
+
+  test("findInnerRangeInText() finds key or inner-quote fallback (unit)", () => {
+    const txt1 = "t('hello.world')";
+    const r1 = svc.findInnerRangeInText(txt1, 'hello.world');
+    assert.ok(r1);
+    assert.strictEqual(txt1.slice(r1!.start, r1!.end), 'hello.world');
+
+    const txt2 = '"quoted content"';
+    const r2 = svc.findInnerRangeInText(txt2, 'missing');
+    assert.ok(r2);
+    assert.strictEqual(txt2.slice(r2!.start, r2!.end), 'quoted content');
+
+    const txt3 = 'noquotes';
+    const r3 = svc.findInnerRangeInText(txt3, 'missing');
+    assert.strictEqual(r3, null);
+  });
+
+  test("escapePoString() escapes special characters (unit)", () => {
+    const src = 'line "quote" back\\slash\nnew';
+    const escaped = svc.escapePoString(src);
+    assert.strictEqual(escaped, 'line \\\"quote\\\" back\\\\slash\\nnew');
+  });
+
+  test("collectEntriesForKeyAt / canRenameKey behaviour (unit)", () => {
+    const target = {
+      codeLanguages: ["javascript"],
+      codeDirs: [URI.file("d:/proj/src")],
+      l10nFormat: "po",
+      l10nDirs: [URI.file("d:/proj/locales")],
+      l10nExtension: ".po",
+      l10nFuncNames: ["t"],
+      settingsLocation: URI.file("d:/proj"),
+    } as any;
+
+    const mgr = new L10nTargetManager(workspace as any, new MockLogOutputChannel(), target, URI.file("d:/proj/.globalStorage"), 1);
 
     const codeUri = URI.file("d:/proj/src/foo.js");
     const codeLoc = vscTypeHelper.newLocation(codeUri, vscTypeHelper.newRange(0, 0, 0, 10));
@@ -303,11 +410,11 @@ suite("L10nService (unit)", () => {
     (svc as any).managers.set("/path/to/setting", [{ manager: mgr, listenerDisposable: { dispose: () => {} } }]);
 
     // collect from code position
-    const collectedFromCode = svc.collectLocationsForKeyAt(codeUri, { line: 0, character: 1 } as any);
+    const collectedFromCode = svc.collectEntriesForKeyAt(codeUri, { line: 0, character: 1 } as any);
     assert.ok(collectedFromCode);
     assert.strictEqual(collectedFromCode!.key, 'greet');
     assert.strictEqual(collectedFromCode!.codeLocations.length, 1);
-    assert.strictEqual(collectedFromCode!.translationLocations.length, 1);
+    assert.strictEqual(collectedFromCode!.translationEntries.length, 1);
 
     // canRenameKey: renaming to a new unused key is allowed
     const ok1 = svc.canRenameKey('greet', 'newKey');

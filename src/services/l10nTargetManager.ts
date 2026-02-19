@@ -1,6 +1,6 @@
 import EventEmitter from "events";
 import { L10nTarget } from "../models/l10nTypes";
-import { IWorkspaceWrapper, LogOutputChannel, Disposable, MyDiagnostic, MyDiagnosticSeverity, vscTypeHelper } from "../models/vscTypes";
+import { IWorkspaceWrapper, LogOutputChannel, Disposable, MyDiagnostic, MyDiagnosticSeverity, vscTypeHelper, DiagnosticsCode } from "../models/vscodeTypes";
 import { URI } from "vscode-uri";
 import { TranslationManager } from "./translationManager";
 import { CodeManager } from "./codeManager";
@@ -80,6 +80,7 @@ export class L10nTargetManager implements Disposable {
               c.location.range,
               `Undefined localization key '${c.key}' used in code.`,
               MyDiagnosticSeverity.Warning,
+              DiagnosticsCode.undefinedKey,
             ),
           );
         }
@@ -99,6 +100,7 @@ export class L10nTargetManager implements Disposable {
                 (entry as any).location.range,
                 `Localization key '${k}' is not used in code.`,
                 MyDiagnosticSeverity.Information,
+                DiagnosticsCode.unusedKey,
               ),
             );
           }
@@ -120,6 +122,7 @@ export class L10nTargetManager implements Disposable {
                   vscTypeHelper.newRange(0, 0, 0, 0),
                   `Missing translation for key '${k}' in language '${lang}'.`,
                   MyDiagnosticSeverity.Warning,
+                  DiagnosticsCode.missingTranslation,
                 ),
               );
             }
@@ -142,12 +145,13 @@ export class L10nTargetManager implements Disposable {
     private workspace: IWorkspaceWrapper,
     private logger: LogOutputChannel,
     public target: L10nTarget,
+    private globalStorageUri: URI,
     reloadIntervalMs: number = 500,
   ) {
     this.l10nTranslationManager = new TranslationManager(this.workspace, this.logger, this.target);
     const transDisposable = this.l10nTranslationManager.onRebuilt(() => this.reloadIntervalQueue.push("translation"));
     this.disposables.push(this.l10nTranslationManager, transDisposable);
-    this.codeManager = new CodeManager(this.workspace, this.logger, this.target);
+    this.codeManager = new CodeManager(this.workspace, this.logger, this.target, this.globalStorageUri);
     const codeDisposable = this.codeManager.onRebuilt(() => this.reloadIntervalQueue.push("code"));
     this.disposables.push(this.codeManager, codeDisposable);
 
@@ -195,6 +199,11 @@ export class L10nTargetManager implements Disposable {
       if (disposable) {
         disposable.dispose();
       }
+    }
+    try {
+      this.rebuiltEmitter.removeAllListeners();
+    } catch (err) {
+      this.logger.warn("L10nTargetManager.dispose: removeAllListeners failed", err);
     }
   }
 }

@@ -1,4 +1,4 @@
-import { MyDiagnostic, MyDiagnosticSeverity, vscTypeHelper } from "../models/vscTypes";
+import { MyDiagnostic, MyDiagnosticSeverity, vscTypeHelper, DiagnosticsCode } from "../models/vscodeTypes";
 import { URI } from "vscode-uri";
 import { TranslationParser, TranslationParseResult } from "./translationParser";
 import { L10nLangEntries } from "../models/l10nTypes";
@@ -73,6 +73,7 @@ export class PoParser implements TranslationParser {
               ),
               `missing msgstr for msgid '${msgid}'`,
               MyDiagnosticSeverity.Error,
+              DiagnosticsCode.poMissingMsgstr,
             ),
           );
           success = false;
@@ -96,6 +97,7 @@ export class PoParser implements TranslationParser {
               ),
               `empty msgstr for msgid '${msgid}'`,
               MyDiagnosticSeverity.Warning,
+              DiagnosticsCode.poEmptyMsgstr,
             ),
           );
           success = false;
@@ -119,11 +121,49 @@ export class PoParser implements TranslationParser {
               ),
               `duplicate msgid '${msgid}'`,
               MyDiagnosticSeverity.Warning,
+              DiagnosticsCode.poDuplicateMsgid,
             ),
           );
         }
 
         // 登録
+        // deletionRange: msgid 開始行 〜 msgstr 終了行（続く空行があればそこまで）
+        let deletionEndLine = currentMsgStrEndLine || currentMsgIdEndLine;
+        let deletionEndCol = currentMsgStrEndCol || currentMsgIdEndCol;
+        if (typeof deletionEndLine === "number" && text[deletionEndLine + 1] !== undefined && text[deletionEndLine + 1].trim() === "") {
+          // If there's only a single trailing newline (no array element after the
+          // blank), do not treat it as a removable separator — keep current end.
+          if (text[deletionEndLine + 2] === undefined) {
+            // single trailing newline only -> leave deletionEndLine as-is
+          } else {
+            // There are further array elements after the blank line.  Find the next
+            // non-empty line; if found, end the deletion at its start so the
+            // separator blank line(s) are removed.  If not found, include the
+            // single blank line (handles multiple trailing empty array elements).
+            let nextNonEmpty = -1;
+            for (let li = deletionEndLine + 2; li < text.length; li++) {
+              if (text[li].trim() !== "") {
+                nextNonEmpty = li;
+                break;
+              }
+            }
+            if (nextNonEmpty !== -1) {
+              deletionEndLine = nextNonEmpty;
+              deletionEndCol = 0;
+            } else {
+              deletionEndLine = deletionEndLine + 1;
+              deletionEndCol = 0;
+            }
+          }
+        }
+
+        // determine deletionRange start column so that deleting an entry removes
+        // the entire msgid/msgstr block (include the 'msgid' token and leading
+        // indentation), not only the quoted string inside it.
+        const rawLine = text[currentMsgIdStartLine] || "";
+        const msgidIndex = rawLine.indexOf("msgid");
+        const deletionStartCol = msgidIndex >= 0 ? msgidIndex : 0;
+
         entries[msgid] = {
           translation: msgstr,
           location: vscTypeHelper.newLocation(
@@ -134,6 +174,14 @@ export class PoParser implements TranslationParser {
               currentMsgIdEndLine,
               currentMsgIdEndCol,
             ),
+          ),
+          // deletionRange should start at the beginning of the msgid line so that
+          // WorkspaceEdit.delete removes the whole entry including the msgid/msgstr
+          deletionRange: vscTypeHelper.newRange(
+            currentMsgIdStartLine,
+            deletionStartCol,
+            deletionEndLine,
+            deletionEndCol,
           ),
         };
 
@@ -191,6 +239,7 @@ export class PoParser implements TranslationParser {
               vscTypeHelper.newRange(i, col >= 0 ? col : 0, i, endCol),
               `invalid msgid format, expected quoted string`,
               MyDiagnosticSeverity.Error,
+              DiagnosticsCode.poInvalidMsgidFormat,
             ),
           );
           success = false;
@@ -223,6 +272,7 @@ export class PoParser implements TranslationParser {
               vscTypeHelper.newRange(i, col >= 0 ? col : 0, i, endCol),
               `invalid msgstr format, expected quoted string`,
               MyDiagnosticSeverity.Error,
+              DiagnosticsCode.poInvalidMsgstrFormat,
             ),
           );
           success = false;
@@ -253,6 +303,7 @@ export class PoParser implements TranslationParser {
                 vscTypeHelper.newRange(i, col, i, endCol),
                 `unexpected continuation string outside of msgid/msgstr: ${m[1]}`,
                 MyDiagnosticSeverity.Warning,
+                DiagnosticsCode.poUnexpectedContinuation,
               ),
             );
             success = false;
@@ -266,6 +317,7 @@ export class PoParser implements TranslationParser {
             vscTypeHelper.newRange(i, 0, i, 0),
             `unrecognized line in .po: ${line}`,
             MyDiagnosticSeverity.Warning,
+            DiagnosticsCode.poUnrecognizedLine,
           ),
         );
         success = false;
@@ -281,6 +333,7 @@ export class PoParser implements TranslationParser {
           vscTypeHelper.newRange(0, 0, 0, 0),
           `unknown parse error`,
           MyDiagnosticSeverity.Warning,
+          DiagnosticsCode.poParseError,
         ),
       );
     }
@@ -289,6 +342,17 @@ export class PoParser implements TranslationParser {
       entries: { [lang]: entries },
       diagnostics,
       success,
+      // .po 用のエントリ整形関数
+      formatEntry: (key: string, translation: string) => {
+        const esc = (s: string) =>
+          s
+            .replace(/\\/g, "\\\\")
+            .replace(/"/g, '\\"')
+            .replace(/\n/g, "\\n")
+            .replace(/\r/g, "\\r")
+            .replace(/\t/g, "\\t");
+        return `msgid "${esc(key)}"\nmsgstr "${esc(translation)}"\n\n`;
+      },
     };
   }
 }

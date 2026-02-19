@@ -1,4 +1,4 @@
-import { MyDiagnostic } from "../models/vscTypes";
+import { MyDiagnostic } from "../models/vscodeTypes";
 import { URI } from "vscode-uri";
 import { L10nEntries, L10nFormats } from "../models/l10nTypes";
 import { PoParser } from "./poParser";
@@ -7,6 +7,8 @@ export type TranslationParseResult = {
   entries: L10nEntries;
   success: boolean;
   diagnostics: MyDiagnostic[];
+  /** 翻訳エントリを生成する際のフォーマット関数 */
+  formatEntry: (key: string, translation: string) => string;
 };
 
 export interface TranslationParser {

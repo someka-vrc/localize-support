@@ -1,6 +1,6 @@
 import assert from "assert";
 import { IntervalQueue, OrganizeStrategies } from "../../../utils/intervalQueue";
-import { MockIWindowWrapper } from "../mocks/mockWorkspaceService";
+import { MockLogOutputChannel as MockLogger } from "../mocks/mockVscodeWrapper";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -9,7 +9,7 @@ suite("IntervalQueue", () => {
     const processed: number[] = [];
     const q = new IntervalQueue<number>(10, async (n) => {
       processed.push(n);
-    }, new MockIWindowWrapper().logger);
+    }, new MockLogger());
     q.start();
 
     q.push(1);
@@ -28,7 +28,7 @@ suite("IntervalQueue", () => {
       async (n) => {
         processed.push(n);
       },
-      new MockIWindowWrapper().logger,
+      new MockLogger(),
       OrganizeStrategies.lastOnly,
     );
     q.start();
@@ -52,7 +52,7 @@ suite("IntervalQueue", () => {
       async (it) => {
         processedIds.push(it.id);
       },
-      new MockIWindowWrapper().logger,
+      new MockLogger(),
       OrganizeStrategies.skipDuplicatesByKey((it) => it.key),
     );
     q.start();
@@ -72,8 +72,8 @@ suite("IntervalQueue", () => {
     const processed: number[] = [];
     const errors: any[] = [];
 
-    const win = new MockIWindowWrapper();
-    const wsLogger = win.logger;
+    const logger = new MockLogger();
+    const wsLogger = logger;
 
     // stub logger.error
     const origLoggerError = wsLogger.error;
@@ -111,7 +111,7 @@ suite("IntervalQueue", () => {
     const processed: number[] = [];
     const q = new IntervalQueue<number>(10, async (n) => {
       processed.push(n);
-    }, new MockIWindowWrapper().logger);
+    }, new MockLogger());
     q.start();
 
     q.push(0);
@@ -127,7 +127,7 @@ suite("IntervalQueue", () => {
     const processed: Array<string | boolean> = [];
     const q = new IntervalQueue<string | boolean>(10, async (v) => {
       processed.push(v);
-    }, new MockIWindowWrapper().logger);
+    }, new MockLogger());
     q.start();
 
     q.push("");
@@ -144,7 +144,7 @@ suite("IntervalQueue", () => {
     const processed: number[] = [];
     const q = new IntervalQueue<number>(20, async (n) => {
       processed.push(n);
-    }, new MockIWindowWrapper().logger);
+    }, new MockLogger());
     q.start();
 
     q.push(1);
@@ -168,7 +168,7 @@ suite("IntervalQueue", () => {
       if (n === 1) {
         q.push(2);
       }
-    }, new MockIWindowWrapper().logger);
+    }, new MockLogger());
     q.start();
 
     q.push(1);

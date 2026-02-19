@@ -1,6 +1,6 @@
 import { EventEmitter } from "events";
 import { URI } from "vscode-uri";
-import { IWorkspaceWrapper, LogOutputChannel, MyRelativePattern, Disposable, FileType } from "../models/vscTypes";
+import { IWorkspaceWrapper, LogOutputChannel, MyRelativePattern, Disposable, FileType } from "../models/vscodeTypes";
 import { L10nTarget, L10nCode, CodeLanguage, CodeLanguageFileExtMap } from "../models/l10nTypes";
 import { IntervalQueue, OrganizeStrategies } from "../utils/intervalQueue";
 import { CodeParser } from "./codeParser";
@@ -34,6 +34,7 @@ export class CodeManager implements Disposable {
     private workspace: IWorkspaceWrapper,
     private logger: LogOutputChannel,
     private target: L10nTarget,
+    private globalStorageUri: URI,
     rebuildIntervalMs: number = 500,
   ) {
     this.rebuildIntervalQueue = new IntervalQueue<RebuildQueueItem>(
@@ -43,8 +44,8 @@ export class CodeManager implements Disposable {
       OrganizeStrategies.skipDuplicatesByKey<RebuildQueueItem>((item) => item.uri.path + "-" + item.reason),
     );
 
-    // default wasm storage under project .tmp/wasms — tests may stub parsing instead of downloading
-    this.wasmDownloader = new WasmDownloader(this.workspace, this.logger, URI.file(path.join(process.cwd(), ".tmp/wasms")));
+    // store WASM files under the extension Global Storage (provided by ExtensionContext.globalStorageUri)
+    this.wasmDownloader = new WasmDownloader(this.workspace, this.logger, this.globalStorageUri);
     this.disposables.push(this.wasmDownloader);
   }
 

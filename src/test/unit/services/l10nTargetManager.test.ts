@@ -1,9 +1,10 @@
 import assert from "assert";
 import { URI } from "vscode-uri";
-import { MockWorkspaceWrapper, MockLogOutputChannel } from "../mocks/mockWorkspaceService";
+import { MockWorkspaceWrapper, MockLogOutputChannel } from "../mocks/mockVscodeWrapper";
 import { L10nTargetManager } from "../../../services/l10nTargetManager";
 import { L10nTarget } from "../../../models/l10nTypes";
-import { vscTypeHelper, MyDiagnosticSeverity } from "../../../models/vscTypes";
+import { vscTypeHelper, MyDiagnosticSeverity, DiagnosticsCode } from "../../../models/vscodeTypes";
+import sinon from "sinon";
 
 suite("L10nTargetManager diagnostics (unit)", () => {
   let workspace: MockWorkspaceWrapper;
@@ -22,7 +23,7 @@ suite("L10nTargetManager diagnostics (unit)", () => {
   });
 
   test("undefined key used in code -> warning on code URI", () => {
-    const mgr = new L10nTargetManager(workspace, new MockLogOutputChannel(), baseTarget, 1);
+    const mgr = new L10nTargetManager(workspace, new MockLogOutputChannel(), baseTarget, URI.file("d:/proj/.globalStorage"), 1);
     const codeUri = URI.file("d:/proj/src/foo.js");
 
     // simulate code uses key 'missing.key'
@@ -36,11 +37,11 @@ suite("L10nTargetManager diagnostics (unit)", () => {
     // no translations present
     const items = mgr.getMatchDiagnostics();
     const forCode = items.find((it) => it.uri.path === codeUri.path)?.diagnostics || [];
-    assert.ok(forCode.some((d) => /missing.key/.test(d.message) && d.severity === MyDiagnosticSeverity.Warning));
+    assert.ok(forCode.some((d) => /missing.key/.test(d.message) && d.severity === MyDiagnosticSeverity.Warning && d.code === DiagnosticsCode.undefinedKey));
   });
 
   test("unused translation entry -> information on l10n URI", () => {
-    const mgr = new L10nTargetManager(workspace, new MockLogOutputChannel(), baseTarget, 1);
+    const mgr = new L10nTargetManager(workspace, new MockLogOutputChannel(), baseTarget, URI.file("d:/proj/.globalStorage"), 1);
     const luri = URI.file("d:/proj/locales/ja.po");
 
     // simulate translation file with key 'unused.key'
@@ -60,11 +61,11 @@ suite("L10nTargetManager diagnostics (unit)", () => {
     // no code references
     const items = mgr.getMatchDiagnostics();
     const forL10n = items.find((it) => it.uri.path === luri.path)?.diagnostics || [];
-    assert.ok(forL10n.some((d) => /unused.key/.test(d.message) && d.severity === MyDiagnosticSeverity.Information));
+    assert.ok(forL10n.some((d) => /unused.key/.test(d.message) && d.severity === MyDiagnosticSeverity.Information && d.code === DiagnosticsCode.unusedKey));
   });
 
   test("missing translation in other language -> warning on that language file", () => {
-    const mgr = new L10nTargetManager(workspace, new MockLogOutputChannel(), baseTarget, 1);
+    const mgr = new L10nTargetManager(workspace, new MockLogOutputChannel(), baseTarget, URI.file("d:/proj/.globalStorage"), 1);
     const en = URI.file("d:/proj/locales/en.po");
     const ja = URI.file("d:/proj/locales/ja.po");
 
@@ -95,13 +96,13 @@ suite("L10nTargetManager diagnostics (unit)", () => {
     const forJa = items.find((it) => it.uri.path === ja.path)?.diagnostics || [];
     assert.ok(
       forJa.some(
-        (d) => /Missing translation for key 'hello'/.test(d.message) && d.severity === MyDiagnosticSeverity.Warning,
+        (d) => /Missing translation for key 'hello'/.test(d.message) && d.severity === MyDiagnosticSeverity.Warning && d.code === DiagnosticsCode.missingTranslation,
       ),
     );
   });
 
   test("integration: code uses key present in one lang -> no undefined; missing lang diagnostic emitted", () => {
-    const mgr = new L10nTargetManager(workspace, new MockLogOutputChannel(), baseTarget, 1);
+    const mgr = new L10nTargetManager(workspace, new MockLogOutputChannel(), baseTarget, URI.file("d:/proj/.globalStorage"), 1);
     const codeUri = URI.file("d:/proj/src/app.js");
     const en = URI.file("d:/proj/locales/en.po");
     const ja = URI.file("d:/proj/locales/ja.po");
@@ -141,9 +142,39 @@ suite("L10nTargetManager diagnostics (unit)", () => {
 
     // ja should have missing translation for 'greet'
     const jaDiags = items.find((it) => it.uri.path === ja.path)?.diagnostics || [];
-    assert.ok(jaDiags.some((d) => /Missing translation for key 'greet'/.test(d.message)));
+    assert.ok(jaDiags.some((d) => /Missing translation for key 'greet'/.test(d.message) && d.code === DiagnosticsCode.missingTranslation));
 
     // ja should also have unused entry diagnostic for 'onlyInJa'
-    assert.ok(jaDiags.some((d) => /onlyInJa/.test(d.message) && d.severity === MyDiagnosticSeverity.Information));
+    assert.ok(jaDiags.some((d) => /onlyInJa/.test(d.message) && d.severity === MyDiagnosticSeverity.Information && d.code === DiagnosticsCode.unusedKey));
+  });
+
+  test("onRebuilt.dispose logs when removeListener fails", () => {
+    const mgr = new L10nTargetManager(workspace, new MockLogOutputChannel(), baseTarget, URI.file("d:/proj/.globalStorage"), 1);
+    const warnStub = sinon.stub(MockLogOutputChannel.prototype, "warn");
+
+    // make removeListener throw to exercise the catch path inside onRebuilt().dispose
+    (mgr as any).rebuiltEmitter.removeListener = () => {
+      throw new Error("boom");
+    };
+
+    const sub = mgr.onRebuilt(() => {});
+    // should not throw
+    sub.dispose();
+    sinon.assert.calledOnce(warnStub);
+    warnStub.restore();
+  });
+
+  test("dispose logs when removeAllListeners fails", () => {
+    const mgr = new L10nTargetManager(workspace, new MockLogOutputChannel(), baseTarget, URI.file("d:/proj/.globalStorage"), 1);
+    const warnStub = sinon.stub(MockLogOutputChannel.prototype, "warn");
+
+    (mgr as any).rebuiltEmitter.removeAllListeners = () => {
+      throw new Error("boom");
+    };
+
+    // should not throw
+    mgr.dispose();
+    sinon.assert.calledOnce(warnStub);
+    warnStub.restore();
   });
 });

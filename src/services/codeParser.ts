@@ -2,7 +2,7 @@ import { URI } from "vscode-uri";
 import Parser from "web-tree-sitter";
 import { CodeLanguage, L10nCode } from "../models/l10nTypes";
 import { WasmDownloader } from "./wasmDownloader";
-import { vscTypeHelper, IWorkspaceWrapper, LogOutputChannel } from "../models/vscTypes";
+import { vscTypeHelper, IWorkspaceWrapper, LogOutputChannel } from "../models/vscodeTypes";
 
 
 /**

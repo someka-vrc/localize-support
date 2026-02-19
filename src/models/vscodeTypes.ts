@@ -28,7 +28,30 @@ export interface MyDiagnostic {
   range: MyRange;
   message: string;
   severity: MyDiagnosticSeverity;
+  code?: string;
 }
+
+export const DiagnosticsCode = {
+  // settings
+  settingsInvalid: 'settings.invalid',
+
+  // .po parser
+  poMissingMsgstr: 'po.missingMsgstr',
+  poEmptyMsgstr: 'po.emptyMsgstr',
+  poDuplicateMsgid: 'po.duplicateMsgid',
+  poInvalidMsgidFormat: 'po.invalidMsgidFormat',
+  poInvalidMsgstrFormat: 'po.invalidMsgstrFormat',
+  poUnexpectedContinuation: 'po.unexpectedContinuation',
+  poUnrecognizedLine: 'po.unrecognizedLine',
+  poParseError: 'po.parseError',
+
+  // l10n matching
+  undefinedKey: 'l10n.undefinedKey',
+  unusedKey: 'l10n.unusedKey',
+  missingTranslation: 'l10n.missingTranslation',
+} as const;
+
+export type DiagnosticsCodeType = typeof DiagnosticsCode[keyof typeof DiagnosticsCode];
 
 export type DiagnosticCollection = vscode.DiagnosticCollection;
 
@@ -59,8 +82,8 @@ function newRange(startLine: number, startChar: number, endLine: number, endChar
 function newLocation(uri: URI, range: MyRange): MyLocation {
   return { uri, range };
 }
-function newDiagnostic(range: MyRange, message: string, severity: MyDiagnosticSeverity): MyDiagnostic {
-  return { range, message, severity };
+function newDiagnostic(range: MyRange, message: string, severity: MyDiagnosticSeverity, code?: string): MyDiagnostic {
+  return { range, message, severity, code };
 }
 
 export const vscTypeHelper = {
@@ -101,9 +124,8 @@ export interface ICommandWrapper {
 export type LogLevel = vscode.LogLevel;
 export type Event<T> = vscode.Event<T>;
 export type LogOutputChannel = vscode.LogOutputChannel;
-export interface IWindowWrapper {
-  showTextDocument(uri: URI, options?: { selection?: MyRange }): Promise<void>;
-  get logger(): LogOutputChannel;
+export interface Logger {
+  getLogger(): LogOutputChannel;
 }
 
 export interface ILanguagesWrapper {
@@ -113,6 +135,6 @@ export interface ILanguagesWrapper {
 export interface IVSCodeWrapper {
   readonly workspace: IWorkspaceWrapper;
   readonly command: ICommandWrapper;
-  readonly window: IWindowWrapper;
   readonly languages: ILanguagesWrapper;
+  readonly logger: LogOutputChannel;
 }

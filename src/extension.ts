@@ -1,25 +1,29 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from "vscode";
-import { VSCoderWrapper } from "./models/vscWorkspace";
+import { VSCodeWrapper } from "./models/vscodeWrapper";
 import { L10nService } from "./services/l10nService";
 import { DiagnosticProvider } from "./providers/diagnosticProvider";
 import { DefinitionProvider } from "./providers/definitionProvider";
 import { ReferenceProvider } from "./providers/referenceProvider";
 import { CodeLanguages, CodeLanguageFileExtMap } from "./models/l10nTypes";
 import { registerOpenLocationCommand } from "./commands/openLocationCommand";
+import { registerToggleDiagnosticsCommand } from "./commands/toggleDiagnosticsCommand";
 import { HoverProvider } from "./providers/hoverProvider";
 import { RenameProvider } from "./providers/renameProvider";
 import { CompletionProvider } from "./providers/completionProvider";
+import { CodeActionProvider } from "./providers/codeActionProvider";
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export async function activate(context: vscode.ExtensionContext) {
 
   // --- L10nService -----------------------------------
-  const vscodeWrapper = new VSCoderWrapper();
-  const logger = vscodeWrapper.window.logger;
-  const l10nService = new L10nService(vscodeWrapper.workspace, logger);
+  const vscodeWrapper = new VSCodeWrapper();
+  // ensure wrapper is disposed when extension deactivates
+  context.subscriptions.push(vscodeWrapper);
+  const logger = vscodeWrapper.logger;
+  const l10nService = new L10nService(vscodeWrapper.workspace, logger, context.globalStorageUri);
   context.subscriptions.push(l10nService);
   await l10nService.init().catch((e) => logger.error(e));
 
@@ -40,11 +44,28 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(vscode.languages.registerRenameProvider(docSelectors, new RenameProvider(l10nService)));
   context.subscriptions.push(vscode.languages.registerCompletionItemProvider(docSelectors, new CompletionProvider(l10nService), "'", '"', "`"));
 
-  context.subscriptions.push(registerOpenLocationCommand(vscodeWrapper.command, vscodeWrapper.window.logger, vscodeWrapper.window));
+  const diagnosticProvider = new DiagnosticProvider("localize-support", l10nService, logger);
+  context.subscriptions.push(diagnosticProvider);
+
+  // Load persisted diagnostics-enabled state (default: true)
+  const diagStateKey = "localize-support.diagnosticsEnabled";
+  const diagnosticsEnabled = context.workspaceState.get<boolean>(diagStateKey, true);
+  if (!diagnosticsEnabled) {
+    // ensure provider is disabled at startup
+    diagnosticProvider.setEnabled(false);
+  }
+
+  context.subscriptions.push(registerOpenLocationCommand(vscodeWrapper.command, vscodeWrapper.logger));
+  context.subscriptions.push(registerToggleDiagnosticsCommand(vscodeWrapper.command, vscodeWrapper.logger, diagnosticProvider, context.workspaceState));
   context.subscriptions.push(vscode.languages.registerHoverProvider(docSelectors, new HoverProvider(l10nService)));
+  // register code action provider (returns placeholder actions for diagnostics that have `code`)
+  context.subscriptions.push(vscode.languages.registerCodeActionsProvider(docSelectors, new CodeActionProvider(l10nService)));
 
   logger.info("localize-support activated");
 }
 
 // This method is called when your extension is deactivated
-export function deactivate() {}
+export function deactivate() {
+  // All disposables registered on `context.subscriptions` are disposed by VS Code.
+  // No manual cleanup required here.
+}

@@ -1,7 +1,6 @@
 import {
   IWorkspaceWrapper,
   ICommandWrapper,
-  IWindowWrapper,
   ILanguagesWrapper,
   FileStat,
   WorkspaceConfiguration,
@@ -13,10 +12,10 @@ import {
   MyRange,
   FileSystemWatcher,
   IFileSystemWrapper,
-  LogLevel,
   LogOutputChannel,
-} from "../../../models/vscTypes";
-import { Event as vtEvent } from "../../../models/vscTypes";
+  LogLevel,
+} from "../../../models/vscodeTypes";
+import { Event as vtEvent } from "../../../models/vscodeTypes";
 import { URI } from "vscode-uri";
 
 export class MockFileSystemWrapper implements IFileSystemWrapper {
@@ -116,14 +115,6 @@ export class MockLogOutputChannel implements LogOutputChannel {
   }
   error(error: string | Error, ...args: any[]): void {
     console.error(error, ...args);
-  }
-}
-export class MockIWindowWrapper implements IWindowWrapper {
-  showTextDocument(uri: URI, options?: { selection?: MyRange }): Promise<void> {
-    return Promise.reject(new Error("MockIWindowWrapper.showTextDocument not stubbed"));
-  }
-  get logger(): LogOutputChannel {
-    return new MockLogOutputChannel();
   }
 }
 export class MockILanguagesWrapper implements ILanguagesWrapper {

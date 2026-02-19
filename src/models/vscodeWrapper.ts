@@ -3,35 +3,23 @@ import {
   IFileSystemWrapper,
   IWorkspaceWrapper,
   ICommandWrapper,
-  IWindowWrapper,
   FileSystemWatcher,
   WorkspaceConfiguration,
   Disposable,
   MyRelativePattern,
   MyConfigurationChangeEvent,
   MyRange,
+  MyLocation,
   DiagnosticCollection,
   FileStat,
   LogOutputChannel,
   IVSCodeWrapper,
   ILanguagesWrapper,
-} from "./vscTypes";
+  Logger,
+} from "./vscodeTypes";
 import { URI } from "vscode-uri";
+import { toVscPattern, toVscRange, toVscUri } from "./vscodeTypeConverter";
 
-function toVscUri(uri: URI): vscode.Uri {
-  return uri as vscode.Uri;
-}
-
-function toVscPattern(pattern: string | MyRelativePattern): string | vscode.RelativePattern {
-  if (typeof pattern === "string") {
-    return pattern;
-  }
-  return new vscode.RelativePattern(pattern.baseUri as vscode.Uri, pattern.pattern);
-}
-
-function toVscRange(range: MyRange): vscode.Range {
-  return new vscode.Range(range.start.line, range.start.character, range.end.line, range.end.character);
-}
 
 /**
  * `vscode.workspace.fs` をラップした実装。
@@ -113,26 +101,25 @@ export class CommandWrapper implements ICommandWrapper {
   registerCommand(command: string, callback: (...args: any[]) => any): Disposable {
     return vscode.commands.registerCommand(command, callback);
   }
-} 
+}
 
-
-/**
- * `vscode.window` をラップするクラス。`showTextDocument` と出力チャンネル（logger）を提供する。
- */
-export class WindowWrapper implements IWindowWrapper {
-  async showTextDocument(uri: URI, options?: { selection?: MyRange }): Promise<void> {
-    const vscOptions: vscode.TextDocumentShowOptions = {};
-    if (options?.selection) {
-      vscOptions.selection = toVscRange(options.selection);
-    }
-    return vscode.window.showTextDocument(toVscUri(uri), vscOptions).then(() => {});
-  }
+export class LoggerWrapper implements Logger, Disposable {
   private _outputChannel: LogOutputChannel | null = null;
-  get logger(): LogOutputChannel {
+  getLogger(): LogOutputChannel {
     if (!this._outputChannel) {
       this._outputChannel = vscode.window.createOutputChannel("localize-support", { log: true });
     }
     return this._outputChannel;
+  }
+  dispose(): void {
+    if (this._outputChannel) {
+      try {
+        this._outputChannel.dispose();
+      } catch (err) {
+        // ignore
+      }
+      this._outputChannel = null;
+    }
   }
 }
 
@@ -143,21 +130,30 @@ export class LanguagesWrapper implements ILanguagesWrapper {
   createDiagnosticCollection(name: string): DiagnosticCollection {
     return vscode.languages.createDiagnosticCollection(name);
   }
-} 
+}
 
 /**
  * 拡張内で使用する `vscode` ラッパーの集約実装。
  * テスト可能性のため `vscode` への直接参照を避け、必要なラッパーインスタンスを提供する。
  */
-export class VSCoderWrapper implements IVSCodeWrapper {
+export class VSCodeWrapper implements IVSCodeWrapper, Disposable {
   workspace: IWorkspaceWrapper;
   command: ICommandWrapper;
   languages: ILanguagesWrapper;
-  window: IWindowWrapper;
+  logger: LogOutputChannel;
+  private _loggerWrapper: LoggerWrapper;
   constructor() {
     this.workspace = new WorkspaceWrapper();
     this.command = new CommandWrapper();
-    this.window = new WindowWrapper();
+    this._loggerWrapper = new LoggerWrapper();
+    this.logger = this._loggerWrapper.getLogger();
     this.languages = new LanguagesWrapper();
+  }
+  dispose(): void {
+    try {
+      this._loggerWrapper.dispose();
+    } catch (err) {
+      // ignore
+    }
   }
 }

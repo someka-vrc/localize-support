@@ -4,6 +4,9 @@
   "description": "VS Code extension supports localizing",
   "version": "0.0.1",
   "license": "MIT",
+  "repository": {
+    "url": "https://github.com/someka-vrc/localize-support.git"
+  },
   "engines": {
     "vscode": "^1.109.0"
   },
@@ -17,8 +20,8 @@
   "contributes": {
     "commands": [
       {
-        "command": "localize-support.helloWorld",
-        "title": "Hello World"
+        "command": "localize-support.toggleDiagnostics",
+        "title": "Localize Support: Toggle diagnostics"
       }
     ],
     "configuration": {
@@ -115,20 +118,31 @@
     "spec": "out/test/unit/**/*.test.js"
   },
   "c8": {
-    "reporter": "istanbul-reporter-html-dark",
-    "report-dir": "coverage",
-    "exclude": "src/test/**",
+    "all": true,
+    "reporter": [
+      "istanbul-reporter-html-dark",
+      "json-summary",
+      "lcovonly"
+    ],
+    "report-dir": "coverage/unit",
+    "exclude": [
+      "coverage/**",
+      "src/test/**",
+      ".vscode-test/**",
+      "**/*.mjs"
+    ],
     "excludeAfterRemap": true
   },
   "scripts": {
     "vscode:prepublish": "yarn compile",
+    "package": "npx vsce package",
     "compile": "yarn lint && tsc -p ./",
     "watch": "tsc -watch -p ./",
     "lint": "eslint src",
     "pretest:unit": "yarn compile",
     "test:unit": "cross-env NODE_OPTIONS=--enable-source-maps c8 mocha",
-    "pretest:integration": "yarn compile && yarn lint",
-    "test:integration": "vscode-test",
+    "pretest:integration": "yarn compile",
+    "test:integration": "vscode-test --coverage --coverage-output=coverage/integration --coverage-reporter=istanbul-reporter-html-dark --coverage-reporter=json-summary --coverage-reporter=lcovonly",
     "test": "yarn test:unit && yarn test:integration",
     "clean:tmp": "node -e \"const fs = require('fs'); fs.rmSync('.tmp', { recursive: true, force: true })\"",
     "clean:out": "node -e \"const fs = require('fs'); fs.rmSync('out', { recursive: true, force: true })\"",

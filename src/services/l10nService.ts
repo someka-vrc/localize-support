@@ -7,10 +7,11 @@ import {
   MyDiagnosticSeverity,
   IWorkspaceWrapper,
   LogOutputChannel,
-} from "../models/vscTypes";
+  DiagnosticsCode,
+} from "../models/vscodeTypes";
 import { URI } from "vscode-uri";
 import type { DiagOrStatus } from "../models/interfaces";
-import { CodeLanguage, CodeLanguages, L10nFormat, L10nFormats, L10nTarget } from "../models/l10nTypes";
+import { CodeLanguage, CodeLanguages, L10nFormat, L10nFormats, L10nTarget, L10nEntry } from "../models/l10nTypes";
 import { L10nTargetManager } from "./l10nTargetManager";
 import { IntervalQueue, OrganizeStrategies } from "../utils/intervalQueue";
 import { EventEmitter } from "events";
@@ -37,6 +38,7 @@ export class L10nService implements Disposable {
   constructor(
     private workspace: IWorkspaceWrapper,
     private logger: LogOutputChannel,
+    private globalStorageUri: URI,
     reloadIntervalMs: number = 500,
   ) {
     this.reloadIntervalQueue = new IntervalQueue<L10nService>(
@@ -170,7 +172,7 @@ export class L10nService implements Disposable {
     // 新しいマネージャーを作成、登録
     const managers = await Promise.all(
       targets.map(async (t) => {
-        const manager = new L10nTargetManager(this.workspace, this.logger, t);
+        const manager = new L10nTargetManager(this.workspace, this.logger, t, this.globalStorageUri);
         try {
           await manager.init();
         } catch (error) {
@@ -278,13 +280,10 @@ export class L10nService implements Disposable {
   }
 
   /**
-   * ----- 追加: 検索 / 定義参照ヘルパー -----
-   *
-   * サービス層（vscode 依存なし）で以下の機能を提供する：
-   * - コード/翻訳ファイル上の位置からキーを取得する
-   * - キーから翻訳エントリの位置を列挙する
-   * - キーからコード参照位置を列挙する
-   * - 高レベル API: findDefinition / findReferences
+   * コード/翻訳ファイル上の位置からキーを取得する
+   * @param uri
+   * @param position
+   * @returns
    */
   public getKeyAtPosition(uri: URI, position: MyPosition): string | null {
     const path = uri.path;
@@ -321,8 +320,13 @@ export class L10nService implements Disposable {
     return null;
   }
 
-  public findTranslationLocationsForKey(key: string) {
-    const result: any[] = [];
+  /**
+   * 指定されたキーに対する翻訳エントリをすべて取得する
+   * @param key
+   * @returns L10nEntry の配列
+   */
+  public findTranslationEntriesForKey(key: string): L10nEntry[] {
+    const result: L10nEntry[] = [];
     for (const tgtUnits of this.managers.values()) {
       for (const tu of tgtUnits) {
         const l10ns = tu.manager?.l10ns;
@@ -332,15 +336,15 @@ export class L10nService implements Disposable {
         for (const [, parsed] of l10ns.entries()) {
           const langs = Object.keys(parsed?.entries || {});
           for (const lang of langs) {
-            const entries = (parsed!.entries as any)[lang] || {};
-            if (entries[key] && entries[key].location) {
-              result.push(entries[key].location);
+            const entries = parsed!.entries[lang] || {};
+            if (entries[key]) {
+              result.push(entries[key]);
             }
           }
         }
       }
     }
-    return result as MyLocation[];
+    return result;
   }
 
   /**
@@ -385,6 +389,175 @@ export class L10nService implements Disposable {
       }
     }
     return result;
+  }
+
+  /**
+   * Return a deduplicated list of all known localization file URIs (parsed by TranslationManager).
+   * Used by providers that need to add/remove entries across all translation files.
+   */
+  public getAllL10nUris(): URI[] {
+    const seen = new Set<string>();
+    const result: URI[] = [];
+    for (const tgtUnits of this.managers.values()) {
+      for (const tu of tgtUnits) {
+        const l10ns = tu.manager?.l10ns;
+        if (!l10ns) {
+          continue;
+        }
+        for (const [luri] of l10ns.entries()) {
+          if (!seen.has(luri)) {
+            seen.add(luri);
+            result.push(URI.parse(luri));
+          }
+        }
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Compute insertion targets for adding a new translation `key` corresponding to a
+   * code location (uri + position).  For each known localization file return the
+   * MyPosition where the new entry text should be inserted and the formatted
+   * entry text (using the file's parser.formatEntry).
+   *
+   * Behavior:
+   * - Find the nearest localization call in the same code file that occurs before
+   *   `position` and has an existing translation entry; insert the new entry
+   *   directly under that existing entry in each translation file where it
+   *   appears.
+   * - If no such preceding code-localization key is found, use the last
+   *   occurring entry in the translation file as the insertion anchor.
+   * - If the file has no entries, insertion position will be at EOF (document
+   *   end).
+   */
+  public computeInsertionTargetsForKeyAt(
+    codeUri: URI,
+    position: MyPosition,
+    key: string,
+    translation: string | null = null,
+  ): { uri: URI; position: MyPosition; entryText: string }[] {
+    if (!key) {
+      return [];
+    }
+
+    // 1) find nearest preceding code localization call (in same file) that has translations
+    const path = codeUri.path;
+    type CodeCandidate = { key: string; startLine: number; startChar: number };
+    const candidates: CodeCandidate[] = [];
+
+    for (const tgtUnits of this.managers.values()) {
+      for (const tu of tgtUnits) {
+        const codes = tu.manager?.codes;
+        if (!codes) {
+          continue;
+        }
+        if (!codes.has(path)) {
+          continue;
+        }
+        const list = codes.get(path) || [];
+        for (const c of list) {
+          const r = c.location.range;
+          // only consider calls that occur at-or-before the position
+          // and which themselves have at least one translation entry
+          if (
+            r.start.line < position.line ||
+            (r.start.line === position.line && r.start.character <= position.character)
+          ) {
+            const transEntries = this.findTranslationEntriesForKey(c.key) || [];
+            if (transEntries.length > 0) {
+              candidates.push({ key: c.key, startLine: r.start.line, startChar: r.start.character });
+            }
+          }
+        }
+      }
+    }
+
+    // choose the closest candidate by position (largest startLine/startChar)
+    candidates.sort((a, b) => b.startLine - a.startLine || b.startChar - a.startChar);
+    const nearestKey = candidates.length > 0 ? candidates[0].key : null;
+    const l10nUris = this.getAllL10nUris();
+    const results: { uri: URI; position: MyPosition; entryText: string }[] = [];
+
+    for (const uri of l10nUris) {
+      // obtain the parsed TranslationParseResult for this uri
+      let parsed: any = null;
+      for (const tgtUnits of this.managers.values()) {
+        for (const tu of tgtUnits) {
+          const l10ns = tu.manager?.l10ns;
+          if (l10ns && l10ns.has((uri as any).path)) {
+            parsed = l10ns.get((uri as any).path);
+            break;
+          }
+        }
+        if (parsed) {
+          break;
+        }
+      }
+
+      // fallback: insert at EOF when parser not available
+      if (!parsed) {
+        results.push({
+          uri: uri as URI,
+          position: { line: Number.MAX_SAFE_INTEGER, character: 0 },
+          entryText: `${key}\n`,
+        });
+        continue;
+      }
+
+      // determine language block inside parsed.entries (po parser uses filename->lang)
+      const langs = Object.keys(parsed.entries || {});
+      const lang = langs.length > 0 ? langs[0] : "";
+      const entries = (parsed.entries || {})[lang] || {};
+
+      // helper to format entry text for this file
+      const entryText = parsed.formatEntry
+        ? parsed.formatEntry(key, translation ?? key)
+        : `msgid "${key}"\nmsgstr "${translation ?? key}"\n\n`;
+
+      // if nearestKey exists and this file contains that key, insert after that entry
+      if (nearestKey && entries[nearestKey]) {
+        const e = entries[nearestKey] as any;
+        const insPos = e.deletionRange ? e.deletionRange.end : e.location.range.end;
+        results.push({
+          uri: URI.parse((uri as any).toString()),
+          position: { line: insPos.line, character: insPos.character || 0 },
+          entryText,
+        });
+        continue;
+      }
+
+      // otherwise insert after the last existing entry in this file (if any)
+      let lastEntry: any = null;
+      let lastLine = -1;
+      for (const k of Object.keys(entries)) {
+        const ent = entries[k];
+        const endLine = ent.deletionRange ? ent.deletionRange.end.line : ent.location.range.end.line;
+        if (endLine > lastLine) {
+          lastLine = endLine;
+          lastEntry = ent;
+        }
+      }
+
+      if (lastEntry) {
+        const pos = lastEntry.deletionRange ? lastEntry.deletionRange.end : lastEntry.location.range.end;
+        results.push({
+          uri: URI.parse((uri as any).toString()),
+          position: { line: pos.line, character: pos.character || 0 },
+          entryText,
+        });
+        continue;
+      }
+
+      // no existing entries -> append at EOF
+      results.push({
+        uri: URI.parse((uri as any).toString()),
+        position: { line: Number.MAX_SAFE_INTEGER, character: 0 },
+        entryText,
+      });
+    }
+
+    return results;
   }
 
   /**
@@ -444,6 +617,121 @@ export class L10nService implements Disposable {
     return Array.from(set);
   }
 
+  /**
+   * Return completion candidates (fuzzy-scored + translations) for a given prefix.
+   */
+  public getCompletionCandidates(
+    prefix: string,
+    maxResults: number = 200,
+  ): {
+    key: string;
+    score: number;
+    translations: {
+      translation: string;
+      uri: URI;
+      fileName: string;
+      path: string;
+      lang: string;
+      location?: MyLocation;
+    }[];
+  }[] {
+    const allKeys = this.getAllKeys() || [];
+    const pat = (prefix || "").toLowerCase();
+
+    const fuzzyScore = (pat: string, str: string): number => {
+      if (!pat) {
+        return 1000;
+      } // empty pattern — highest score
+      pat = pat.toLowerCase();
+      str = str.toLowerCase();
+      let pi = 0;
+      let si = 0;
+      let score = 0;
+      let consec = 0;
+      let firstMatch = -1;
+      while (pi < pat.length && si < str.length) {
+        if (pat[pi] === str[si]) {
+          if (firstMatch === -1) {
+            firstMatch = si;
+          }
+          score += 100;
+          if (consec > 0) {
+            score += 30 * consec;
+          }
+          if (si === 0) {
+            score += 50;
+          }
+          consec += 1;
+          pi += 1;
+          si += 1;
+        } else {
+          consec = 0;
+          si += 1;
+        }
+      }
+      if (pi < pat.length) {
+        return -Infinity;
+      } // not a subsequence
+      const gapPenalty = firstMatch >= 0 ? firstMatch : 0;
+      const lengthPenalty = Math.max(0, str.length - pat.length);
+      return score - gapPenalty - Math.floor(lengthPenalty / 2);
+    };
+
+    const scored: { key: string; score: number }[] = [];
+    for (const k of allKeys) {
+      const s = fuzzyScore(pat, k);
+      if (s !== -Infinity) {
+        scored.push({ key: k, score: s });
+      }
+    }
+
+    if (scored.length === 0) {
+      return [];
+    }
+
+    scored.sort((a, b) => b.score - a.score || a.key.localeCompare(b.key));
+    const top = scored.slice(0, maxResults);
+
+    return top.map((s) => ({ key: s.key, score: s.score, translations: this.getTranslationsForKey(s.key) }));
+  }
+
+  /**
+   * Find an inner range inside a literal/PO fragment.
+   * Returns offsets relative to the provided `fullText` (or null).
+   */
+  public findInnerRangeInText(fullText: string, key: string): { start: number; end: number } | null {
+    if (!fullText) {
+      return null;
+    }
+    // try to locate the raw key text inside the literal/po range
+    const idx = fullText.indexOf(key);
+    if (idx >= 0) {
+      return { start: idx, end: idx + key.length };
+    }
+
+    // fallback: find first/last quote and return inner area
+    const firstQuote = fullText.search(/['"`]/);
+    if (firstQuote >= 0) {
+      const quoteChar = fullText[firstQuote];
+      const lastQuote = fullText.lastIndexOf(quoteChar);
+      if (lastQuote > firstQuote) {
+        return { start: firstQuote + 1, end: lastQuote };
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Escape a string for safe insertion into a .po msgid quoted string.
+   */
+  public escapePoString(s: string): string {
+    if (s === null || s === undefined) {
+      return "";
+    }
+    return s.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n");
+  }
+
   public findCodeReferencesForKey(key: string) {
     const result: any[] = [];
     for (const tgtUnits of this.managers.values()) {
@@ -465,9 +753,10 @@ export class L10nService implements Disposable {
   }
 
   // New: collect rename targets for a key located at the given location
-  public collectLocationsForKeyAt(uri: URI, position: MyPosition):
-    | { key: string; codeLocations: MyLocation[]; translationLocations: MyLocation[] }
-    | null {
+  public collectEntriesForKeyAt(
+    uri: URI,
+    position: MyPosition,
+  ): { key: string; codeLocations: MyLocation[]; translationEntries: L10nEntry[] } | null {
     const key = this.getKeyAtPosition(uri, position);
     if (!key) {
       return null;
@@ -475,19 +764,19 @@ export class L10nService implements Disposable {
     return {
       key,
       codeLocations: this.findCodeReferencesForKey(key),
-      translationLocations: this.findTranslationLocationsForKey(key),
+      translationEntries: this.findTranslationEntriesForKey(key),
     };
   }
 
   // New: check whether renaming `oldKey` to `newKey` is allowed (no translation collisions)
-  public canRenameKey(oldKey: string, newKey: string): { ok: boolean; conflicts: MyLocation[] } {
+  public canRenameKey(oldKey: string, newKey: string): { ok: boolean; conflicts: L10nEntry[] } {
     if (!oldKey || !newKey) {
       return { ok: false, conflicts: [] };
     }
     if (oldKey === newKey) {
       return { ok: true, conflicts: [] };
     }
-    const conflicts = this.findTranslationLocationsForKey(newKey) || [];
+    const conflicts = this.findTranslationEntriesForKey(newKey) || [];
     return { ok: conflicts.length === 0, conflicts };
   }
 
@@ -496,7 +785,7 @@ export class L10nService implements Disposable {
     if (!key) {
       return [];
     }
-    return this.findTranslationLocationsForKey(key);
+    return this.findTranslationEntriesForKey(key).map((e) => e.location);
   }
 
   public findReferences(uri: URI, position: MyPosition): MyLocation[] {
@@ -550,6 +839,7 @@ export class L10nService implements Disposable {
               } as MyRange,
               message: m,
               severity: MyDiagnosticSeverity.Warning,
+              code: DiagnosticsCode.settingsInvalid,
             } as MyDiagnostic;
           }),
         },

@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
+import { MyPosition } from "../models/vscodeTypes";
+import { toVscRange, toVscUri } from "../models/vscodeTypeConverter";
 import { L10nService } from "../services/l10nService";
-import { MyPosition, MyLocation } from "../models/vscTypes";
 
 /**
  * ローカライズキーのリネームを提供する `RenameProvider` 実装。
@@ -23,13 +24,13 @@ export class RenameProvider implements vscode.RenameProvider {
   private async waitForTargets(uri: vscode.Uri | any, position: MyPosition, timeoutMs: number = 2000) {
     const start = Date.now();
     while (Date.now() - start < timeoutMs) {
-      const t = this.svc.collectLocationsForKeyAt(uri as any, position);
+      const t = this.svc.collectEntriesForKeyAt(uri as any, position);
       // require not only a key but also at least one known location to make
       // provideRenameEdits produce concrete WorkspaceEdit entries
       if (
         t &&
         t.key &&
-        ((t.codeLocations && t.codeLocations.length > 0) || (t.translationLocations && t.translationLocations.length > 0))
+        ((t.codeLocations && t.codeLocations.length > 0) || (t.translationEntries && t.translationEntries.length > 0))
       ) {
         return t;
       }
@@ -44,28 +45,13 @@ export class RenameProvider implements vscode.RenameProvider {
     key: string,
   ): Promise<vscode.Range | null> {
     const text = doc.getText(fullRange);
-    // try to locate the raw key text inside the literal/po range
-    const idx = text.indexOf(key);
-    if (idx >= 0) {
+    const inner = this.svc.findInnerRangeInText(text, key);
+    if (inner) {
       const baseOffset = doc.offsetAt(fullRange.start);
-      const startOffset = baseOffset + idx;
-      const endOffset = startOffset + key.length;
+      const startOffset = baseOffset + inner.start;
+      const endOffset = baseOffset + inner.end;
       return new vscode.Range(doc.positionAt(startOffset), doc.positionAt(endOffset));
     }
-
-    // fallback: find first/last quote and return inner area
-    const firstQuote = text.search(/['"`]/);
-    if (firstQuote >= 0) {
-      const quoteChar = text[firstQuote];
-      const lastQuote = text.lastIndexOf(quoteChar);
-      if (lastQuote > firstQuote) {
-        const baseOffset = doc.offsetAt(fullRange.start);
-        const startOffset = baseOffset + firstQuote + 1;
-        const endOffset = baseOffset + lastQuote;
-        return new vscode.Range(doc.positionAt(startOffset), doc.positionAt(endOffset));
-      }
-    }
-
     return null;
   }
 
@@ -80,23 +66,18 @@ export class RenameProvider implements vscode.RenameProvider {
       throw new Error("Place the cursor on a localization key to rename.");
     }
 
-    const { key, codeLocations, translationLocations } = targets;
+    const { key, codeLocations, translationEntries } = targets;
 
-    // locate the matching location within this document
-    const all = [...(codeLocations || []), ...(translationLocations || [])];
+    // locate the matching location within this document (normalize entries -> locations)
+    const all = [...(codeLocations || []), ...((translationEntries || []).map((e) => e.location))];
     const match = all.find((l) => (l.uri as any).path === (document.uri as any).path &&
       !(position.line < l.range.start.line || position.line > l.range.end.line || (position.line === l.range.start.line && position.character < l.range.start.character) || (position.line === l.range.end.line && position.character > l.range.end.character))
     );
 
     if (match) {
-      const vscUri = vscode.Uri.parse((match.uri as any).toString());
+      const vscUri = toVscUri(match.uri);
       const doc = await this.openDoc(vscUri);
-      const fullRange = new vscode.Range(
-        match.range.start.line,
-        match.range.start.character,
-        match.range.end.line,
-        match.range.end.character,
-      );
+      const fullRange = toVscRange(match.range);
       const inner = await this.findInnerRangeForKeyInDocument(doc, fullRange, key);
       if (inner) {
         return { range: inner, placeholder: key };
@@ -132,16 +113,15 @@ export class RenameProvider implements vscode.RenameProvider {
     }
 
     const codeLocs = targets.codeLocations || [];
-    const transLocs = targets.translationLocations || [];
+    const transEntries = targets.translationEntries || [];
 
     const edit = new vscode.WorkspaceEdit();
 
     // replace in code locations (preserve quotes/prefixes when necessary)
     for (const l of codeLocs) {
-      const uriStr = (l.uri as any).toString();
-      const vscUri = vscode.Uri.parse(uriStr);
+      const vscUri = toVscUri(l.uri);
       const doc = await this.openDoc(vscUri);
-      const fullRange = new vscode.Range(l.range.start.line, l.range.start.character, l.range.end.line, l.range.end.character);
+      const fullRange = toVscRange(l.range);
       const inner = await this.findInnerRangeForKeyInDocument(doc, fullRange, oldKey);
       if (inner) {
         edit.replace(vscUri, inner, newName);
@@ -156,13 +136,12 @@ export class RenameProvider implements vscode.RenameProvider {
     }
 
     // replace in translation files (.po) — replace the entire msgid region with properly escaped quoted string
-    const escapePo = (s: string) => s.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n");
-    for (const l of transLocs) {
-      const uriStr = (l.uri as any).toString();
-      const vscUri = vscode.Uri.parse(uriStr);
+    for (const e of transEntries) {
+      const l = e.location;
+      const vscUri = toVscUri(l.uri);
       const doc = await this.openDoc(vscUri);
-      const fullRange = new vscode.Range(l.range.start.line, l.range.start.character, l.range.end.line, l.range.end.character);
-      const replacement = `"${escapePo(newName)}"`;
+      const fullRange = toVscRange(l.range);
+      const replacement = `"${this.svc.escapePoString(newName)}"`;
       edit.replace(vscUri, fullRange, replacement);
     }
 
